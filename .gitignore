@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+**/node_modules/
+.npm
+
+# Next.js
+**/.next/
+**/out/
+**/build/
+
+# Environment variables (NEVER commit these)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# Lock files de LibreOffice / editors
+.~lock.*
+*.~lock.*#
+
+# Archivos de trabajo / generación (no van al repo)
+generar_cronograma.py
+Cronograma_PLURALL.xlsx
+"Cronograma codificacion del proyecto ProyectoXXX.xlsx"
+Cronograma codificacion del proyecto ProyectoXXX.xlsx
+"Plurall Description.xlsx"
+Plurall Description.xlsx
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
