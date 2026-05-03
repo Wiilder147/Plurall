@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { calcularAmortizacion } from '@/lib/calculadora'
+import { notificarDesembolso } from '@/lib/notificaciones'
 
 function getServiceClient() {
   return createServiceClient(
@@ -32,13 +33,14 @@ export async function POST(request, { params }) {
   const { id: solicitudId } = await params
   const service = getServiceClient()
 
-  // Obtener la solicitud y su decisión aprobada
+  // Obtener la solicitud y su decisión aprobada (+ datos del cliente para email)
   const { data: sol } = await service
     .from('solicitud_credito')
     .select(`
       id_solicitud, id_cliente,
       estado_solicitud ( nombre ),
-      decision_solicitud ( monto_aprobado, plazo_aprobado, tasa_interes_aprobada )
+      decision_solicitud ( monto_aprobado, plazo_aprobado, tasa_interes_aprobada ),
+      cliente ( nombre_completo, email )
     `)
     .eq('id_solicitud', solicitudId)
     .single()
@@ -167,6 +169,22 @@ export async function POST(request, { params }) {
   }
 
   console.log(`[Desembolso] Crédito ${credito.id_credito} creado con ${plazo} cuotas.`)
+
+  // ── Notificación por email al cliente ────────────────────────
+  const clienteEmail  = sol.cliente?.email
+  const clienteNombre = sol.cliente?.nombre_completo
+
+  if (clienteEmail) {
+    notificarDesembolso({
+      email:            clienteEmail,
+      nombre:           clienteNombre,
+      creditoId:        credito.id_credito,
+      monto,
+      cuotaFija:        sim.cuotaMensual,
+      numeroCuotas:     plazo,
+      fechaPrimeraCuota: fechaPrimeraCuota.toISOString().split('T')[0],
+    }).catch(err => console.error('[Notif] Error email desembolso:', err))
+  }
 
   return NextResponse.json({
     ok:        true,

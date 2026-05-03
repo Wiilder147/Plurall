@@ -71,7 +71,14 @@ export default function LoginPage() {
       body: JSON.stringify({ celular: telLimpio }),
     }).catch(() => null)
 
-    router.push('/dashboard/inicio')
+    // ── Redirigir al portal según el rol del usuario ───────────
+    try {
+      const portalRes = await fetch('/api/auth/portal')
+      const { portal } = await portalRes.json()
+      router.push(portal)
+    } catch {
+      router.push('/dashboard/inicio')
+    }
     router.refresh()
   }
 

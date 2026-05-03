@@ -1,29 +1,104 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { notificarSolicitudRecibida } from '@/lib/notificaciones'
 
-// MOCK DE EXPERIAN (Generador pseudo-aleatorio de riesgo crediticio)
-function consultarExperian(dni) {
-  // En la vida real aquí haríamos fetch a https://api.experian.com/...
-  // Usaremos la longitud o un hash simple del DNI para asegurar un resultado "consistente" en demos
+/**
+ * Motor de scoring interno de PLURALL.
+ *
+ * Calcula el puntaje sumando los `valor_puntos` de las respuestas del cliente
+ * contra las opciones de la tabla `opcion_pregunta`.
+ *
+ * Si no hay respuestas registradas (flujo sin cuestionario), usa el fallback
+ * pseudo-aleatorio basado en DNI para mantener compatibilidad con el MVP.
+ *
+ * Umbrales:
+ *   puntaje >= 600  → PRE_APROBADO
+ *   puntaje >= 400  → REVISION_MANUAL
+ *   puntaje <  400  → RECHAZAR
+ */
+async function calcularScoreInterno(supabase, idCliente, idSolicitud) {
+  // 1. Obtener respuestas del cliente para esta solicitud
+  const { data: respuestas } = await supabase
+    .from('respuesta_cliente')
+    .select('id_opcion, respuesta_texto')
+    .eq('id_solicitud', idSolicitud)
+
+  // Si no hay respuestas, retornar null para usar el fallback
+  if (!respuestas || respuestas.length === 0) return null
+
+  // 2. Sumar puntos de las opciones seleccionadas
+  const idsOpciones = respuestas
+    .map(r => r.id_opcion)
+    .filter(Boolean)
+
+  let puntajeTotal = 0
+
+  if (idsOpciones.length > 0) {
+    const { data: opciones } = await supabase
+      .from('opcion_pregunta')
+      .select('id_opcion, valor_puntos')
+      .in('id_opcion', idsOpciones)
+
+    puntajeTotal = (opciones ?? []).reduce((sum, o) => sum + (o.valor_puntos ?? 0), 0)
+  }
+
+  // 3. Obtener el modelo de score activo
+  const { data: modelo } = await supabase
+    .from('modelo_score')
+    .select('id_modelo_score, puntaje_minimo, puntaje_maximo')
+    .eq('activo', true)
+    .order('vigente_desde', { ascending: false })
+    .limit(1)
+    .single()
+
+  const puntajeMax = modelo?.puntaje_maximo ?? 1000
+  const puntajeMin = modelo?.puntaje_minimo ?? 600
+  const porcentaje = Math.round((puntajeTotal / puntajeMax) * 100)
+
+  // 4. Determinar recomendación
+  let recomendacion
+  if (puntajeTotal >= puntajeMin)       recomendacion = 'APROBAR'
+  else if (puntajeTotal >= puntajeMin * 0.67) recomendacion = 'REVISAR_MANUAL'
+  else                                   recomendacion = 'RECHAZAR'
+
+  // 5. Guardar resultado en tabla score
+  await supabase.from('score').insert({
+    id_solicitud:          idSolicitud,
+    id_modelo_score:       modelo?.id_modelo_score,
+    puntaje_total:         puntajeTotal,
+    puntaje_maximo_posible: puntajeMax,
+    porcentaje,
+    recomendacion,
+  })
+
+  return { puntajeTotal, porcentaje, recomendacion }
+}
+
+/**
+ * Fallback: scoring pseudo-aleatorio basado en DNI.
+ * Se usa cuando el cliente no completó el cuestionario.
+ * Mantiene resultados consistentes para demos.
+ */
+function scoringFallbackDNI(dni) {
   const factor = Number(dni.substring(dni.length - 2) || '50')
-  
   if (factor < 20) {
-    return { score: 450, dictamen: 'RECHAZAR', motivo: 'Historial crediticio negativo en Datacrédito' }
+    return { score: 450, dictamen: 'RECHAZAR',        motivo: 'Historial crediticio negativo en Datacrédito' }
   } else if (factor < 60) {
     return { score: 650, dictamen: 'REVISION_MANUAL', motivo: 'Capacidad de endeudamiento al límite' }
   } else {
-    return { score: 850, dictamen: 'PRE_APROBADO', motivo: 'Excelente historial crediticio' }
+    return { score: 850, dictamen: 'PRE_APROBADO',    motivo: 'Excelente historial crediticio' }
   }
 }
 
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { monto, plazo, frontUrl, backUrl } = body
+    // respuestas: [{ id_pregunta, id_opcion?, respuesta_texto? }]
+    const { monto, plazo, frontUrl, backUrl, respuestas = [] } = body
 
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
@@ -31,29 +106,31 @@ export async function POST(request) {
     // 1. OBTENER DATOS DEL CLIENTE
     const { data: cliente, error: cliErr } = await supabase
       .from('cliente')
-      .select('id_cliente, dni')
-      .eq('id_cliente', user.id)
+      .select('id_cliente, dni, nombre_completo, email')
+      .eq('id_usuario_cuenta', user.id)
       .single()
 
-    if (cliErr) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
+    if (cliErr || !cliente) {
+      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
+    }
 
-    // 2.A VALIDAR CRÉDITO ÚNICO ACTIVO (Ninguna deuda vigente)
+    // 2.A VALIDAR CRÉDITO ÚNICO ACTIVO
     const { data: creditoVigente } = await supabase
       .from('credito')
-      .select('id_credito, saldo_pendiente')
+      .select('id_credito')
       .eq('id_cliente', cliente.id_cliente)
       .gt('saldo_pendiente', 0)
       .limit(1)
       .single()
 
     if (creditoVigente) {
-      return NextResponse.json({ 
-        error: 'CREDITO_ACTIVO', 
-        message: 'No puedes solicitar un nuevo crédito mientras mantengas saldo pendiente en un crédito activo.' 
+      return NextResponse.json({
+        error:   'CREDITO_ACTIVO',
+        message: 'No puedes solicitar un nuevo crédito mientras mantengas saldo pendiente en un crédito activo.',
       }, { status: 403 })
     }
 
-    // 2.B VALIDAR REGLA TRIMESTRAL (Backend Fallback en caso de evadir UI)
+    // 2.B VALIDAR REGLA TRIMESTRAL (backend fallback)
     const { data: lastRequest } = await supabase
       .from('solicitud_credito')
       .select('fecha_solicitud')
@@ -63,64 +140,132 @@ export async function POST(request) {
       .single()
 
     if (lastRequest) {
-      const msDia = 1000 * 60 * 60 * 24
-      const diffDias = (new Date() - new Date(lastRequest.fecha_solicitud)) / msDia
+      const diffDias = (Date.now() - new Date(lastRequest.fecha_solicitud)) / 86400000
       if (diffDias < 90) {
-        return NextResponse.json({ 
-          error: 'BLOQUEO_TRIMESTRAL', 
-          message: `Debes esperar ${Math.ceil(90 - diffDias)} días antes de volver a solicitar.` 
+        return NextResponse.json({
+          error:   'BLOQUEO_TRIMESTRAL',
+          message: `Debes esperar ${Math.ceil(90 - diffDias)} días antes de volver a solicitar.`,
         }, { status: 403 })
       }
     }
 
-    // 3. CONSUMO DEL BURÓ DE CRÉDITO (EXPERIAN MOCK)
-    const experian = consultarExperian(cliente.dni)
-    let estadoNombre = 'PENDIENTE' 
-    let rechazoMotivo = null
+    // 3. CREAR LA SOLICITUD (estado PENDIENTE por defecto)
+    const { data: estadoPendiente } = await supabase
+      .from('estado_solicitud')
+      .select('id_estado_solicitud')
+      .eq('nombre', 'PENDIENTE')
+      .single()
 
-    if (experian.dictamen === 'RECHAZAR') {
-      estadoNombre = 'RECHAZADA'
-      rechazoMotivo = experian.motivo
-    }
-
-    // 4. TRANSACCIÓN DIRECTA SEGURO EN BD
-    // Buscar uuids
-    const { data: estQ } = await supabase.from('estado_solicitud').select('id_estado_solicitud').eq('nombre', estadoNombre).single()
-    const idEstado = estQ?.id_estado_solicitud
-    
-    let idMotivo = null
-    if (rechazoMotivo) {
-        // Buscamos si existe o inyectamos uno genérico (o buscamos por Like)
-        const { data: motQ } = await supabase.from('motivo_rechazo').select('id_motivo').ilike('descripcion_motivo', '%Historial%').limit(1).single()
-        idMotivo = motQ?.id_motivo || null
-    }
-
-    // Inyectamos documentos a BD paralela 
-    await supabase.from('documento_cliente').upsert([
-      { id_cliente: cliente.id_cliente, tipo_documento: 'CEDULA_FRONTAL', url_archivo: frontUrl },
-      { id_cliente: cliente.id_cliente, tipo_documento: 'CEDULA_TRASERA', url_archivo: backUrl }
-    ])
-
-    const { data: newSolicitud, error: insErr } = await supabase.from('solicitud_credito').insert({
-      id_cliente: cliente.id_cliente,
-      id_estado_solicitud: idEstado,
-      id_motivo_rechazo: idMotivo,
-      monto_solicitado: monto,
-      plazo_meses: plazo,
-      proposito: `Perfilamiento Auto Experian: ${experian.score} pts`,
-      canal_solicitud: 'WEB'
-    }).select().single()
+    const { data: newSolicitud, error: insErr } = await supabase
+      .from('solicitud_credito')
+      .insert({
+        id_cliente:          cliente.id_cliente,
+        id_estado_solicitud: estadoPendiente?.id_estado_solicitud,
+        monto_solicitado:    monto,
+        plazo_meses:         plazo,
+        canal_solicitud:     'WEB',
+      })
+      .select()
+      .single()
 
     if (insErr) throw insErr
 
-    return NextResponse.json({ 
-      success: true, 
-      resultado_buro: experian.dictamen,
-      score: experian.score
+    // 4. GUARDAR RESPUESTAS DEL CUESTIONARIO (si las hay)
+    if (respuestas.length > 0) {
+      const respuestasInsert = respuestas.map(r => ({
+        id_solicitud:   newSolicitud.id_solicitud,
+        id_pregunta:    r.id_pregunta,
+        id_opcion:      r.id_opcion   || null,
+        respuesta_texto: r.respuesta_texto || null,
+      }))
+      await supabase.from('respuesta_cliente').insert(respuestasInsert)
+    }
+
+    // 5. CALCULAR SCORE
+    let dictamen = 'REVISION_MANUAL'
+    let scoreNum  = 650
+    let propositoTexto = ''
+
+    const scoreInterno = await calcularScoreInterno(
+      supabase,
+      cliente.id_cliente,
+      newSolicitud.id_solicitud,
+    )
+
+    if (scoreInterno) {
+      // Scoring real con respuestas del cuestionario
+      scoreNum  = scoreInterno.puntajeTotal
+      dictamen  = scoreInterno.recomendacion === 'APROBAR'        ? 'PRE_APROBADO'
+                : scoreInterno.recomendacion === 'REVISAR_MANUAL' ? 'REVISION_MANUAL'
+                : 'RECHAZAR'
+      propositoTexto = `Score interno: ${scoreNum} pts (${scoreInterno.porcentaje}%)`
+    } else {
+      // Fallback por DNI cuando no hay cuestionario
+      const fallback = scoringFallbackDNI(cliente.dni)
+      scoreNum       = fallback.score
+      dictamen       = fallback.dictamen
+      propositoTexto = `Score Experian (mock): ${scoreNum} pts`
+    }
+
+    // 6. ACTUALIZAR SOLICITUD con propósito y estado final
+    let estadoFinal = 'PENDIENTE'
+    let idMotivo    = null
+
+    if (dictamen === 'RECHAZAR') {
+      estadoFinal = 'RECHAZADA'
+      const { data: motQ } = await supabase
+        .from('motivo_rechazo')
+        .select('id_motivo')
+        .ilike('descripcion_motivo', '%Historial%')
+        .limit(1)
+        .single()
+      idMotivo = motQ?.id_motivo || null
+    }
+
+    const { data: estadoRow } = await supabase
+      .from('estado_solicitud')
+      .select('id_estado_solicitud')
+      .eq('nombre', estadoFinal)
+      .single()
+
+    await supabase
+      .from('solicitud_credito')
+      .update({
+        id_estado_solicitud: estadoRow?.id_estado_solicitud,
+        id_motivo_rechazo:   idMotivo,
+        proposito:           propositoTexto,
+        updated_at:          new Date().toISOString(),
+      })
+      .eq('id_solicitud', newSolicitud.id_solicitud)
+
+    // 7. GUARDAR DOCUMENTOS KYC
+    if (frontUrl || backUrl) {
+      const docs = []
+      if (frontUrl) docs.push({ id_cliente: cliente.id_cliente, tipo_documento: 'CEDULA_FRONTAL', url_archivo: frontUrl })
+      if (backUrl)  docs.push({ id_cliente: cliente.id_cliente, tipo_documento: 'CEDULA_TRASERA', url_archivo: backUrl })
+      await supabase.from('documento_cliente').upsert(docs)
+    }
+
+    // 8. NOTIFICACIÓN EMAIL (solo si no fue rechazado)
+    if (estadoFinal !== 'RECHAZADA' && cliente.email) {
+      notificarSolicitudRecibida({
+        email:       cliente.email,
+        nombre:      cliente.nombre_completo,
+        solicitudId: newSolicitud.id_solicitud,
+        monto,
+        plazo,
+      }).catch(err => console.error('[Notif] Error email solicitud:', err))
+    }
+
+    return NextResponse.json({
+      success:        true,
+      resultado_buro: dictamen,
+      score:          scoreNum,
+      solicitudId:    newSolicitud.id_solicitud,
     })
 
   } catch (error) {
-    console.error('API Error:', error)
+    console.error('[API solicitar] Error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

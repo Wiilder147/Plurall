@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
+import { notificarPagoConfirmado } from '@/lib/notificaciones'
 
 // Usamos el cliente SERVICE_ROLE para escribir desde el webhook (sin cookies de sesión)
 function getServiceClient() {
@@ -136,6 +137,27 @@ export async function POST(request) {
         })
         .eq('id_credito', planPago.id_credito)
     }
+
+    // 5. Notificar al cliente por email (fire-and-forget)
+    try {
+      const { data: creditoCliente } = await supabase
+        .from('credito')
+        .select('saldo_pendiente, cliente ( nombre_completo, email )')
+        .eq('id_credito', planPago.id_credito)
+        .single()
+
+      if (creditoCliente?.cliente?.email) {
+        const nuevoSaldo = Math.max(0, (creditoActual?.saldo_pendiente ?? 0) - cuota.monto_capital)
+        notificarPagoConfirmado({
+          email:          creditoCliente.cliente.email,
+          nombre:         creditoCliente.cliente.nombre_completo,
+          numeroCuota:    cuota.numero_cuota,
+          montoPagado:    monto / 100,
+          saldoPendiente: nuevoSaldo,
+          referencia,
+        }).catch(() => null)
+      }
+    } catch { /* No bloquear el webhook si el email falla */ }
 
     console.log(`[Wompi Webhook] Pago CONFIRMADO — cuota ${cuota.id_cuota}`)
 

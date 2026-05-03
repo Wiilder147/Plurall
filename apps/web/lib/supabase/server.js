@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 // Crea cliente Supabase para server-side (Server Components), con manejo de cookies.
+// Usa ANON_KEY + JWT del usuario → respeta RLS.
 export async function createClient() {
   const cookieStore = await cookies()
 

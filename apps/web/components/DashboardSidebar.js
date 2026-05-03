@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Home, User, LogOut, Menu, X, CreditCard, FileText, DollarSign, Globe } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import ThemeToggle from './ThemeToggle'
 
 const navigation = [
   { name: 'Inicio',       href: '/dashboard/inicio',    icon: Home       },
@@ -98,15 +99,16 @@ export default function DashboardSidebar() {
           })}
         </div>
 
-        {/* Botón Cerrar Sesión */}
-        <div className="p-4 border-t border-slate-100">
+        {/* Botón Cerrar Sesión + Toggle */}
+        <div className="p-4 border-t border-slate-100 flex items-center gap-2">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+            className="flex items-center gap-3 px-4 py-3 flex-1 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
           >
             <LogOut className="h-5 w-5" />
             <span className="font-medium">Cerrar sesión</span>
           </button>
+          <ThemeToggle />
         </div>
       </div>
     </>

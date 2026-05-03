@@ -34,6 +34,7 @@
   --font-sans: var(--font-montserrat);
 }
 
+/* ── Body base ────────────────────────────────────────────────────────────── */
 body {
   background: var(--color-background);
   color: var(--color-foreground);
@@ -41,6 +42,65 @@ body {
   overflow-x: hidden;
 }
 
+/* ── Modo claro: reemplaza los colores slate oscuros del panel ────────────── */
+/* Usamos @layer para que tenga la misma especificidad que Tailwind */
+@layer utilities {
+  [data-theme="light"] .bg-slate-950 { background-color: #f0f4f8; }
+  [data-theme="light"] .bg-slate-900 { background-color: #e8edf4; }
+  [data-theme="light"] .bg-slate-800 { background-color: #ffffff; }
+  [data-theme="light"] .bg-slate-700 { background-color: #f1f5f9; }
+
+  [data-theme="light"] .border-slate-700 { border-color: #cbd5e1; }
+  [data-theme="light"] .border-slate-800 { border-color: #e2e8f0; }
+  [data-theme="light"] .border-slate-600 { border-color: #94a3b8; }
+
+  [data-theme="light"] .text-white   { color: #0f172a; }
+  [data-theme="light"] .text-slate-200 { color: #1e293b; }
+  [data-theme="light"] .text-slate-300 { color: #334155; }
+  [data-theme="light"] .text-slate-400 { color: #475569; }
+  [data-theme="light"] .text-slate-500 { color: #64748b; }
+  [data-theme="light"] .text-slate-600 { color: #475569; }
+
+  /* Hover states */
+  [data-theme="light"] .hover\:bg-slate-700\/40:hover { background-color: rgba(226,232,240,0.6); }
+  [data-theme="light"] .hover\:bg-slate-700\/20:hover { background-color: rgba(226,232,240,0.4); }
+
+  /* Dividers */
+  [data-theme="light"] .divide-slate-700\/50 > :not([hidden]) ~ :not([hidden]) { border-color: #e2e8f0; }
+  [data-theme="light"] .divide-slate-700\/40 > :not([hidden]) ~ :not([hidden]) { border-color: #e2e8f0; }
+
+  /* Fondo principal de los layouts */
+  [data-theme="light"] .bg-slate-950.overflow-hidden { background-color: #f0f4f8; }
+
+  /* Inputs dentro de paneles oscuros */
+  [data-theme="light"] input.bg-slate-700,
+  [data-theme="light"] textarea.bg-slate-700,
+  [data-theme="light"] select.bg-slate-700 {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+  }
+
+  /* Tablas */
+  [data-theme="light"] .bg-slate-700\/50 { background-color: rgba(241,245,249,0.9); }
+
+  /* Gradientes de cartera */
+  [data-theme="light"] .from-indigo-600 { --tw-gradient-from: #4338ca; }
+  [data-theme="light"] .to-indigo-700   { --tw-gradient-to: #3730a3; }
+
+  /* Sidebar: mantener siempre oscuro */
+  [data-theme="light"] .bg-indigo-950 { background-color: #1e1b4b; }
+  [data-theme="light"] .bg-teal-950   { background-color: #042f2e; }
+  [data-theme="light"] .border-indigo-900 { border-color: #312e81; }
+  [data-theme="light"] .border-teal-900   { border-color: #134e4a; }
+}
+
+/* ── Transición suave al cambiar tema ─────────────────────────────────────── */
+html {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* ── Animaciones ──────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -54,98 +114,80 @@ body {
   50%      { box-shadow: 0 0 20px rgba(255, 152, 0, 0.6); }
 }
 
-.animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+.animate-fade-in  { animation: fadeIn 0.5s ease-out forwards; }
 .animate-slide-in { animation: slideIn 0.4s ease-out forwards; }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
+/* ── Componentes base ─────────────────────────────────────────────────────── */
 .btn-primary {
   background: var(--color-accent-600);
-  color: white; 
-  padding: 0.75rem 1.5rem; 
-  border-radius: 9999px; /* Rounded full as in the design */
-  font-weight: 600; 
-  border: none; 
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  border: none;
   cursor: pointer;
-  transition: all 0.2s ease; 
+  transition: all 0.2s ease;
   font-size: 1rem;
 }
-.btn-primary:hover { 
-  background: var(--color-accent-700);
-  transform: translateY(-1px); 
-}
-.btn-primary:disabled { 
-  opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; 
-}
+.btn-primary:hover  { background: var(--color-accent-700); transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 .btn-secondary {
-  background: transparent; 
+  background: transparent;
   color: var(--color-navy-600);
-  padding: 0.75rem 1.5rem; 
+  padding: 0.75rem 1.5rem;
   border-radius: 9999px;
-  font-weight: 600; 
+  font-weight: 600;
   border: 1px solid var(--color-navy-600);
-  cursor: pointer; 
+  cursor: pointer;
   transition: all 0.2s ease;
 }
-.btn-secondary:hover { 
-  background: var(--color-navy-50); 
-  color: var(--color-navy-900); 
-}
+.btn-secondary:hover { background: var(--color-navy-50); color: var(--color-navy-900); }
 
 .input-field {
-  width: 100%; 
-  padding: 0.85rem 1.25rem; 
-  padding-left: 2.75rem; /* Space for icon */
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  padding-left: 2.75rem;
   border-radius: 9999px;
-  border: 1px solid transparent; 
-  background: #E5E7EB; /* Light gray */
-  color: var(--color-navy-900); 
+  border: 1px solid transparent;
+  background: #E5E7EB;
+  color: var(--color-navy-900);
   font-size: 0.95rem;
-  transition: all 0.2s ease; 
+  transition: all 0.2s ease;
   outline: none;
 }
-.input-field:focus { 
+.input-field:focus {
   background: #F3F4F6;
-  border-color: var(--color-accent-500); 
-  box-shadow: 0 0 0 3px rgba(255,152,0,0.15); 
+  border-color: var(--color-accent-500);
+  box-shadow: 0 0 0 3px rgba(255,152,0,0.15);
 }
-.input-field::placeholder { 
-  color: #9CA3AF; 
-}
+.input-field::placeholder { color: #9CA3AF; }
 
-/* Formas decorativas - Triángulos en las esquinas */
 .bg-triangle-orange {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 400px;
-  height: 400px;
+  position: absolute; top: 0; right: 0;
+  width: 400px; height: 400px;
   background-color: var(--color-accent-600);
   clip-path: polygon(100% 0, 0 0, 100% 100%);
   z-index: 0;
 }
-
 .bg-triangle-navy {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 400px;
-  height: 400px;
+  position: absolute; bottom: 0; left: 0;
+  width: 400px; height: 400px;
   background-color: var(--color-navy-900);
   clip-path: polygon(0 100%, 0 0, 100% 100%);
   z-index: 0;
 }
 
-/* Tarjetas claras */
 .card {
   background: #ffffff;
-  border: 1px solid var(--color-navy-100); 
+  border: 1px solid var(--color-navy-100);
   border-radius: 1rem;
-  padding: 1.5rem; 
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
   transition: all 0.3s ease;
 }
-.card:hover { 
-  border-color: var(--color-navy-200); 
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); 
+.card:hover {
+  border-color: var(--color-navy-200);
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
 }

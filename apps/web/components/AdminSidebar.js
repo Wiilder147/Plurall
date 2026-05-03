@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, ClipboardList, Users, LogOut, Menu, X, BarChart3 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import ThemeToggle from './ThemeToggle'
 
 const navigation = [
   { name: 'Panel',       href: '/admin',             icon: LayoutDashboard },
@@ -81,15 +82,16 @@ export default function AdminSidebar() {
           })}
         </div>
 
-        {/* Logout */}
-        <div className="p-4 border-t border-slate-800">
+        {/* Logout + Toggle */}
+        <div className="p-4 border-t border-slate-800 flex items-center gap-2">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-slate-400 hover:bg-red-900/30 hover:text-red-400 transition-all text-sm"
+            className="flex items-center gap-3 px-4 py-3 flex-1 rounded-xl text-slate-400 hover:bg-red-900/30 hover:text-red-400 transition-all text-sm"
           >
             <LogOut className="h-4 w-4" />
             <span className="font-medium">Cerrar sesión</span>
           </button>
+          <ThemeToggle />
         </div>
       </div>
     </>

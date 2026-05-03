@@ -2,6 +2,43 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 
+// ── Rate limiting con Upstash Redis ─────────────────────────────────────────
+// Máximo 5 intentos de pago por usuario cada 10 minutos
+const RATE_LIMIT = 5
+const WINDOW_SEC = 600 // 10 minutos
+
+async function checkRateLimit(userId) {
+  const url   = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+
+  // Si no hay Redis configurado, permitir sin límite
+  if (!url || !token) return { permitido: true, restantes: RATE_LIMIT }
+
+  const key = `pago_rate:${userId}`
+
+  try {
+    // Incrementar contador
+    const incrRes = await fetch(`${url}/incr/${key}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const { result: intentos } = await incrRes.json()
+
+    // Si es el primer intento, establecer TTL
+    if (intentos === 1) {
+      await fetch(`${url}/expire/${key}/${WINDOW_SEC}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    }
+
+    const permitido  = intentos <= RATE_LIMIT
+    const restantes  = Math.max(0, RATE_LIMIT - intentos)
+    return { permitido, restantes, intentos }
+  } catch {
+    // Si Redis falla, no bloquear el pago
+    return { permitido: true, restantes: RATE_LIMIT }
+  }
+}
+
 export async function POST(request) {
   const supabase = await createClient()
 
@@ -9,6 +46,18 @@ export async function POST(request) {
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  // ── Rate limiting ────────────────────────────────────────────
+  const { permitido, restantes } = await checkRateLimit(user.id)
+  if (!permitido) {
+    return NextResponse.json(
+      { error: `Demasiados intentos de pago. Espera unos minutos e intenta de nuevo.` },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(WINDOW_SEC) },
+      }
+    )
   }
 
   const { cuotaId } = await request.json()

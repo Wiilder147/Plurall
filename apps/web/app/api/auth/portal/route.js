@@ -1,0 +1,35 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+
+/**
+ * GET /api/auth/portal
+ * Devuelve la URL del portal correcto según el rol del usuario autenticado.
+ * Se llama justo después del login exitoso para redirigir al portal correcto.
+ */
+export async function GET() {
+  const supabase = await createClient()
+
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    return NextResponse.json({ portal: '/login' })
+  }
+
+  const { data: perfil } = await supabase
+    .from('perfil_usuario')
+    .select('rol ( nombre_rol )')
+    .eq('id', user.id)
+    .single()
+
+  const rol = perfil?.rol?.nombre_rol?.toUpperCase()
+
+  const portales = {
+    ADMIN:      '/admin',
+    ANALISTA:   '/admin',
+    SUPERVISOR: '/supervisor',
+    ASESOR:     '/asesor',
+    CLIENTE:    '/dashboard/inicio',
+  }
+
+  const portal = portales[rol] ?? '/dashboard/inicio'
+  return NextResponse.json({ portal, rol })
+}

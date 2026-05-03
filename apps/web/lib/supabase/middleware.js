@@ -35,16 +35,24 @@ export async function updateSession(request) {
   // Obtener usuario actual y validar acceso a rutas privadas.
   const { data: { user } } = await supabase.auth.getUser()
 
+  const path = request.nextUrl.pathname
+
   if (
     !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/registro') &&
-    !request.nextUrl.pathname.startsWith('/recuperar') &&
-    request.nextUrl.pathname !== '/'
+    !path.startsWith('/login') &&
+    !path.startsWith('/registro') &&
+    !path.startsWith('/recuperar') &&
+    path !== '/'
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
+  }
+
+  // Proteger rutas de supervisor y asesor — redirigir al login si no hay sesión
+  // La verificación de ROL se hace en el layout de cada sección
+  if (user && (path.startsWith('/supervisor') || path.startsWith('/asesor'))) {
+    // Sesión válida — el layout verificará el rol específico
   }
 
   return supabaseResponse

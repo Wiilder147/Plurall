@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { calcularAmortizacion } from '@/lib/calculadora'
+import {
+  notificarSolicitudAprobada,
+  notificarSolicitudRechazada,
+} from '@/lib/notificaciones'
 
 function getServiceClient() {
   return createServiceClient(
@@ -41,10 +46,14 @@ export async function PATCH(request, { params }) {
 
   const service = getServiceClient()
 
-  // Obtener solicitud
+  // Obtener solicitud + datos del cliente para la notificación
   const { data: sol } = await service
     .from('solicitud_credito')
-    .select('id_solicitud, id_cliente, id_estado_solicitud, estado_solicitud(nombre)')
+    .select(`
+      id_solicitud, id_cliente, id_estado_solicitud, estado_solicitud(nombre),
+      monto_solicitado, plazo_meses,
+      cliente ( nombre_completo, email )
+    `)
     .eq('id_solicitud', id)
     .single()
 
@@ -87,13 +96,47 @@ export async function PATCH(request, { params }) {
   await service
     .from('solicitud_credito')
     .update({
-      id_estado_solicitud: estadoRow.id_estado_solicitud,
+      id_estado_solicitud:  estadoRow.id_estado_solicitud,
       id_usuario_evaluador: user.id,
-      fecha_decision:      new Date().toISOString(),
+      fecha_decision:       new Date().toISOString(),
       comentarios_analista: comentarios_tecnicos,
-      updated_at:          new Date().toISOString(),
+      updated_at:           new Date().toISOString(),
     })
     .eq('id_solicitud', id)
+
+  // ── Notificación por email al cliente ────────────────────────
+  const clienteEmail = sol.cliente?.email
+  const clienteNombre = sol.cliente?.nombre_completo
+
+  if (clienteEmail) {
+    if (accion === 'APROBAR') {
+      // Calcular cuota estimada para el email
+      const tasaEA = monto_aprobado && tasa_interes_aprobada
+        ? (Math.pow(1 + tasa_interes_aprobada, 12) - 1) * 100
+        : 28
+      const { cuotaMensual } = calcularAmortizacion(
+        monto_aprobado || sol.monto_solicitado,
+        tasaEA,
+        plazo_aprobado || sol.plazo_meses,
+      )
+      notificarSolicitudAprobada({
+        email:             clienteEmail,
+        nombre:            clienteNombre,
+        solicitudId:       id,
+        montoAprobado:     monto_aprobado,
+        plazoAprobado:     plazo_aprobado,
+        cuotaFija:         cuotaMensual,
+        comentariosCliente: comentarios_cliente,
+      }).catch(err => console.error('[Notif] Error email aprobación:', err))
+    } else {
+      notificarSolicitudRechazada({
+        email:             clienteEmail,
+        nombre:            clienteNombre,
+        solicitudId:       id,
+        comentariosCliente: comentarios_cliente,
+      }).catch(err => console.error('[Notif] Error email rechazo:', err))
+    }
+  }
 
   return NextResponse.json({ ok: true, resultado: nuevoEstadoNombre })
 }

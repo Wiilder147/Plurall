@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
-import { BarChart3, TrendingUp, TrendingDown, AlertTriangle, DollarSign, Users, CheckCircle2 } from 'lucide-react'
+import { BarChart3, TrendingUp, TrendingDown, AlertTriangle, DollarSign, Users, CheckCircle2, Download } from 'lucide-react'
+import ExportarReporteBtn from '@/components/ExportarReporteBtn'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,9 +62,19 @@ export default async function AdminReportesPage() {
 
   return (
     <div className="flex flex-col gap-8 pb-10">
-      <header>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Reportes y Métricas</h1>
-        <p className="text-slate-400 mt-1">Vista ejecutiva del portafolio de créditos PLURALL.</p>
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Reportes y Métricas</h1>
+          <p className="text-slate-400 mt-1">Vista ejecutiva del portafolio de créditos PLURALL.</p>
+        </div>
+        {/* Botones de exportación CSV */}
+        <div className="flex flex-wrap gap-2">
+          <ExportarReporteBtn tipo="clientes"    label="Clientes" />
+          <ExportarReporteBtn tipo="creditos"    label="Créditos" />
+          <ExportarReporteBtn tipo="solicitudes" label="Solicitudes" />
+          <ExportarReporteBtn tipo="pagos"       label="Pagos" />
+          <ExportarReporteBtn tipo="mora"        label="Mora" acento />
+        </div>
       </header>
 
       {/* KPIs grid */}

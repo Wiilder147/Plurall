@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatCOP } from '@/lib/calculadora'
+import EditarPerfilForm from '@/components/EditarPerfilForm'
 import {
   User,
   Phone,
@@ -218,15 +219,8 @@ export default async function DashboardPerfil() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">
-          ¿Necesitas actualizar tus datos personales o financieros? Contacta a soporte.
-        </p>
-        <button className="text-orange-600 font-semibold text-sm hover:text-orange-700 transition-colors whitespace-nowrap">
-          Solicitar Actualización
-        </button>
-      </div>
+      {/* ── FORMULARIO DE EDICIÓN ── */}
+      <EditarPerfilForm cliente={cliente} />
     </div>
   )
 }
