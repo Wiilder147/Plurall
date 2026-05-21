@@ -20,6 +20,15 @@ const PASOS = [
   { num: 4, title: 'Resumen',      icon: CheckSquare   },
 ]
 
+// ── Fire-and-forget event tracker ──────────────────────────────────────────
+function trackEvent(evento, metadata = {}) {
+  fetch('/api/eventos/funnel', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ evento, metadata }),
+  }).catch(() => null) // silencioso — nunca bloquea la UX
+}
+
 export default function SolicitarCredito() {
   const router   = useRouter()
   const supabase = createClient()
@@ -66,6 +75,7 @@ export default function SolicitarCredito() {
           .limit(1).single()
 
         if (creditoActivo) {
+          trackEvent('BLOQUEADO_CREDITO_ACTIVO')
           return setBloqueo({
             isLoading: false, isBlocked: true,
             message: 'Tienes un crédito activo. Debes finalizar todos los pagos antes de solicitar uno nuevo.',
@@ -83,6 +93,7 @@ export default function SolicitarCredito() {
         if (lastReq) {
           const diffDias = (Date.now() - new Date(lastReq.fecha_solicitud)) / 86400000
           if (diffDias < 90) {
+            trackEvent('BLOQUEADO_COOLDOWN_90', { dias_restantes: Math.ceil(90 - diffDias) })
             return setBloqueo({
               isLoading: false, isBlocked: true,
               message: `Debes esperar ${Math.ceil(90 - diffDias)} días antes de realizar una nueva solicitud.`,
@@ -91,6 +102,8 @@ export default function SolicitarCredito() {
         }
       }
       setBloqueo({ isLoading: false, isBlocked: false, message: '' })
+      // Registrar que el usuario llegó al calculador (sin bloqueo)
+      trackEvent('INICIO_CALCULADORA')
     }
     auditar()
   }, [])
@@ -122,8 +135,14 @@ export default function SolicitarCredito() {
   function handleFileChange(e, tipo) {
     const file = e.target.files[0]
     if (!file) return
-    if (tipo === 'frontal') setCedulaFrontal(file)
-    if (tipo === 'trasera') setCedulaTrasera(file)
+    if (tipo === 'frontal') {
+      setCedulaFrontal(file)
+      trackEvent('SUBIO_CEDULA_FRONTAL')
+    }
+    if (tipo === 'trasera') {
+      setCedulaTrasera(file)
+      trackEvent('SUBIO_CEDULA_TRASERA')
+    }
   }
 
   // Validar que todas las preguntas obligatorias tengan respuesta
@@ -186,9 +205,11 @@ export default function SolicitarCredito() {
       }
 
       if (data.resultado_buro === 'RECHAZAR') {
+        trackEvent('SOLICITUD_RECHAZADA', { score: data.score })
         alert('Tu solicitud fue rechazada por nuestro comité de riesgo. Puedes intentarlo nuevamente en 90 días.')
         router.push('/dashboard/inicio')
       } else {
+        trackEvent(data.resultado_buro === 'PRE_APROBADO' ? 'SOLICITUD_APROBADA' : 'SOLICITUD_REVISION', { score: data.score })
         router.push('/dashboard/inicio?success=true')
       }
     } catch (err) {
@@ -304,7 +325,7 @@ export default function SolicitarCredito() {
               </div>
             </div>
             <div className="mt-8 flex justify-end">
-              <button onClick={() => setStep(2)}
+              <button onClick={() => { trackEvent('INICIO_CUESTIONARIO', { monto, plazo }); setStep(2) }}
                 className="flex items-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3 px-6 rounded-xl transition-all">
                 Siguiente <ArrowRight className="w-5 h-5" />
               </button>
@@ -388,7 +409,7 @@ export default function SolicitarCredito() {
                 <ArrowLeft className="w-5 h-5" /> Atrás
               </button>
               <button
-                onClick={() => setStep(3)}
+                onClick={() => { trackEvent('INICIO_DOCUMENTOS'); setStep(3) }}
                 disabled={preguntas.length > 0 && !cuestionarioCompleto()}
                 className="flex items-center gap-2 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all"
               >
@@ -435,7 +456,7 @@ export default function SolicitarCredito() {
                 className="flex items-center gap-2 text-slate-500 hover:text-slate-700 font-medium py-3 px-4 rounded-xl transition-all">
                 <ArrowLeft className="w-5 h-5" /> Atrás
               </button>
-              <button onClick={() => setStep(4)}
+              <button onClick={() => { trackEvent('INICIO_RESUMEN'); setStep(4) }}
                 disabled={!cedulaFrontal || !cedulaTrasera}
                 className="flex items-center gap-2 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all">
                 Revisar resumen <ArrowRight className="w-5 h-5" />

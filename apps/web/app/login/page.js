@@ -25,7 +25,9 @@ export default function LoginPage() {
 
     setLoading(true)
 
-    // ── RN-02: Verificar bloqueo antes de intentar login ─────────
+    // ── ENTRENAMIENTO: RN-02: Verificar bloqueo antes de intentar login ─────────
+    // Antes de llamar a Supabase, verificamos si este celular ya superó los 3 intentos fallidos.
+    // Llamamos al método GET de nuestra API de lockout.
     try {
       const lockRes = await fetch(`/api/auth/lockout?celular=${telLimpio}`)
       if (lockRes.ok) {
@@ -38,12 +40,18 @@ export default function LoginPage() {
       }
     } catch { /* Si el endpoint falla, continuamos sin bloqueo */ }
 
+    // ── ENTRENAMIENTO: El Truco del Correo Virtual ─────────────────────────────────
+    // Supabase Auth requiere obligatoriamente un email. Como nuestros usuarios ingresan
+    // su celular, nosotros creamos un "correo virtual" (ej: 3001234567@plurall.app).
+    // Esto nos permite usar el sistema seguro de Supabase sin pagar por SMS de terceros.
     const fakeEmail = `${telLimpio}@plurall.app`.toLowerCase()
     const supabase  = createClient()
     const { error: authError } = await supabase.auth.signInWithPassword({ email: fakeEmail, password })
 
     if (authError) {
-      // ── Registrar intento fallido ─────────────────────────────
+      // ── ENTRENAMIENTO: Registrar intento fallido ─────────────────────────────
+      // Si Supabase dice que la clave es incorrecta, llamamos al método POST de nuestra API.
+      // Esta API sumará +1 a los intentos_fallidos del usuario en la base de datos.
       try {
         const res = await fetch('/api/auth/lockout', {
           method: 'POST',
@@ -64,14 +72,18 @@ export default function LoginPage() {
       return
     }
 
-    // ── Login exitoso: resetear contador de intentos ──────────
+    // ── ENTRENAMIENTO: Login exitoso: resetear contador de intentos ──────────
+    // Si la contraseña es correcta, llamamos al método DELETE de la API
+    // para volver a poner los intentos_fallidos en 0 (el "perdón").
     fetch('/api/auth/lockout', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ celular: telLimpio }),
     }).catch(() => null)
 
-    // ── Redirigir al portal según el rol del usuario ───────────
+    // ── ENTRENAMIENTO: Redirigir al portal según el rol del usuario ───────────
+    // Aquí llamamos a la API /api/auth/portal que revisa si el usuario es CLIENTE o SUPERVISOR
+    // y nos dice a qué ruta enviarlo.
     try {
       const portalRes = await fetch('/api/auth/portal')
       const { portal } = await portalRes.json()
@@ -84,7 +96,9 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-center px-4 relative overflow-hidden">
-      {/* Barra superior — sitio web de Plurall */}
+      {/* ── ENTRENAMIENTO: BARRA SUPERIOR ── 
+           Aviso pegado arriba (fixed top-0) con un link externo hacia la web principal.
+      */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900 text-white flex items-center justify-center gap-2 py-2 px-4 text-xs font-medium">
         <Globe size={13} />
         ¿Quieres conocer más sobre Plurall?&nbsp;
@@ -98,7 +112,9 @@ export default function LoginPage() {
         </a>
       </div>
 
-      {/* Botón volver al inicio */}
+      {/* ── ENTRENAMIENTO: BOTÓN VOLVER ── 
+           Botón flotante (fixed top-12 left-6) para regresar al Home, posicionado debajo de la barra superior.
+      */}
       <Link
         href="/"
         className="fixed top-12 left-6 z-40 inline-flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-slate-200 text-slate-700 hover:text-orange-600 hover:border-orange-300 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm hover:shadow-md group"
@@ -110,12 +126,15 @@ export default function LoginPage() {
         </div>
       </Link>
 
-      {/* Formas decorativas */}
+      {/* ── ENTRENAMIENTO: DECORACIONES DE FONDO ── 
+           Estos divs usan clases globales de Tailwind (definidas en globals.css) 
+           para pintar los triángulos grandes al fondo de la pantalla.
+      */}
       <div className="bg-triangle-orange"></div>
       <div className="bg-triangle-navy"></div>
 
       <div className="w-full max-w-sm animate-fade-in relative z-10 flex flex-col items-center">
-        {/* Logo */}
+        {/* ── ENTRENAMIENTO: LOGO ── */}
         <div className="w-14 h-14 bg-navy-900 rounded-xl flex items-center justify-center mb-6 shadow-md">
           <span className="text-white font-extrabold text-2xl">P</span>
         </div>
@@ -128,7 +147,9 @@ export default function LoginPage() {
           ingresa tu celular registrado
         </p>
 
-        {/* Formulario */}
+        {/* ── ENTRENAMIENTO: FORMULARIO PRINCIPAL ── 
+             Al enviar el form (onSubmit), se dispara la lógica handleLogin() explicada arriba.
+        */}
         <form onSubmit={handleLogin} className="w-full space-y-4 flex flex-col items-center">
           {error && (
             <div className="w-full bg-danger/10 text-danger rounded-lg p-3 text-sm animate-fade-in text-center">
@@ -183,7 +204,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Links inferiores */}
+        {/* ── ENTRENAMIENTO: ENLACES INFERIORES ── 
+             Redirigen a las otras vistas de autenticación (Recuperar y Registro).
+        */}
         <div className="mt-8 flex flex-col items-center gap-2">
           <Link href="/recuperar" className="text-navy-400 hover:text-navy-600 text-sm lowercase transition">
             olvidé la contraseña

@@ -1,6 +1,7 @@
+
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
@@ -10,24 +11,28 @@ import {
 import {
   TrendingUp, AlertTriangle, Users, DollarSign,
   CheckCircle2, ShieldAlert, ArrowRight, RefreshCw,
-  BarChart3, Activity, TrendingDown, Filter,
+  BarChart3, Activity, TrendingDown, Calendar,
+  ChevronLeft, ChevronRight, X, Filter,
 } from 'lucide-react'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const COP = (v) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v ?? 0)
+const COP = (v) => new Intl.NumberFormat('es-CO', {
+  style: 'currency', currency: 'COP',
+  minimumFractionDigits: 0, maximumFractionDigits: 0,
+}).format(v ?? 0)
 const NUM = (v) => (v ?? 0).toLocaleString('es-CO')
+const ISO = (d) => d.toISOString().slice(0, 10)
 
-// Tooltip personalizado
 function TooltipCOP({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-xl text-xs">
+    <div className="bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-xl text-xs min-w-[160px]">
       <p className="text-slate-400 font-semibold mb-2">{label}</p>
       {payload.map((p) => (
         <div key={p.dataKey} className="flex items-center gap-2 mb-1">
-          <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-slate-300">{p.name}:</span>
-          <span className="font-bold" style={{ color: p.color }}>
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
+          <span className="text-slate-300 truncate">{p.name}:</span>
+          <span className="font-bold ml-auto" style={{ color: p.color }}>
             {typeof p.value === 'number' && p.value > 10000 ? COP(p.value) : NUM(p.value)}
           </span>
         </div>
@@ -36,27 +41,224 @@ function TooltipCOP({ active, payload, label }) {
   )
 }
 
+// ── Componente de calendario para selección de rango ─────────────────────────
+function DateRangePicker({ desde, hasta, onChange, onClose }) {
+  const hoy = new Date()
+  const [viewYear,  setViewYear]  = useState(hoy.getFullYear())
+  const [viewMonth, setViewMonth] = useState(hoy.getMonth())
+  const [selecting, setSelecting] = useState('desde') // 'desde' | 'hasta'
+  const [tempDesde, setTempDesde] = useState(desde)
+  const [tempHasta, setTempHasta] = useState(hasta)
+
+  const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  const DIAS  = ['Do','Lu','Ma','Mi','Ju','Vi','Sa']
+
+  function getDaysInMonth(y, m) {
+    return new Date(y, m + 1, 0).getDate()
+  }
+  function getFirstDayOfMonth(y, m) {
+    return new Date(y, m, 1).getDay()
+  }
+
+  function handleDayClick(day) {
+    const d = ISO(new Date(viewYear, viewMonth, day))
+    if (selecting === 'desde') {
+      setTempDesde(d)
+      setTempHasta(d)
+      setSelecting('hasta')
+    } else {
+      if (d < tempDesde) {
+        setTempHasta(tempDesde)
+        setTempDesde(d)
+      } else {
+        setTempHasta(d)
+      }
+      setSelecting('desde')
+    }
+  }
+
+  function isInRange(day) {
+    const d = ISO(new Date(viewYear, viewMonth, day))
+    return d >= tempDesde && d <= tempHasta
+  }
+  function isStart(day) { return ISO(new Date(viewYear, viewMonth, day)) === tempDesde }
+  function isEnd(day)   { return ISO(new Date(viewYear, viewMonth, day)) === tempHasta }
+
+  const totalDays   = getDaysInMonth(viewYear, viewMonth)
+  const firstDay    = getFirstDayOfMonth(viewYear, viewMonth)
+  const cells       = Array.from({ length: firstDay + totalDays }, (_, i) => i < firstDay ? null : i - firstDay + 1)
+
+  // Atajos rápidos
+  const shortcuts = [
+    { label: 'Hoy',         fn: () => { const d = ISO(hoy); setTempDesde(d); setTempHasta(d) } },
+    { label: 'Esta semana', fn: () => {
+      const lun = new Date(hoy); lun.setDate(hoy.getDate() - hoy.getDay() + 1)
+      setTempDesde(ISO(lun)); setTempHasta(ISO(hoy))
+    }},
+    { label: 'Este mes',    fn: () => {
+      setTempDesde(ISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1)))
+      setTempHasta(ISO(hoy))
+    }},
+    { label: 'Último mes',  fn: () => {
+      const ini = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
+      const fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0)
+      setTempDesde(ISO(ini)); setTempHasta(ISO(fin))
+    }},
+    { label: 'Últ. 3 meses',fn: () => {
+      const ini = new Date(hoy); ini.setMonth(ini.getMonth() - 3)
+      setTempDesde(ISO(ini)); setTempHasta(ISO(hoy))
+    }},
+    { label: 'Últ. 6 meses',fn: () => {
+      const ini = new Date(hoy); ini.setMonth(ini.getMonth() - 6)
+      setTempDesde(ISO(ini)); setTempHasta(ISO(hoy))
+    }},
+    { label: 'Este año',    fn: () => {
+      setTempDesde(`${hoy.getFullYear()}-01-01`)
+      setTempHasta(ISO(hoy))
+    }},
+    { label: 'Año pasado',  fn: () => {
+      const y = hoy.getFullYear() - 1
+      setTempDesde(`${y}-01-01`); setTempHasta(`${y}-12-31`)
+    }},
+  ]
+
+  return (
+    <div className="absolute top-full right-0 mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl shadow-black/40 flex overflow-hidden"
+      style={{ minWidth: 520 }}>
+
+      {/* Atajos */}
+      <div className="w-36 border-r border-slate-700 p-3 flex flex-col gap-1">
+        <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-2 px-1">Atajos</p>
+        {shortcuts.map(s => (
+          <button key={s.label} onClick={s.fn}
+            className="text-left text-xs text-slate-400 hover:text-white hover:bg-slate-700 px-3 py-2 rounded-lg transition-all">
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Calendario */}
+      <div className="flex-1 p-4">
+        {/* Navegación mes */}
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y-1) } else setViewMonth(m => m-1) }}
+            className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-all">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-white font-semibold text-sm">
+            {MESES[viewMonth]} {viewYear}
+          </span>
+          <button onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y+1) } else setViewMonth(m => m+1) }}
+            className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-all">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Días de la semana */}
+        <div className="grid grid-cols-7 mb-2">
+          {DIAS.map(d => (
+            <div key={d} className="text-center text-slate-500 text-xs font-semibold py-1">{d}</div>
+          ))}
+        </div>
+
+        {/* Celdas del mes */}
+        <div className="grid grid-cols-7 gap-0.5">
+          {cells.map((day, idx) => {
+            if (!day) return <div key={idx} />
+            const inRange = isInRange(day)
+            const start   = isStart(day)
+            const end     = isEnd(day)
+            return (
+              <button key={idx} onClick={() => handleDayClick(day)}
+                className={`
+                  h-8 w-full text-xs font-medium rounded-lg transition-all
+                  ${start || end ? 'bg-indigo-500 text-white font-bold' :
+                    inRange ? 'bg-indigo-500/20 text-indigo-300' :
+                    'text-slate-300 hover:bg-slate-700 hover:text-white'}
+                `}>
+                {day}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Rango seleccionado + botones */}
+        <div className="mt-4 pt-4 border-t border-slate-700">
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`flex-1 bg-slate-800 border rounded-xl px-3 py-2 text-xs ${selecting === 'desde' ? 'border-indigo-500' : 'border-slate-700'}`}>
+              <p className="text-slate-500 text-xs mb-0.5">Desde</p>
+              <p className="text-white font-semibold">{tempDesde || '—'}</p>
+            </div>
+            <span className="text-slate-600">→</span>
+            <div className={`flex-1 bg-slate-800 border rounded-xl px-3 py-2 text-xs ${selecting === 'hasta' ? 'border-indigo-500' : 'border-slate-700'}`}>
+              <p className="text-slate-500 text-xs mb-0.5">Hasta</p>
+              <p className="text-white font-semibold">{tempHasta || '—'}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onClose}
+              className="flex-1 py-2 rounded-xl text-sm text-slate-400 hover:bg-slate-700 transition-all border border-slate-700">
+              Cancelar
+            </button>
+            <button
+              onClick={() => { onChange(tempDesde, tempHasta); onClose() }}
+              disabled={!tempDesde || !tempHasta}
+              className="flex-1 py-2 rounded-xl text-sm bg-indigo-500 hover:bg-indigo-400 disabled:opacity-50 text-white font-semibold transition-all">
+              Aplicar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function SupervisorCharts() {
-  const [data,       setData]       = useState(null)
-  const [loading,    setLoading]    = useState(true)
-  const [meses,      setMeses]      = useState(12)
-  const [graficaActiva, setGrafica] = useState('cartera') // cartera | desembolsos | recaudo | solicitudes | mora
+  const hoy = new Date()
+  const hace12 = new Date(hoy); hace12.setMonth(hace12.getMonth() - 12)
+
+  const [data,          setData]          = useState(null)
+  const [loading,       setLoading]       = useState(true)
+  const [graficaActiva, setGrafica]       = useState('cartera')
+  const [agrupacion,    setAgrupacion]    = useState('mes')
+  const [showCalendar,  setShowCalendar]  = useState(false)
+  const [modoFecha,     setModoFecha]     = useState('meses') // 'meses' | 'rango'
+  const [meses,         setMeses]         = useState(12)
+  const [desde,         setDesde]         = useState(ISO(hace12))
+  const [hasta,         setHasta]         = useState(ISO(hoy))
+  const calRef = useRef(null)
+
+  // Cerrar calendario al hacer click fuera
+  useEffect(() => {
+    function handleClick(e) {
+      if (calRef.current && !calRef.current.contains(e.target)) setShowCalendar(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   const cargar = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/supervisor/dashboard-data?meses=${meses}`)
+      let url
+      if (modoFecha === 'rango') {
+        url = `/api/supervisor/dashboard-data?desde=${desde}&hasta=${hasta}&agrupacion=${agrupacion}`
+      } else {
+        url = `/api/supervisor/dashboard-data?meses=${meses}&agrupacion=${agrupacion}`
+      }
+      const res  = await fetch(url)
       const json = await res.json()
       setData(json)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-    }
-  }, [meses])
+    } catch (e) { console.error(e) }
+    finally { setLoading(false) }
+  }, [meses, desde, hasta, agrupacion, modoFecha])
 
   useEffect(() => { cargar() }, [cargar])
+
+  function handleRangoChange(d, h) {
+    setDesde(d); setHasta(h); setModoFecha('rango')
+  }
 
   if (loading || !data) {
     return (
@@ -70,29 +272,33 @@ export default function SupervisorCharts() {
   const { serie, kpis, tramos } = data
   const totalActivos = kpis.creditosActivos + kpis.creditosMora
 
-  // KPI cards
   const kpiCards = [
-    { label: 'Solicitudes por revisar', value: NUM(kpis.totalClientes),    icon: Users,         color: 'text-blue-400 bg-blue-500/10',      href: '/supervisor/solicitudes' },
-    { label: 'Créditos activos',        value: NUM(kpis.creditosActivos),  icon: TrendingUp,    color: 'text-emerald-400 bg-emerald-500/10', href: '/supervisor/cartera'     },
-    { label: 'Créditos en mora',        value: NUM(kpis.creditosMora),     icon: AlertTriangle, color: 'text-red-400 bg-red-500/10',         href: '/supervisor/mora'        },
-    { label: 'Cuotas vencidas',         value: NUM(kpis.cuotasVencidas),   icon: ShieldAlert,   color: 'text-orange-400 bg-orange-500/10',   href: '/supervisor/mora'        },
-    { label: 'Cartera activa',          value: COP(kpis.carteraSaldo),     icon: DollarSign,    color: 'text-indigo-400 bg-indigo-500/10',   href: '/supervisor/cartera'     },
-    { label: 'Indicador de mora',       value: `${kpis.indicadorMora}%`,   icon: TrendingDown,  color: parseFloat(kpis.indicadorMora) > 5 ? 'text-red-400 bg-red-500/10' : 'text-emerald-400 bg-emerald-500/10', href: '/supervisor/mora' },
+    { label: 'Clientes registrados', value: NUM(kpis.totalClientes),   icon: Users,         color: 'text-blue-400 bg-blue-500/10',       href: '/supervisor/clientes'    },
+    { label: 'Créditos activos',     value: NUM(kpis.creditosActivos), icon: TrendingUp,    color: 'text-emerald-400 bg-emerald-500/10', href: '/supervisor/cartera'     },
+    { label: 'Créditos en mora',     value: NUM(kpis.creditosMora),    icon: AlertTriangle, color: 'text-red-400 bg-red-500/10',         href: '/supervisor/mora'        },
+    { label: 'Cuotas vencidas',      value: NUM(kpis.cuotasVencidas),  icon: ShieldAlert,   color: 'text-orange-400 bg-orange-500/10',   href: '/supervisor/mora'        },
+    { label: 'Cartera activa',       value: COP(kpis.carteraSaldo),    icon: DollarSign,    color: 'text-indigo-400 bg-indigo-500/10',   href: '/supervisor/cartera'     },
+    { label: 'Indicador de mora',    value: `${kpis.indicadorMora}%`,  icon: TrendingDown,
+      color: parseFloat(kpis.indicadorMora) > 5 ? 'text-red-400 bg-red-500/10' : 'text-emerald-400 bg-emerald-500/10',
+      href: '/supervisor/mora' },
   ]
 
-  // Tabs de gráficas
   const tabs = [
-    { key: 'cartera',      label: 'Cartera',      icon: Activity   },
-    { key: 'desembolsos',  label: 'Desembolsos',  icon: TrendingUp },
-    { key: 'recaudo',      label: 'Recaudo',      icon: CheckCircle2 },
-    { key: 'solicitudes',  label: 'Solicitudes',  icon: BarChart3  },
-    { key: 'mora',         label: 'Mora',         icon: AlertTriangle },
+    { key: 'cartera',     label: 'Cartera',     icon: Activity    },
+    { key: 'desembolsos', label: 'Desembolsos', icon: TrendingUp  },
+    { key: 'recaudo',     label: 'Recaudo',     icon: CheckCircle2},
+    { key: 'solicitudes', label: 'Solicitudes', icon: BarChart3   },
+    { key: 'mora',        label: 'Mora',        icon: AlertTriangle},
   ]
+
+  const labelFiltro = modoFecha === 'rango'
+    ? `${desde} → ${hasta}`
+    : `Últimos ${meses} meses`
 
   return (
     <div className="flex flex-col gap-6">
 
-      {/* ── KPI Cards ── */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {kpiCards.map(({ label, value, icon: Icon, color, href }) => (
           <Link key={label} href={href}
@@ -106,9 +312,8 @@ export default function SupervisorCharts() {
         ))}
       </div>
 
-      {/* ── Cartera + Mora ── */}
+      {/* Cartera + Mora */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Cartera activa */}
         <div className="bg-gradient-to-br from-blue-700 to-blue-900 rounded-2xl p-6 text-white shadow-xl">
           <p className="text-blue-200 text-xs font-semibold uppercase tracking-wide mb-1">Cartera activa total</p>
           <p className="text-4xl font-extrabold">{COP(kpis.carteraSaldo)}</p>
@@ -119,7 +324,6 @@ export default function SupervisorCharts() {
             <span className="text-red-300">{kpis.creditosMora} en mora</span>
           </div>
         </div>
-        {/* Indicador mora */}
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
           <p className="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-2">Indicador de mora</p>
           <p className={`text-4xl font-extrabold ${parseFloat(kpis.indicadorMora) > 5 ? 'text-red-400' : 'text-emerald-400'}`}>
@@ -135,181 +339,222 @@ export default function SupervisorCharts() {
         </div>
       </div>
 
-      {/* ── Panel de gráficas interactivo ── */}
+      {/* KPIs del período */}
+      {kpis.periodo && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Desembolsado en período', value: COP(kpis.periodo.desembolsado), color: 'text-indigo-400' },
+            { label: 'Recaudado en período',    value: COP(kpis.periodo.recaudado),    color: 'text-emerald-400' },
+            { label: 'Solicitudes en período',  value: NUM(kpis.periodo.solicitudes),  color: 'text-yellow-400' },
+            { label: 'Créditos en período',     value: NUM(kpis.periodo.creditos),     color: 'text-blue-400' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+              <p className={`text-xl font-extrabold ${color}`}>{value}</p>
+              <p className="text-slate-500 text-xs mt-0.5">{label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Panel de gráficas */}
       <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
-        {/* Header con filtros */}
-        <div className="px-6 py-4 border-b border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <Activity className="w-4 h-4 text-indigo-400" /> Análisis histórico
-          </h2>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Selector de período */}
-            <div className="flex items-center gap-1 bg-slate-700 rounded-xl p-1">
-              {[3, 6, 12].map(m => (
-                <button key={m} onClick={() => setMeses(m)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    meses === m ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-slate-200'
+        {/* Header con todos los filtros */}
+        <div className="px-6 py-4 border-b border-slate-700 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <Activity className="w-4 h-4 text-indigo-400" /> Análisis histórico
+              <span className="text-xs text-slate-500 font-normal ml-1">· {labelFiltro}</span>
+            </h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Agrupación */}
+              <div className="flex items-center gap-1 bg-slate-700 rounded-xl p-1">
+                {[['dia','Día'],['semana','Sem'],['mes','Mes']].map(([k,l]) => (
+                  <button key={k} onClick={() => setAgrupacion(k)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${agrupacion === k ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-slate-200'}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {/* Período rápido */}
+              <div className="flex items-center gap-1 bg-slate-700 rounded-xl p-1">
+                {[3,6,12,24].map(m => (
+                  <button key={m} onClick={() => { setMeses(m); setModoFecha('meses') }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${modoFecha === 'meses' && meses === m ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-slate-200'}`}>
+                    {m}m
+                  </button>
+                ))}
+              </div>
+              {/* Botón calendario */}
+              <div className="relative" ref={calRef}>
+                <button onClick={() => setShowCalendar(v => !v)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                    modoFecha === 'rango'
+                      ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
+                      : 'bg-slate-700 border-slate-600 text-slate-400 hover:text-slate-200'
                   }`}>
-                  {m}m
+                  <Calendar className="w-3.5 h-3.5" />
+                  {modoFecha === 'rango' ? `${desde} → ${hasta}` : 'Rango'}
+                  {modoFecha === 'rango' && (
+                    <span onClick={(e) => { e.stopPropagation(); setModoFecha('meses') }}
+                      className="ml-1 hover:text-red-400 transition-colors">
+                      <X className="w-3 h-3" />
+                    </span>
+                  )}
                 </button>
-              ))}
+                {showCalendar && (
+                  <DateRangePicker
+                    desde={desde} hasta={hasta}
+                    onChange={handleRangoChange}
+                    onClose={() => setShowCalendar(false)}
+                  />
+                )}
+              </div>
+              <button onClick={cargar}
+                className="p-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-400 hover:text-slate-200 transition-all">
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
             </div>
-            {/* Selector de gráfica */}
-            <div className="flex items-center gap-1 bg-slate-700 rounded-xl p-1">
-              {tabs.map(({ key, label, icon: Icon }) => (
-                <button key={key} onClick={() => setGrafica(key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    graficaActiva === key ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-slate-200'
-                  }`}>
-                  <Icon className="w-3 h-3" />{label}
-                </button>
-              ))}
-            </div>
-            <button onClick={cargar}
-              className="p-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-400 hover:text-slate-200 transition-all">
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
+          </div>
+          {/* Tabs de gráfica */}
+          <div className="flex gap-1 flex-wrap">
+            {tabs.map(({ key, label, icon: Icon }) => (
+              <button key={key} onClick={() => setGrafica(key)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  graficaActiva === key ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20' : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-slate-200'
+                }`}>
+                <Icon className="w-3.5 h-3.5" />{label}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Gráfica */}
         <div className="p-6">
-          <ResponsiveContainer width="100%" height={320}>
-            {graficaActiva === 'cartera' ? (
-              <AreaChart data={serie} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradCartera" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="gradDesemb" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<TooltipCOP />} />
-                <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
-                <Area type="monotone" dataKey="carteraAcumulada" name="Cartera acumulada" stroke="#6366f1" fill="url(#gradCartera)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: '#6366f1' }} />
-                <Area type="monotone" dataKey="desembolsado" name="Desembolsado" stroke="#10b981" fill="url(#gradDesemb)" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#10b981' }} />
-              </AreaChart>
-            ) : graficaActiva === 'desembolsos' ? (
-              <BarChart data={serie} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<TooltipCOP />} />
-                <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
-                <Bar dataKey="desembolsado" name="Desembolsado" fill="#6366f1" radius={[4,4,0,0]} />
-                <Bar dataKey="recaudado"    name="Recaudado"    fill="#10b981" radius={[4,4,0,0]} />
-              </BarChart>
-            ) : graficaActiva === 'recaudo' ? (
-              <AreaChart data={serie} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradRecaudo" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#10b981" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<TooltipCOP />} />
-                <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
-                <Area type="monotone" dataKey="recaudado" name="Recaudado" stroke="#10b981" fill="url(#gradRecaudo)" strokeWidth={2.5} dot={{ r: 3, fill: '#10b981' }} activeDot={{ r: 6 }} />
-                <Area type="monotone" dataKey="desembolsado" name="Desembolsado" stroke="#6366f1" fill="none" strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
-              </AreaChart>
-            ) : graficaActiva === 'solicitudes' ? (
-              <BarChart data={serie} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<TooltipCOP />} />
-                <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
-                <Bar dataKey="solicitudes" name="Total solicitudes" fill="#6366f1" radius={[4,4,0,0]} />
-                <Bar dataKey="aprobadas"   name="Aprobadas"         fill="#10b981" radius={[4,4,0,0]} />
-                <Bar dataKey="rechazadas"  name="Rechazadas"        fill="#ef4444" radius={[4,4,0,0]} />
-              </BarChart>
-            ) : (
-              /* Mora — gráfica de línea con área */
-              <AreaChart data={serie} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradMora" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<TooltipCOP />} />
-                <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
-                <ReferenceLine y={0} stroke="#334155" />
-                <Area type="monotone" dataKey="enMora"         name="Créditos en mora"  stroke="#ef4444" fill="url(#gradMora)" strokeWidth={2.5} dot={{ r: 3, fill: '#ef4444' }} activeDot={{ r: 6 }} />
-                <Area type="monotone" dataKey="creditosNuevos" name="Créditos nuevos"   stroke="#6366f1" fill="none" strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
-              </AreaChart>
-            )}
-          </ResponsiveContainer>
+          {serie.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-slate-500">
+              <BarChart3 className="w-12 h-12 mb-3 opacity-40" />
+              <p>Sin datos para el período seleccionado.</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              {graficaActiva === 'cartera' ? (
+                <AreaChart data={serie} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gC" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="gD" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<TooltipCOP />} />
+                  <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
+                  <Area type="monotone" dataKey="carteraAcumulada" name="Cartera acumulada" stroke="#6366f1" fill="url(#gC)" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                  <Area type="monotone" dataKey="desembolsado"     name="Desembolsado"      stroke="#10b981" fill="url(#gD)" strokeWidth={2}   dot={false} activeDot={{ r: 4 }} />
+                </AreaChart>
+              ) : graficaActiva === 'desembolsos' ? (
+                <BarChart data={serie} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<TooltipCOP />} />
+                  <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
+                  <Bar dataKey="desembolsado"  name="Desembolsado" fill="#6366f1" radius={[4,4,0,0]} />
+                  <Bar dataKey="recaudado"     name="Recaudado"    fill="#10b981" radius={[4,4,0,0]} />
+                </BarChart>
+              ) : graficaActiva === 'recaudo' ? (
+                <AreaChart data={serie} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#10b981" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={v => `$${(v/1000000).toFixed(1)}M`} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<TooltipCOP />} />
+                  <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
+                  <Area type="monotone" dataKey="recaudado"    name="Recaudado"    stroke="#10b981" fill="url(#gR)" strokeWidth={2.5} dot={{ r: 3, fill: '#10b981' }} activeDot={{ r: 6 }} />
+                  <Area type="monotone" dataKey="desembolsado" name="Desembolsado" stroke="#6366f1" fill="none"     strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
+                </AreaChart>
+              ) : graficaActiva === 'solicitudes' ? (
+                <BarChart data={serie} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<TooltipCOP />} />
+                  <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
+                  <Bar dataKey="solicitudes" name="Total"      fill="#6366f1" radius={[4,4,0,0]} />
+                  <Bar dataKey="aprobadas"   name="Aprobadas"  fill="#10b981" radius={[4,4,0,0]} />
+                  <Bar dataKey="rechazadas"  name="Rechazadas" fill="#ef4444" radius={[4,4,0,0]} />
+                </BarChart>
+              ) : (
+                <AreaChart data={serie} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gM" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<TooltipCOP />} />
+                  <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
+                  <Area type="monotone" dataKey="enMora"         name="En mora"        stroke="#ef4444" fill="url(#gM)" strokeWidth={2.5} dot={{ r: 3, fill: '#ef4444' }} activeDot={{ r: 6 }} />
+                  <Area type="monotone" dataKey="creditosNuevos" name="Créditos nuevos" stroke="#6366f1" fill="none"     strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
+                </AreaChart>
+              )}
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
-      {/* ── Gráfica de tramos de mora ── */}
+      {/* Tramos de mora */}
       {kpis.creditosMora > 0 && (
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
           <h2 className="font-semibold text-slate-300 mb-5 flex items-center gap-2 text-sm">
             <BarChart3 className="w-4 h-4 text-red-400" /> Distribución de mora por tramos
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Barras horizontales */}
-            <div className="flex flex-col gap-4">
-              {tramos.map((t) => {
-                const maxMonto = Math.max(...tramos.map(x => x.monto), 1)
-                const pct = Math.max(t.count > 0 ? 6 : 0, (t.monto / maxMonto) * 100)
-                const color = t.label === '1-30d' ? 'bg-yellow-500' : t.label === '31-60d' ? 'bg-orange-500' : t.label === '61-90d' ? 'bg-red-500' : 'bg-red-900'
-                const textColor = t.label === '1-30d' ? 'text-yellow-400' : t.label === '31-60d' ? 'text-orange-400' : 'text-red-400'
-                return (
-                  <div key={t.label} className="flex items-center gap-3">
-                    <span className="text-slate-400 text-xs w-14 shrink-0 font-mono">{t.label}</span>
-                    <div className="flex-1 bg-slate-700 rounded-full h-6 overflow-hidden">
-                      <div className={`${color} h-6 rounded-full flex items-center justify-end pr-2 transition-all duration-700`}
-                        style={{ width: `${pct}%` }}>
-                        {t.count > 0 && <span className="text-white text-xs font-bold">{t.count}</span>}
-                      </div>
+          <div className="flex flex-col gap-4">
+            {tramos.map((t) => {
+              const maxM = Math.max(...tramos.map(x => x.monto), 1)
+              const pct  = Math.max(t.count > 0 ? 6 : 0, (t.monto / maxM) * 100)
+              const col  = t.label === '1-30d' ? 'bg-yellow-500' : t.label === '31-60d' ? 'bg-orange-500' : t.label === '61-90d' ? 'bg-red-500' : 'bg-red-900'
+              const txt  = t.label === '1-30d' ? 'text-yellow-400' : t.label === '31-60d' ? 'text-orange-400' : 'text-red-400'
+              return (
+                <div key={t.label} className="flex items-center gap-3">
+                  <span className="text-slate-400 text-xs w-14 shrink-0 font-mono">{t.label}</span>
+                  <div className="flex-1 bg-slate-700 rounded-full h-6 overflow-hidden">
+                    <div className={`${col} h-6 rounded-full flex items-center justify-end pr-2 transition-all duration-700`}
+                      style={{ width: `${pct}%` }}>
+                      {t.count > 0 && <span className="text-white text-xs font-bold">{t.count}</span>}
                     </div>
-                    <span className={`text-xs font-bold w-28 text-right ${textColor}`}>{COP(t.monto)}</span>
                   </div>
-                )
-              })}
-            </div>
-            {/* Mini gráfica de dona (CSS) */}
-            <div className="flex flex-col gap-3">
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={tramos} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                  <XAxis type="number" tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}`} />
-                  <YAxis type="category" dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} width={45} />
-                  <Tooltip content={<TooltipCOP />} />
-                  <Bar dataKey="count" name="Créditos" radius={[0,4,4,0]}
-                    fill="#ef4444"
-                    label={{ position: 'right', fill: '#94a3b8', fontSize: 11 }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="grid grid-cols-2 gap-2">
-                {tramos.map(t => (
-                  <div key={t.label} className="bg-slate-700/50 rounded-xl p-3 text-center">
-                    <p className="text-lg font-extrabold text-red-400">{t.count}</p>
-                    <p className="text-slate-500 text-xs">{t.label}</p>
-                  </div>
-                ))}
+                  <span className={`text-xs font-bold w-28 text-right ${txt}`}>{COP(t.monto)}</span>
+                </div>
+              )
+            })}
+          </div>
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {tramos.map(t => (
+              <div key={t.label} className="bg-slate-700/50 rounded-xl p-3 text-center">
+                <p className="text-xl font-extrabold text-red-400">{t.count}</p>
+                <p className="text-slate-500 text-xs mt-0.5">{t.label}</p>
+                <p className="text-slate-400 text-xs">{COP(t.monto)}</p>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* ── Solicitudes recientes + Mora crítica ── */}
+      {/* Solicitudes + Mora crítica */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
@@ -334,7 +579,6 @@ export default function SupervisorCharts() {
   )
 }
 
-// ── Sub-componentes que cargan sus propios datos ──────────────────────────────
 function SolicitudesRecientes() {
   const [items, setItems] = useState([])
   useEffect(() => {

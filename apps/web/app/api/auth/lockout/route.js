@@ -9,8 +9,10 @@ function getServiceClient() {
   )
 }
 
+// ── ENTRENAMIENTO: Método GET (Lectura del estado de bloqueo) ───────────────
 // GET /api/auth/lockout?celular=3001234567
-// → { bloqueado: bool, minutosRestantes: number, intentos: number }
+// Lo llama el frontend ANTES de enviar la contraseña a Supabase.
+// Devuelve: { bloqueado: bool, minutosRestantes: number, intentos: number }
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const celular = searchParams.get('celular')?.replace(/\D/g, '')
@@ -45,21 +47,25 @@ export async function GET(request) {
 
   const ahora = new Date()
   const bloqueadoHasta = perfil.bloqueado_hasta ? new Date(perfil.bloqueado_hasta) : null
-  const estaBloqueado  = bloqueadoHasta && bloqueadoHasta > ahora
+  const estaBloqueado = bloqueadoHasta && bloqueadoHasta > ahora
 
   const minutosRestantes = estaBloqueado
     ? Math.ceil((bloqueadoHasta - ahora) / 60000)
     : 0
 
   return NextResponse.json({
-    bloqueado:       estaBloqueado,
+    bloqueado: estaBloqueado,
     minutosRestantes,
-    intentos:        perfil.intentos_fallidos,
+    intentos: perfil.intentos_fallidos,
   })
 }
 
+// ── ENTRENAMIENTO: Método POST (Registro de error) ──────────────────────────
 // POST /api/auth/lockout  body: { celular }
-// → incrementa intentos_fallidos, bloquea tras 3 intentos por 30 min
+// Lo llama el frontend cuando Supabase dice "Contraseña incorrecta".
+// Incrementa la columna intentos_fallidos. Si llega a 3, guarda una fecha
+// 30 minutos en el futuro en la columna bloqueado_hasta.
+// RN-05: Resetear intentos de login por bloqueo
 export async function POST(request) {
   const { celular: rawCelular } = await request.json()
   const celular = rawCelular?.replace(/\D/g, '')
@@ -103,7 +109,7 @@ export async function POST(request) {
     .eq('id', clienteRow.id_usuario_cuenta)
 
   return NextResponse.json({
-    ok:       true,
+    ok: true,
     intentos: nuevosIntentos,
     bloqueado: nuevosIntentos >= LIMITE,
   })

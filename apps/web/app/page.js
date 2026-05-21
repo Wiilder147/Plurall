@@ -6,7 +6,9 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-white text-navy-900 overflow-x-hidden font-sans">
 
-      {/* ── NAVEGACIÓN ── */}
+      {/* ── ENTRENAMIENTO: NAVEGACIÓN (Navbar) ── 
+           Esta barra se mantiene fija en la parte superior (sticky top-0) con un efecto de desenfoque (backdrop-blur-xl).
+      */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 lg:px-12 py-4">
           {/* Logo */}
@@ -25,7 +27,10 @@ export default function HomePage() {
             <Link href="#" className="text-slate-500 hover:text-navy-900 font-medium text-sm transition-colors">Recursos</Link>
           </div>
 
-          {/* CTA */}
+          {/* ── ENTRENAMIENTO: CTAs (Llamados a la Acción) ── 
+               Aquí vemos cómo los botones principales dirigen al usuario hacia 
+               el embudo de autenticación (/login) 
+          */}
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-slate-600 hover:text-navy-900 font-semibold text-sm transition-colors hidden sm:block">
               Iniciar Sesión
@@ -37,7 +42,9 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* ── HERO SECTION ── */}
+      {/* ── ENTRENAMIENTO: HERO SECTION (Sección Principal) ── 
+           Es lo primero que ve el usuario. Utiliza animaciones (animate-fade-in) e imágenes para atrapar la atención.
+      */}
       <section className="relative overflow-hidden">
         {/* Decorative background */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-orange-50/30"></div>
@@ -46,7 +53,7 @@ export default function HomePage() {
 
         <div className="relative max-w-7xl mx-auto px-6 lg:px-12 py-16 lg:py-24">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
-            
+
             {/* Columna Izquierda: Texto */}
             <div className="w-full lg:w-1/2 flex flex-col items-center text-center lg:items-start lg:text-left animate-fade-in">
               {/* Badge */}
@@ -59,12 +66,16 @@ export default function HomePage() {
                 Donde tus planes
                 <span className="block text-accent-500">comienzan a rodar</span>
               </h1>
-              
+
               <p className="mt-6 text-lg sm:text-xl text-slate-500 leading-relaxed max-w-lg">
-                Créditos digitales rápidos, transparentes y sin papeleos. 
+                Créditos digitales rápidos, transparentes y sin papeleos.
                 Todo desde tu celular, aprobación en minutos.
               </p>
-              
+
+              {/* ── ENTRENAMIENTO: Botones principales del Hero ── 
+                   Ambos botones "Simula tu Préstamo" y "Ya tengo cuenta" apuntan a /login, 
+                   ya que desde el login se distribuye a registro o dashboard. 
+              */}
               <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
                 <Link href="/login" className="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white font-bold text-lg px-8 py-4 rounded-full transition-all hover:scale-105 shadow-xl shadow-accent-500/25">
                   Simula tu Préstamo
@@ -100,9 +111,9 @@ export default function HomePage() {
                 <div className="absolute -inset-4 bg-gradient-to-br from-accent-500/20 to-navy-900/10 rounded-3xl blur-2xl"></div>
                 <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-navy-900/15 border-2 border-white">
                   <div className="aspect-[4/3] relative">
-                    <Image 
-                      src="/hero.png" 
-                      alt="Comerciante colombiana exitosa en su negocio" 
+                    <Image
+                      src="/hero.png"
+                      alt="Comerciante colombiana exitosa en su negocio"
                       fill
                       priority
                       className="object-cover object-center"
@@ -136,7 +147,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── BENEFICIOS ── */}
+      {/* ── ENTRENAMIENTO: SECCIÓN DE BENEFICIOS ── 
+           Grid de 4 columnas (en desktop) que resalta las ventajas competitivas.
+      */}
       <section id="beneficios" className="bg-slate-50 border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-28">
           <div className="text-center mb-16">
@@ -151,27 +164,27 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { 
-                icon: Clock, 
-                title: 'Aprobación Express', 
+              {
+                icon: Clock,
+                title: 'Aprobación Express',
                 desc: 'Respuesta en menos de 24 horas. Sin filas, sin citas, sin desplazamientos.',
                 color: 'bg-blue-50 text-blue-600'
               },
-              { 
-                icon: Shield, 
-                title: '100% Seguro', 
+              {
+                icon: Shield,
+                title: '100% Seguro',
                 desc: 'Tu información está protegida con cifrado bancario y cumplimiento SARLAFT.',
                 color: 'bg-emerald-50 text-emerald-600'
               },
-              { 
-                icon: Smartphone, 
-                title: 'Todo Digital', 
+              {
+                icon: Smartphone,
+                title: 'Todo Digital',
                 desc: 'Solicita, firma y paga desde tu celular. Sin papeles, sin sucursales físicas.',
                 color: 'bg-accent-50 text-accent-600'
               },
-              { 
-                icon: TrendingUp, 
-                title: 'Tasas Competitivas', 
+              {
+                icon: TrendingUp,
+                title: 'Tasas Competitivas',
                 desc: 'Tasas desde el 2% mensual. Transparencia total sin costos ocultos.',
                 color: 'bg-purple-50 text-purple-600'
               },
@@ -188,7 +201,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── CÓMO FUNCIONA ── */}
+      {/* ── ENTRENAMIENTO: SECCIÓN "CÓMO FUNCIONA" (Pasos) ── 
+           Explica visualmente el proceso del crédito en 3 pasos con una línea conectora.
+      */}
       <section id="como-funciona" className="bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-28">
           <div className="text-center mb-16">
@@ -226,7 +241,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── CTA FINAL ── */}
+      {/* ── ENTRENAMIENTO: CALL TO ACTION FINAL ── 
+           El último empujón para que el usuario inicie sesión o se registre antes del footer.
+      */}
       <section className="bg-gradient-to-br from-navy-900 to-navy-950 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl"></div>
@@ -234,7 +251,7 @@ export default function HomePage() {
         </div>
         <div className="relative max-w-4xl mx-auto px-6 lg:px-12 py-20 lg:py-28 text-center">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
-            ¿Listo para impulsar <br/>
+            ¿Listo para impulsar <br />
             <span className="text-accent-400">tu negocio?</span>
           </h2>
           <p className="text-navy-300 mt-6 text-lg max-w-xl mx-auto">
@@ -253,7 +270,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
+      {/* ── ENTRENAMIENTO: FOOTER (Pie de Página) ── 
+           Contiene la información corporativa, los enlaces legales y el copyright.
+      */}
       <footer className="bg-navy-950 text-navy-300 border-t border-navy-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 py-16">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
@@ -269,7 +288,7 @@ export default function HomePage() {
                 Impulsando el crecimiento de los comerciantes colombianos con soluciones financieras digitales, rápidas y 100% seguras.
               </p>
             </div>
-            
+
             {/* Links */}
             <div>
               <h4 className="text-white font-bold mb-4 text-sm tracking-wide">Plataforma</h4>
@@ -289,7 +308,7 @@ export default function HomePage() {
               </ul>
             </div>
           </div>
-          
+
           <div className="mt-16 pt-8 border-t border-navy-800 text-xs text-navy-500 flex flex-col md:flex-row justify-between items-center gap-2">
             <p>© 2025 Plurall Colombia S.A.S. Todos los derechos reservados.</p>
             <p className="font-medium text-navy-400">Proyecto Formativo SENA · Tecnólogo ADSO</p>

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, ClipboardList, Users,
   AlertTriangle, BarChart3, UserCheck,
-  LogOut, Menu, X, ShieldCheck, Search,
+  LogOut, Menu, X, ShieldCheck, Search, GitMerge,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -16,6 +16,7 @@ const navigation = [
   { name: 'Solicitudes',  href: '/supervisor/solicitudes',      icon: ClipboardList   },
   { name: 'Cartera',      href: '/supervisor/cartera',          icon: BarChart3       },
   { name: 'Mora',         href: '/supervisor/mora',             icon: AlertTriangle   },
+  { name: 'Embudo',       href: '/supervisor/funnel',           icon: GitMerge        },
   { name: 'Clientes',     href: '/supervisor/clientes',         icon: Users           },
   { name: 'Buscar',       href: '/supervisor/buscar',           icon: Search          },
   { name: 'Asesores',     href: '/supervisor/asesores',         icon: UserCheck       },
