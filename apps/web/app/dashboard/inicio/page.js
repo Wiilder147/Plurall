@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/dashboard/inicio/page.js
+ * DESCRIPCIÓN: Vista del panel de control del usuario.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'

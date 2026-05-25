@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: route.js
+ * RUTA: apps/web/app/api/documentos/estado-cuenta/[creditoId]/route.js
+ * DESCRIPCIÓN: Endpoint de API (Backend) para manejar la lógica de [creditoId]
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 
@@ -21,7 +27,7 @@ export async function GET(request, { params }) {
 
   const { data: clienteRow } = await supabase
     .from('cliente')
-    .select('id_cliente')
+    .select('id_cliente, email')
     .eq('id_usuario_cuenta', user.id)
     .single()
 
@@ -58,7 +64,8 @@ export async function GET(request, { params }) {
   }
 
   const { nombre_completo = 'Cliente', dni = '—' } = user.user_metadata || {}
-  const email = user.email || '—'
+  // Usar el email real del cliente (no el email autogenerado de Supabase Auth)
+  const email = clienteRow.email || '—'
   const ref   = String(credito.id_credito).slice(-8).toUpperCase()
   const hoy   = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
   const fmtF  = (iso) => iso ? new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'

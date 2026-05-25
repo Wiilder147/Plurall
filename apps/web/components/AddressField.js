@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: AddressField.js
+ * RUTA: apps/web/components/AddressField.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState, useRef } from 'react'
 import { Search, MapPin, X, Loader2 } from 'lucide-react'
 

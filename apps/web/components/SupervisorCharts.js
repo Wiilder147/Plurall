@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: SupervisorCharts.js
+ * RUTA: apps/web/components/SupervisorCharts.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 
 'use client'
 
@@ -314,14 +320,14 @@ export default function SupervisorCharts() {
 
       {/* Cartera + Mora */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-blue-700 to-blue-900 rounded-2xl p-6 text-white shadow-xl">
-          <p className="text-blue-200 text-xs font-semibold uppercase tracking-wide mb-1">Cartera activa total</p>
-          <p className="text-4xl font-extrabold">{COP(kpis.carteraSaldo)}</p>
-          <p className="text-blue-300 text-sm mt-1">Total desembolsado: {COP(kpis.totalDesembolsado)}</p>
-          <div className="mt-3 flex items-center gap-3 text-xs text-blue-200">
+        <div className="bg-blue-100 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-6">
+          <p className="text-orange-500 text-xs font-semibold uppercase tracking-wide mb-1">Cartera activa total</p>
+          <p className="text-4xl font-extrabold text-slate-900 dark:text-white">{COP(kpis.carteraSaldo)}</p>
+          <p className="text-slate-600 dark:text-blue-300 text-sm mt-1">Total desembolsado: {COP(kpis.totalDesembolsado)}</p>
+          <div className="mt-3 flex items-center gap-3 text-xs text-slate-500 dark:text-blue-200">
             <span>{kpis.creditosActivos} activos</span>
             <span>·</span>
-            <span className="text-red-300">{kpis.creditosMora} en mora</span>
+            <span className="text-red-600 dark:text-red-300">{kpis.creditosMora} en mora</span>
           </div>
         </div>
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
@@ -343,14 +349,14 @@ export default function SupervisorCharts() {
       {kpis.periodo && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Desembolsado en período', value: COP(kpis.periodo.desembolsado), color: 'text-indigo-400' },
-            { label: 'Recaudado en período',    value: COP(kpis.periodo.recaudado),    color: 'text-emerald-400' },
-            { label: 'Solicitudes en período',  value: NUM(kpis.periodo.solicitudes),  color: 'text-yellow-400' },
-            { label: 'Créditos en período',     value: NUM(kpis.periodo.creditos),     color: 'text-blue-400' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
+            { label: 'Desembolsado en período', value: COP(kpis.periodo.desembolsado), color: 'text-indigo-600 dark:text-indigo-400',  bg: 'bg-indigo-500/10 border-indigo-500/30' },
+            { label: 'Recaudado en período',    value: COP(kpis.periodo.recaudado),    color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+            { label: 'Solicitudes en período',  value: NUM(kpis.periodo.solicitudes),  color: 'text-yellow-600 dark:text-yellow-400',   bg: 'bg-yellow-500/10 border-yellow-500/30' },
+            { label: 'Créditos en período',     value: NUM(kpis.periodo.creditos),     color: 'text-blue-600 dark:text-blue-400',       bg: 'bg-blue-500/10 border-blue-500/30' },
+          ].map(({ label, value, color, bg }) => (
+            <div key={label} className={`border rounded-xl p-4 ${bg}`}>
               <p className={`text-xl font-extrabold ${color}`}>{value}</p>
-              <p className="text-slate-500 text-xs mt-0.5">{label}</p>
+              <p className="text-slate-600 dark:text-slate-400 text-xs mt-0.5">{label}</p>
             </div>
           ))}
         </div>

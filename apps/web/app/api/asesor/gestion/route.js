@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: route.js
+ * RUTA: apps/web/app/api/asesor/gestion/route.js
+ * DESCRIPCIÓN: Endpoint de API (Backend) para manejar la lógica de gestion
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 

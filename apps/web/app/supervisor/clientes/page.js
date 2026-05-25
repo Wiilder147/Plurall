@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/supervisor/clientes/page.js
+ * DESCRIPCIÓN: Vista del panel para el rol de supervisor.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
@@ -14,21 +20,47 @@ export default async function SupervisorClientesPage({ searchParams }) {
   const buscar = params?.q || ''
   const filtro = params?.estado?.toUpperCase() || 'TODOS'
 
-  let query = db
-    .from('cliente')
-    .select(`
-      id_cliente, nombre_completo, dni, telefono, email,
-      score_credito, created_at,
-      estado_cliente ( nombre ),
-      credito ( id_credito, estado_credito, saldo_pendiente, dias_mora_maximo )
-    `)
-    .order('created_at', { ascending: false })
+  const SELECT_CLIENTE = `
+    id_cliente, nombre_completo, dni, telefono, email,
+    score_credito, created_at,
+    estado_cliente ( nombre ),
+    credito ( id_credito, estado_credito, saldo_pendiente, dias_mora_maximo )
+  `
 
-  if (buscar) {
-    query = query.or(`nombre_completo.ilike.%${buscar}%,dni.ilike.%${buscar}%,telefono.ilike.%${buscar}%`)
+  let todos = []
+
+  if (buscar && buscar.length >= 2) {
+    // Search by name, DNI, phone or email
+    const { data: byDatos } = await db
+      .from('cliente')
+      .select(SELECT_CLIENTE)
+      .or(`nombre_completo.ilike.%${buscar}%,dni.ilike.%${buscar}%,telefono.ilike.%${buscar}%,email.ilike.%${buscar}%`)
+      .order('created_at', { ascending: false })
+
+    // Also search by credit UUID prefix
+    let byCredito = []
+    if (buscar.length >= 8) {
+      const { data: creditos } = await db
+        .from('credito')
+        .select(`id_credito, cliente ( ${SELECT_CLIENTE} )`)
+        .ilike('id_credito', `${buscar}%`)
+        .limit(5)
+      byCredito = (creditos ?? []).filter(c => c.cliente).map(c => c.cliente)
+    }
+
+    // Deduplicate by id_cliente
+    const mapa = new Map()
+    ;[...(byDatos ?? []), ...byCredito].forEach(c => {
+      if (!mapa.has(c.id_cliente)) mapa.set(c.id_cliente, c)
+    })
+    todos = Array.from(mapa.values())
+  } else {
+    const { data } = await db
+      .from('cliente')
+      .select(SELECT_CLIENTE)
+      .order('created_at', { ascending: false })
+    todos = data ?? []
   }
-
-  const { data: todos } = await query
 
   const clientes = filtro === 'TODOS' ? todos ?? []
     : filtro === 'MORA' ? (todos ?? []).filter(c => c.credito?.some(cr => cr.estado_credito === 'EN_MORA'))
@@ -52,7 +84,7 @@ export default async function SupervisorClientesPage({ searchParams }) {
         <form method="GET" className="relative flex-1 max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input name="q" type="text" defaultValue={buscar}
-            placeholder="Buscar por nombre, cédula o celular…"
+            placeholder="Buscar por nombre, cédula, celular, email o ID de crédito…"
             className="w-full bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-500 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </form>
         <div className="flex gap-2">
@@ -98,7 +130,9 @@ export default async function SupervisorClientesPage({ searchParams }) {
                     <tr key={cli.id_cliente} className="hover:bg-slate-700/20 transition-colors">
                       <td className="px-5 py-4">
                         <p className="font-semibold text-slate-200">{cli.nombre_completo}</p>
-                        <p className="text-slate-500 text-xs">{cli.email}</p>
+                        {cli.email && !cli.email.endsWith('@plurall.app') && (
+                          <p className="text-slate-500 text-xs">{cli.email}</p>
+                        )}
                       </td>
                       <td className="px-5 py-4 text-slate-400 font-mono text-xs">{cli.dni}</td>
                       <td className="px-5 py-4 text-slate-400">{cli.telefono}</td>

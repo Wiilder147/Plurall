@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: EditarPerfilForm.js
+ * RUTA: apps/web/components/EditarPerfilForm.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState } from 'react'
 import {
   Pencil, X, Check, Loader2, Phone, MapPin,

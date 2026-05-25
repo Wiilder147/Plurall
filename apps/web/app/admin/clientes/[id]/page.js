@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/admin/clientes/[id]/page.js
+ * DESCRIPCIÓN: Vista del panel de administración.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -96,7 +102,7 @@ export default async function AdminDetalleClientePage({ params }) {
   const docsAprobados = documentos?.filter(d => d.estado_verificacion === 'APROBADO').length ?? 0
 
   return (
-    <div className="flex flex-col gap-6 pb-10 max-w-5xl">
+    <div className="w-full flex flex-col gap-6 pb-10 max-w-5xl">
 
       {/* ── Header ── */}
       <header>

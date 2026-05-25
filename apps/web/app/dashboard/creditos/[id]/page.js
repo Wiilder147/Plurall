@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/dashboard/creditos/[id]/page.js
+ * DESCRIPCIÓN: Vista del panel de control del usuario.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import React from 'react'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, Clock, AlertTriangle, CreditCard } from 'lucide-react'
@@ -38,7 +44,7 @@ export default async function DetalleCredito({ params }) {
 
   if (credError || !credito || credito.id_cliente !== cliente?.id_cliente) {
     return (
-      <div className="max-w-4xl mx-auto pb-12 pt-10 text-center">
+      <div className="w-full max-w-4xl mx-auto pb-12 pt-10 text-center">
         <h2 className="text-2xl font-bold text-slate-800">Crédito no encontrado o sin acceso</h2>
         <Link href="/dashboard/creditos" className="text-orange-500 mt-4 inline-block hover:underline">
           Volver a mis créditos
@@ -81,7 +87,7 @@ export default async function DetalleCredito({ params }) {
   }[credito.estado_credito] ?? { label: credito.estado_credito, cls: 'bg-slate-100 text-slate-600' }
 
   return (
-    <div className="max-w-4xl mx-auto pb-12">
+    <div className="w-full max-w-4xl mx-auto pb-12">
       <Link
         href="/dashboard/creditos"
         className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-800 font-medium transition-colors mb-6"

@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/dashboard/cuotas/[id]/pagar/page.js
+ * DESCRIPCIÓN: Vista del panel de control del usuario.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -128,7 +135,7 @@ export default function PagarCuotaPage({ params }) {
   })
 
   return (
-    <div className="flex flex-col gap-8 pb-10 max-w-2xl">
+    <div className="w-full flex flex-col gap-8 pb-10 max-w-2xl">
 
       <header>
         <Link href="/dashboard/cuotas" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-orange-500 transition-colors mb-3">

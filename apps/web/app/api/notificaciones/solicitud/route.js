@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: route.js
+ * RUTA: apps/web/app/api/notificaciones/solicitud/route.js
+ * DESCRIPCIÓN: Endpoint de API (Backend) para manejar la lógica de solicitud
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 

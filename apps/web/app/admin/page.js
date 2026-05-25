@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/admin/page.js
+ * DESCRIPCIÓN: Vista del panel de administración.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'

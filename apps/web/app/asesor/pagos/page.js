@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/asesor/pagos/page.js
+ * DESCRIPCIÓN: Vista del panel para el rol de asesor.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { DollarSign, CheckCircle2, TrendingUp } from 'lucide-react'

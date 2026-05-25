@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: route.js
+ * RUTA: apps/web/app/api/auth/otp/verificar/route.js
+ * DESCRIPCIÓN: Endpoint de API (Backend) para manejar la lógica de verificar
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
@@ -45,38 +51,33 @@ export async function POST(request) {
       .update({ usado: true })
       .eq('id_otp', otps[0].id_otp)
 
-    // 3. Buscar el user ID en auth.users
-    const fakeEmail = `${celular}@plurall.app`
-    
-    // Para cambiar la contraseña con la Admin API necesitamos el uid.
-    // Listamos usuarios filtrando por el email fake
-    const { data: { users }, error: usersErr } = await service.auth.admin.listUsers()
-    if (usersErr) throw usersErr
+    // 3. Buscar el user ID en la base de datos (mucho más escalable que usar listUsers)
+    // Consultamos la tabla cliente para obtener el id de autenticación (id_usuario_cuenta) asociado a este celular.
+    const { data: perfil, error: perfilErr } = await service
+      .from('cliente')
+      .select('id_usuario_cuenta')
+      .eq('telefono', celular)
+      .single()
 
-    const user = users.find(u => u.email === fakeEmail)
-
-    if (!user) {
+    if (perfilErr || !perfil) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
+    const userId = perfil.id_usuario_cuenta
+
     // 4. Actualizar la contraseña usando Admin API
     const { error: updateErr } = await service.auth.admin.updateUserById(
-      user.id,
+      userId,
       { password: newPassword }
     )
 
     if (updateErr) throw updateErr
 
-    // 5. Opcional: Desbloquear la cuenta si estaba bloqueada (por RN-02)
-    // Borramos los intentos fallidos de este celular si existe la tabla
-    const { error: unlockErr } = await service
-      .from('intentos_login')
-      .delete()
-      .eq('celular', celular)
-
-    if (unlockErr) {
-      console.warn('[OTP Verificar] No se pudo limpiar intentos_login:', unlockErr)
-    }
+    // 5. Resetear intentos fallidos en perfil_usuario (RN-02)
+    await service
+      .from('perfil_usuario')
+      .update({ intentos_fallidos: 0, bloqueado_hasta: null })
+      .eq('id', userId)
 
     return NextResponse.json({ ok: true })
 

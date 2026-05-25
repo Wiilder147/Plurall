@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/admin/reportes/page.js
+ * DESCRIPCIÓN: Vista del panel de administración.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { BarChart3, TrendingUp, TrendingDown, AlertTriangle, DollarSign, Users, CheckCircle2, Download } from 'lucide-react'

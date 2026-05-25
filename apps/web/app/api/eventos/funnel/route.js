@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: route.js
+ * RUTA: apps/web/app/api/eventos/funnel/route.js
+ * DESCRIPCIÓN: Endpoint de API (Backend) para manejar la lógica de funnel
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 

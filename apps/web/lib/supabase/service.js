@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: service.js
+ * RUTA: apps/web/lib/supabase/service.js
+ * DESCRIPCIÓN: Módulo de utilidades y funciones compartidas.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@supabase/supabase-js'
 
 /**

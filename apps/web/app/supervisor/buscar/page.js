@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/supervisor/buscar/page.js
+ * DESCRIPCIÓN: Vista del panel para el rol de supervisor.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Search, Loader2, User, CreditCard, AlertTriangle, CheckCircle2, ArrowRight } from 'lucide-react'

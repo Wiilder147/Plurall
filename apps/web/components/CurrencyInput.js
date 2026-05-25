@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: CurrencyInput.js
+ * RUTA: apps/web/components/CurrencyInput.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 /**
  * Campo de dinero con formato de pesos colombianos en tiempo real.
  * Separadores: punto para miles, apóstrofe para millones.

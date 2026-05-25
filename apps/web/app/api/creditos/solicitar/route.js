@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: route.js
+ * RUTA: apps/web/app/api/creditos/solicitar/route.js
+ * DESCRIPCIÓN: Endpoint de API (Backend) para manejar la lógica de solicitar
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { notificarSolicitudRecibida } from '@/lib/notificaciones'
@@ -92,6 +98,14 @@ function scoringFallbackDNI(dni) {
 
 export async function POST(request) {
   try {
+    // Capturar IP del solicitante (compatible con proxies y CDN)
+    const ip = (
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      request.headers.get('x-real-ip') ??
+      request.headers.get('cf-connecting-ip') ??
+      null
+    )
+
     const body = await request.json()
     // respuestas: [{ id_pregunta, id_opcion?, respuesta_texto? }]
     const { monto, plazo, frontUrl, backUrl, respuestas = [] } = body
@@ -164,6 +178,7 @@ export async function POST(request) {
         monto_solicitado:    monto,
         plazo_meses:         plazo,
         canal_solicitud:     'WEB',
+        ip_solicitud:        ip,
       })
       .select()
       .single()

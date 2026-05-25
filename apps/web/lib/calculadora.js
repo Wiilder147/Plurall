@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: calculadora.js
+ * RUTA: apps/web/lib/calculadora.js
+ * DESCRIPCIÓN: Módulo de utilidades y funciones compartidas.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 /**
  * Calculadora de Amortización Francesa.
  * Se ejecuta 100% en el navegador, sin llamadas al servidor.

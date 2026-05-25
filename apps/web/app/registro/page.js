@@ -1,9 +1,16 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/registro/page.js
+ * DESCRIPCIÓN: Vista de registro de nuevos usuarios.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Lock, Phone, User, IdCard, CheckCircle, Mail, ArrowLeft } from 'lucide-react'
+import { Lock, Phone, User, IdCard, CheckCircle, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
 function RegistroContent() {
   const [form, setForm] = useState({
@@ -14,6 +21,8 @@ function RegistroContent() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [initializing, setInitializing] = useState(true)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   useEffect(() => {
     async function checkOAuthSession() {
@@ -204,13 +213,23 @@ function RegistroContent() {
             <div className="w-full relative">
               <label htmlFor="password" className="block text-xs font-bold text-navy-400 mb-1 ml-1 uppercase">Contraseña nueva</label>
               <div className="absolute left-4 top-[38px] -translate-y-[50%] text-navy-400"><Lock size={18} /></div>
-              <input id="password" name="password" type="password" value={form.password} onChange={handleChange} placeholder="Mínimo 6 caracteres" required minLength={6} className="input-field" />
+              <input id="password" name="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="Mínimo 6 caracteres" required minLength={6} className="input-field pr-12" />
+              <button type="button" onClick={() => setShowPassword(v => !v)}
+                className="absolute right-4 top-[38px] -translate-y-[50%] text-navy-400 hover:text-navy-700 transition-colors"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}>
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
-            
+
             <div className="w-full relative">
               <label htmlFor="confirmPassword" className="block text-xs font-bold text-navy-400 mb-1 ml-1 uppercase">Repetir Contraseña</label>
               <div className="absolute left-4 top-[38px] -translate-y-[50%] text-navy-400"><Lock size={18} /></div>
-              <input id="confirmPassword" name="confirmPassword" type="password" value={form.confirmPassword} onChange={handleChange} placeholder="Mínimo 6 caracteres" required minLength={6} className="input-field" />
+              <input id="confirmPassword" name="confirmPassword" type={showConfirm ? 'text' : 'password'} value={form.confirmPassword} onChange={handleChange} placeholder="Mínimo 6 caracteres" required minLength={6} className="input-field pr-12" />
+              <button type="button" onClick={() => setShowConfirm(v => !v)}
+                className="absolute right-4 top-[38px] -translate-y-[50%] text-navy-400 hover:text-navy-700 transition-colors"
+                aria-label={showConfirm ? 'Ocultar contraseña' : 'Ver contraseña'}>
+                {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
 
             <label className="flex items-start gap-3 cursor-pointer w-full text-left mt-2 px-1">

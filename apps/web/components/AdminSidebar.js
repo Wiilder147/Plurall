@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: AdminSidebar.js
+ * RUTA: apps/web/components/AdminSidebar.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, ClipboardList, Users, LogOut, Menu, X, BarChart3 } from 'lucide-react'

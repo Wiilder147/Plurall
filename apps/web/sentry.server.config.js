@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: sentry.server.config.js
+ * RUTA: apps/web/sentry.server.config.js
+ * DESCRIPCIÓN: Archivo principal de la aplicación frontend.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 // sentry.server.config.js
 // Configuración de Sentry para el lado del servidor (Node.js / Edge Runtime).
 // Captura errores en API Routes, Server Components y middleware.

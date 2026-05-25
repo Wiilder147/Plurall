@@ -1,11 +1,17 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: DashboardSidebar.js
+ * RUTA: apps/web/components/DashboardSidebar.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Home, User, LogOut, Menu, X, CreditCard, FileText, DollarSign, Globe } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import ThemeToggle from './ThemeToggle'
 
 const navigation = [
   { name: 'Inicio',       href: '/dashboard/inicio',    icon: Home       },
@@ -108,7 +114,6 @@ export default function DashboardSidebar() {
             <LogOut className="h-5 w-5" />
             <span className="font-medium">Cerrar sesión</span>
           </button>
-          <ThemeToggle />
         </div>
       </div>
     </>

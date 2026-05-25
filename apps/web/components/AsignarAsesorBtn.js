@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: AsignarAsesorBtn.js
+ * RUTA: apps/web/components/AsignarAsesorBtn.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState } from 'react'
 import { UserCheck, Loader2, ChevronDown } from 'lucide-react'
 

@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: ThemeProvider.js
+ * RUTA: apps/web/components/ThemeProvider.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { createContext, useContext, useEffect, useState } from 'react'
 
 const ThemeContext = createContext({ theme: 'dark', toggle: () => {} })

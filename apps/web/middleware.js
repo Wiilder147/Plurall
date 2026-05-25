@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: middleware.js
+ * RUTA: apps/web/middleware.js
+ * DESCRIPCIÓN: Archivo principal de la aplicación frontend.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request) {

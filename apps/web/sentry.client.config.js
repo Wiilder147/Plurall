@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: sentry.client.config.js
+ * RUTA: apps/web/sentry.client.config.js
+ * DESCRIPCIÓN: Archivo principal de la aplicación frontend.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 // sentry.client.config.js
 // Configuración de Sentry para el lado del cliente (navegador).
 // Este archivo se importa automáticamente por Next.js al hacer build.

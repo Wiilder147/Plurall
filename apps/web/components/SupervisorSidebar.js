@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: SupervisorSidebar.js
+ * RUTA: apps/web/components/SupervisorSidebar.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {

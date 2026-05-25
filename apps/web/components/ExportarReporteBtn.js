@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: ExportarReporteBtn.js
+ * RUTA: apps/web/components/ExportarReporteBtn.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState } from 'react'
 import { Download, Loader2 } from 'lucide-react'
 

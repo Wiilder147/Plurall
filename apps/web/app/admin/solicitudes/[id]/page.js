@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/admin/solicitudes/[id]/page.js
+ * DESCRIPCIÓN: Vista del panel de administración.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -161,7 +168,7 @@ export default function AdminDetalleSolicitudPage() {
   const simResult = calcularAmortizacion(montoSim, tasaSim, plazoSim)
 
   return (
-    <div className="flex flex-col gap-6 pb-10 max-w-5xl">
+    <div className="w-full flex flex-col gap-6 pb-10 max-w-5xl">
 
       <header>
         <Link href="/admin/solicitudes" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-orange-400 transition-colors mb-3">

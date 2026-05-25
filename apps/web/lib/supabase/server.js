@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: server.js
+ * RUTA: apps/web/lib/supabase/server.js
+ * DESCRIPCIÓN: Módulo de utilidades y funciones compartidas.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 

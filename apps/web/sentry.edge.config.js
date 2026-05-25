@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: sentry.edge.config.js
+ * RUTA: apps/web/sentry.edge.config.js
+ * DESCRIPCIÓN: Archivo principal de la aplicación frontend.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 // sentry.edge.config.js
 // Configuración de Sentry para Edge Runtime (middleware de Next.js).
 

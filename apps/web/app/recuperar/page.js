@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/recuperar/page.js
+ * DESCRIPCIÓN: Vista para recuperar la contraseña mediante OTP.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -24,6 +31,7 @@ export default function RecuperarPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [emailEnviado, setEmailEnviado] = useState('')
 
   async function handleSendOTP(e) {
     e.preventDefault()
@@ -53,6 +61,8 @@ export default function RecuperarPage() {
         throw new Error(data.error || 'Error al solicitar el código')
       }
       
+      // Guardar el mensaje con el correo enmascarado que devuelve el backend
+      setEmailEnviado(data.message || 'Hemos enviado un código de 6 dígitos al correo electrónico asociado a este número.')
       setStep(2)
     } catch (err) {
       setError(err.message)
@@ -161,9 +171,17 @@ export default function RecuperarPage() {
                  Cambiamos dinámicamente el título y el onSubmit dependiendo del `step` 
                  en el que nos encontremos (1: Celular, 2: OTP).
             */}
-            <p className="text-navy-400 text-sm mb-8 text-center lowercase">
-              {step === 1 ? 'ingresa tu celular para recibir un código al correo' : 'ingresa el código de 6 dígitos enviado a tu correo'}
-            </p>
+            {step === 1 ? (
+              <p className="text-navy-400 text-sm mb-8 text-center lowercase">
+                ingresa tu celular para recibir un código al correo
+              </p>
+            ) : (
+              <div className="w-full bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-6 text-center animate-fade-in">
+                <p className="text-blue-800 text-xs font-semibold uppercase tracking-wide mb-1">📧 Código enviado</p>
+                <p className="text-blue-700 text-sm">{emailEnviado}</p>
+                <p className="text-blue-500 text-xs mt-1">Revisa también tu carpeta de spam</p>
+              </div>
+            )}
 
             <form onSubmit={step === 1 ? handleSendOTP : handleVerifyOTP} className="w-full space-y-4 flex flex-col items-center">
               {error && <div className="w-full bg-danger/10 text-danger rounded-lg p-3 text-sm animate-fade-in text-center">{error}</div>}

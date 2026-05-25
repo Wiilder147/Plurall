@@ -1,10 +1,17 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/login/page.js
+ * DESCRIPCIÓN: Vista de inicio de sesión para los usuarios.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Lock, Phone, Globe, ArrowLeft } from 'lucide-react'
+import { Lock, Phone, Globe, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -12,6 +19,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -178,17 +186,25 @@ export default function LoginPage() {
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400">
               <Lock size={18} />
             </div>
-            <input 
-              id="password" 
-              type="password" 
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)} 
-              placeholder="contraseña" 
-              required 
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="contraseña"
+              required
               minLength={6}
-              className="input-field" 
-              aria-label="Contraseña" 
+              className="input-field pr-12"
+              aria-label="Contraseña"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-700 transition-colors"
+              aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
 
           <button 

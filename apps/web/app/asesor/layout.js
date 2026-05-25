@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: layout.js
+ * RUTA: apps/web/app/asesor/layout.js
+ * DESCRIPCIÓN: Vista del panel para el rol de asesor.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AsesorSidebar from '@/components/AsesorSidebar'
@@ -24,8 +30,8 @@ export default async function AsesorLayout({ children }) {
   return (
     <div className="flex h-screen bg-teal-950 overflow-hidden">
       <AsesorSidebar />
-      <main className="flex-1 h-screen overflow-y-auto bg-slate-950">
-        <div className="p-4 md:p-8 max-w-5xl mx-auto mt-12 md:mt-0">
+      <main className="flex-1 h-screen overflow-y-auto bg-slate-950 w-full">
+        <div className="w-full p-4 md:p-8 max-w-5xl mx-auto mt-12 md:mt-0">
           {children}
         </div>
       </main>

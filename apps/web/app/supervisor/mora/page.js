@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/supervisor/mora/page.js
+ * DESCRIPCIÓN: Vista del panel para el rol de supervisor.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { formatCOP } from '@/lib/calculadora'
@@ -23,11 +29,25 @@ export default async function SupervisorMoraPage() {
     .select(`
       id_credito, saldo_pendiente, cuotas_en_mora, dias_mora_maximo,
       cuota_fija, fecha_desembolso,
-      cliente ( id_cliente, nombre_completo, dni, telefono, email ),
+      cliente ( id_cliente, id_usuario_cuenta, nombre_completo, dni, telefono, email ),
       plan_pago ( id_plan_pago )
     `)
     .eq('estado_credito', 'EN_MORA')
     .order('dias_mora_maximo', { ascending: false })
+
+  // Real emails from auth metadata (fake @plurall.app emails are excluded)
+  const emailRealMap = {}
+  if (creditosMora?.length > 0) {
+    const userIds = [...new Set(creditosMora.map(c => c.cliente?.id_usuario_cuenta).filter(Boolean))]
+    const results = await Promise.all(userIds.map(uid => db.auth.admin.getUserById(uid)))
+    results.forEach(({ data }) => {
+      if (!data?.user) return
+      const emailReal = data.user.user_metadata?.email_real
+      if (emailReal && !emailReal.endsWith('@plurall.app')) {
+        emailRealMap[data.user.id] = emailReal
+      }
+    })
+  }
 
   // Cuotas vencidas por crédito
   const cuotasVencidasMap = {}
@@ -134,7 +154,9 @@ export default async function SupervisorMoraPage() {
                         <p className="text-slate-400 text-xs flex items-center gap-1">
                           <Phone className="w-3 h-3" /> {c.cliente?.telefono}
                         </p>
-                        <p className="text-slate-500 text-xs">{c.cliente?.email}</p>
+                        {emailRealMap[c.cliente?.id_usuario_cuenta] && (
+                          <p className="text-slate-500 text-xs">{emailRealMap[c.cliente?.id_usuario_cuenta]}</p>
+                        )}
                       </td>
                       <td className="px-5 py-3 text-right font-semibold text-slate-200">{formatCOP(c.saldo_pendiente)}</td>
                       <td className="px-5 py-3 text-right text-red-400 font-bold">{vencidas?.count ?? c.cuotas_en_mora}</td>

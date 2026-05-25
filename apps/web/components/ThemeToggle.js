@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: ThemeToggle.js
+ * RUTA: apps/web/components/ThemeToggle.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useTheme } from './ThemeProvider'
 import { Sun, Moon } from 'lucide-react'
 

@@ -1,9 +1,15 @@
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/asesor/page.js
+ * DESCRIPCIÓN: Vista del panel para el rol de asesor.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import {
   Users, AlertTriangle, CheckCircle2, PhoneCall,
-  ArrowRight, Clock, DollarSign,
+  ArrowRight, Clock, DollarSign, FileCheck,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -20,6 +26,7 @@ export default async function AsesorDashboard() {
     { data: asignaciones },
     { count: gestionesHoy },
     { data: promesas },
+    { data: solsPendientes },
   ] = await Promise.all([
     supabase.from('perfil_usuario').select('nombre_completo').eq('id', user.id).single(),
     supabase.from('asignacion_asesor')
@@ -43,6 +50,9 @@ export default async function AsesorDashboard() {
       .gte('fecha_promesa', hoy)
       .order('fecha_promesa', { ascending: true })
       .limit(5),
+    supabase.from('solicitud_credito')
+      .select('id_solicitud, estado_solicitud!inner ( nombre )')
+      .eq('estado_solicitud.nombre', 'PENDIENTE'),
   ])
 
   const primerNombre = perfil?.nombre_completo?.split(' ')[0] ?? 'Asesor'
@@ -67,6 +77,7 @@ export default async function AsesorDashboard() {
     .slice(0, 5)
 
   const kpis = [
+    { label: 'Sol. por revisar',    value: solsPendientes?.length ?? 0, icon: FileCheck,     color: 'text-violet-400 bg-violet-500/10',   href: '/asesor/solicitudes'},
     { label: 'Clientes asignados',  value: clientes.length,       icon: Users,         color: 'text-teal-400 bg-teal-500/10',      href: '/asesor/clientes'  },
     { label: 'En mora',             value: enMora.length,         icon: AlertTriangle, color: 'text-red-400 bg-red-500/10',        href: '/asesor/cobranza'  },
     { label: 'Al día',              value: alDia.length,          icon: CheckCircle2,  color: 'text-emerald-400 bg-emerald-500/10',href: '/asesor/clientes'  },

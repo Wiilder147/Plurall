@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: client.js
+ * RUTA: apps/web/lib/supabase/client.js
+ * DESCRIPCIÓN: Módulo de utilidades y funciones compartidas.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createBrowserClient } from '@supabase/ssr'
 
 // Crea cliente Supabase en el navegador (front-end) usando envs públicas.

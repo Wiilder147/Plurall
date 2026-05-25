@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: middleware.js
+ * RUTA: apps/web/lib/supabase/middleware.js
+ * DESCRIPCIÓN: Módulo de utilidades y funciones compartidas.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
@@ -42,6 +48,8 @@ export async function updateSession(request) {
     !path.startsWith('/login') &&
     !path.startsWith('/registro') &&
     !path.startsWith('/recuperar') &&
+    !path.startsWith('/api/auth/') &&
+    !path.startsWith('/api/webhooks/') &&
     path !== '/'
   ) {
     const url = request.nextUrl.clone()

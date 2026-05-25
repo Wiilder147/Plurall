@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: layout.js
+ * RUTA: apps/web/app/layout.js
+ * DESCRIPCIÓN: Archivo principal de la aplicación frontend.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";

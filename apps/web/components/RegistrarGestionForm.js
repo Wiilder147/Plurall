@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: RegistrarGestionForm.js
+ * RUTA: apps/web/components/RegistrarGestionForm.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState } from 'react'
 import { PhoneCall, CheckCircle2, Loader2, AlertCircle, DollarSign } from 'lucide-react'
 

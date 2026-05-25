@@ -2,12 +2,27 @@ import { NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
 
+const GMAIL_USER = process.env.GMAIL_FROM_EMAIL || 'wfeoorjuela@gmail.com'
+
 function getServiceClient() {
   return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
+}
+
+function createTransporter() {
+  if (!process.env.GMAIL_APP_PASSWORD) {
+    throw new Error('GMAIL_APP_PASSWORD no está configurado en las variables de entorno')
+  }
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  })
 }
 
 export async function POST(request) {
@@ -17,94 +32,77 @@ export async function POST(request) {
 
     const service = getServiceClient()
 
-    // 1. Buscar al cliente en la DB para obtener su email real
-    const { data: cliente, error: cliErr } = await service
+    // Buscar cliente por teléfono para obtener su email
+    const { data: clientes } = await service
       .from('cliente')
       .select('email, nombre_completo')
-      .eq('dni', celular) // Asumiendo que dni o celular se usa como identificador, la tabla cliente tiene 'telefono' o 'dni'. En el registro guardan celular en teléfono? En login se usa `celular@plurall.app`. Revisemos cómo buscan al cliente.
-      // Mejor buscar por email ficticio o directamente por telefono:
       .eq('telefono', celular)
       .limit(1)
-
-    // Ajuste de búsqueda: si la tabla usa formato con o sin código de país, intentamos flexibilizar.
-    // Asumiremos que el celular se guarda en 'telefono' exactamente igual.
 
     let emailReal = null
     let nombre = 'Cliente'
 
-    if (cliente && cliente.length > 0) {
-      emailReal = cliente[0].email
-      nombre = cliente[0].nombre_completo || 'Cliente'
-    } else {
-      // Como fallback, intentemos buscar por dni por si acaso guardan el número ahí.
-      const { data: clientePorDni } = await service
-        .from('cliente')
-        .select('email, nombre_completo')
-        .eq('dni', celular)
-        .limit(1)
-        
-      if (clientePorDni && clientePorDni.length > 0) {
-        emailReal = clientePorDni[0].email
-        nombre = clientePorDni[0].nombre_completo || 'Cliente'
-      }
+    if (clientes && clientes.length > 0) {
+      emailReal = clientes[0].email
+      nombre = clientes[0].nombre_completo || 'Cliente'
     }
 
     if (!emailReal) {
-      // Por seguridad, no decimos si existe o no, pero logueamos.
       console.warn('[OTP] Cliente no encontrado para el celular:', celular)
-      // Simulamos éxito para evitar enumeración de usuarios
-      return NextResponse.json({ ok: true })
+      // Respuesta genérica para evitar enumeración de usuarios
+      return NextResponse.json({
+        ok: true,
+        message: 'Si el celular está registrado, hemos enviado un código a su correo asociado.',
+      })
     }
 
-    // 2. Generar OTP de 6 dígitos
+    // Generar OTP de 6 dígitos
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
 
-    // 3. Guardar en DB con expiración de 10 minutos
+    // Guardar en DB con expiración de 10 minutos
     const expiracion = new Date()
     expiracion.setMinutes(expiracion.getMinutes() + 10)
 
     const { error: otpErr } = await service
       .from('otp_recuperacion')
-      .insert({
-        celular,
-        otp_code: otpCode,
-        expiracion: expiracion.toISOString(),
-      })
+      .insert({ celular, otp_code: otpCode, expiracion: expiracion.toISOString() })
 
     if (otpErr) throw otpErr
 
-    // 4. Enviar email usando Nodemailer (Gmail SMTP)
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.RESEND_FROM_EMAIL || 'wfeoorjuela@gmail.com',
-        pass: process.env.GMAIL_APP_PASSWORD, // La contraseña de aplicación de Google
-      },
-    })
-
-    const mailOptions = {
-      from: '"Plurall App" <' + (process.env.RESEND_FROM_EMAIL || 'wfeoorjuela@gmail.com') + '>',
+    // Enviar email via Gmail SMTP
+    const transporter = createTransporter()
+    await transporter.sendMail({
+      from: `"Plurall" <${GMAIL_USER}>`,
       to: emailReal,
       subject: 'Código de Recuperación de Contraseña - Plurall',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
           <h2 style="color: #1e1b4b; text-align: center;">Plurall</h2>
           <p>Hola ${nombre},</p>
-          <p>Has solicitado restablecer tu contraseña. Usa el siguiente código de 6 dígitos para continuar. El código expira en 10 minutos.</p>
-          <div style="background-color: #f1f5f9; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; border-radius: 8px; margin: 20px 0;">
+          <p>Has solicitado restablecer tu contraseña. Usa el siguiente código para continuar. <strong>Expira en 10 minutos.</strong></p>
+          <div style="background-color: #f1f5f9; padding: 15px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; border-radius: 8px; margin: 20px 0; color: #1e1b4b;">
             ${otpCode}
           </div>
-          <p style="font-size: 12px; color: #64748b;">Si no solicitaste este código, puedes ignorar este mensaje de forma segura.</p>
+          <p style="font-size: 12px; color: #64748b;">Si no solicitaste este código, puedes ignorar este mensaje.</p>
         </div>
       `,
-    }
+    })
 
-    await transporter.sendMail(mailOptions)
-    console.log(`[OTP] Enviado a ${emailReal} para celular ${celular}`)
+    console.log(`[OTP] Código enviado a ${emailReal} para celular ${celular}`)
 
-    return NextResponse.json({ ok: true })
+    // Enmascarar el correo antes de enviarlo al frontend
+    const [namePart, domainPart] = emailReal.split('@')
+    const maskedName = namePart.length > 2
+      ? namePart.substring(0, 2) + '*'.repeat(namePart.length - 2)
+      : namePart
+    const maskedEmail = `${maskedName}@${domainPart}`
+
+    return NextResponse.json({
+      ok: true,
+      message: `Hemos enviado un código de 6 dígitos al correo: ${maskedEmail}`,
+    })
   } catch (error) {
-    console.error('[OTP Enviar Error]:', error)
-    return NextResponse.json({ error: 'Error al procesar la solicitud' }, { status: 500 })
+    console.error('[OTP Enviar Error]:', error.message)
+    return NextResponse.json({ error: 'Error al enviar el código. Intenta de nuevo.' }, { status: 500 })
   }
 }

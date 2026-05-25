@@ -1,8 +1,20 @@
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/page.js
+ * DESCRIPCIÓN: Archivo principal de la aplicación frontend.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+'use client'
+
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { User, ChevronRight, Shield, Clock, Smartphone, TrendingUp, CheckCircle2, ArrowRight, Star } from "lucide-react";
+import { ChevronRight, Shield, Clock, Smartphone, TrendingUp, CheckCircle2, ArrowRight, Star } from "lucide-react";
+import CreditFunnelModal from "@/components/CreditFunnelModal";
 
 export default function HomePage() {
+  const [funnelOpen, setFunnelOpen] = useState(false)
+
   return (
     <main className="min-h-screen bg-white text-navy-900 overflow-x-hidden font-sans">
 
@@ -10,7 +22,7 @@ export default function HomePage() {
            Esta barra se mantiene fija en la parte superior (sticky top-0) con un efecto de desenfoque (backdrop-blur-xl).
       */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 lg:px-12 py-4">
+        <div className="w-full max-w-7xl mx-auto flex items-center justify-between px-6 lg:px-12 py-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-9 h-9 bg-navy-900 rounded-lg flex items-center justify-center">
@@ -51,7 +63,7 @@ export default function HomePage() {
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-accent-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-navy-900/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4"></div>
 
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-12 py-16 lg:py-24">
+        <div className="relative w-full max-w-7xl mx-auto px-6 lg:px-12 py-16 lg:py-24">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
 
             {/* Columna Izquierda: Texto */}
@@ -77,10 +89,14 @@ export default function HomePage() {
                    ya que desde el login se distribuye a registro o dashboard. 
               */}
               <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
-                <Link href="/login" className="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white font-bold text-lg px-8 py-4 rounded-full transition-all hover:scale-105 shadow-xl shadow-accent-500/25">
+                <button
+                  type="button"
+                  onClick={() => setFunnelOpen(true)}
+                  className="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white font-bold text-lg px-8 py-4 rounded-full transition-all hover:scale-105 shadow-xl shadow-accent-500/25"
+                >
                   Simula tu Préstamo
                   <ArrowRight className="w-5 h-5" />
-                </Link>
+                </button>
                 <Link href="/login" className="inline-flex items-center gap-2 text-navy-900 hover:text-accent-600 font-semibold text-sm transition-colors">
                   Ya tengo cuenta
                   <ChevronRight className="w-4 h-4" />
@@ -151,7 +167,7 @@ export default function HomePage() {
            Grid de 4 columnas (en desktop) que resalta las ventajas competitivas.
       */}
       <section id="beneficios" className="bg-slate-50 border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-28">
+        <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-28">
           <div className="text-center mb-16">
             <span className="text-accent-500 font-bold text-sm uppercase tracking-wider">¿POR QUÉ PLURALL?</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-navy-900 mt-3 tracking-tight">
@@ -205,7 +221,7 @@ export default function HomePage() {
            Explica visualmente el proceso del crédito en 3 pasos con una línea conectora.
       */}
       <section id="como-funciona" className="bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-28">
+        <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-28">
           <div className="text-center mb-16">
             <span className="text-accent-500 font-bold text-sm uppercase tracking-wider">PROCESO SIMPLE</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-navy-900 mt-3 tracking-tight">
@@ -233,10 +249,14 @@ export default function HomePage() {
           </div>
 
           <div className="text-center mt-14">
-            <Link href="/login" className="inline-flex items-center gap-2 bg-navy-900 hover:bg-navy-800 text-white font-bold px-8 py-4 rounded-full transition-all hover:scale-105 shadow-lg text-lg">
+            <button
+              type="button"
+              onClick={() => setFunnelOpen(true)}
+              className="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white font-bold px-8 py-4 rounded-full transition-all hover:scale-105 shadow-lg shadow-accent-500/25 text-lg"
+            >
               Comienza ahora
               <ArrowRight className="w-5 h-5" />
-            </Link>
+            </button>
           </div>
         </div>
       </section>
@@ -249,7 +269,7 @@ export default function HomePage() {
           <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
         </div>
-        <div className="relative max-w-4xl mx-auto px-6 lg:px-12 py-20 lg:py-28 text-center">
+        <div className="relative w-full max-w-4xl mx-auto px-6 lg:px-12 py-20 lg:py-28 text-center">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
             ¿Listo para impulsar <br />
             <span className="text-accent-400">tu negocio?</span>
@@ -258,10 +278,14 @@ export default function HomePage() {
             Únete a miles de comerciantes colombianos que ya confían en Plurall para crecer.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/registro" className="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-400 text-white font-bold text-lg px-10 py-4 rounded-full transition-all hover:scale-105 shadow-xl shadow-accent-500/30">
+            <button
+              type="button"
+              onClick={() => setFunnelOpen(true)}
+              className="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-400 text-white font-bold text-lg px-10 py-4 rounded-full transition-all hover:scale-105 shadow-xl shadow-accent-500/30"
+            >
               Solicitar Crédito
               <ArrowRight className="w-5 h-5" />
-            </Link>
+            </button>
             <Link href="/login" className="inline-flex items-center gap-2 text-white/70 hover:text-white font-semibold transition-colors">
               Ya tengo cuenta
               <ChevronRight className="w-4 h-4" />
@@ -274,7 +298,7 @@ export default function HomePage() {
            Contiene la información corporativa, los enlaces legales y el copyright.
       */}
       <footer className="bg-navy-950 text-navy-300 border-t border-navy-800">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-16">
+        <div className="w-full max-w-7xl mx-auto px-6 lg:px-12 py-16">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
             {/* Brand */}
             <div className="col-span-1 md:col-span-2">
@@ -316,6 +340,7 @@ export default function HomePage() {
         </div>
       </footer>
 
+      <CreditFunnelModal isOpen={funnelOpen} onClose={() => setFunnelOpen(false)} />
     </main>
   );
 }

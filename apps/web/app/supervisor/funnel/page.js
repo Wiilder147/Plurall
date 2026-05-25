@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/supervisor/funnel/page.js
+ * DESCRIPCIÓN: Vista del panel para el rol de supervisor.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useState, useEffect } from 'react'
 import { BarChart2, Users, TrendingDown, RefreshCw, Loader2 } from 'lucide-react'
 

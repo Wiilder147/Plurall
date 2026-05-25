@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: notificaciones.js
+ * RUTA: apps/web/lib/notificaciones.js
+ * DESCRIPCIÓN: Módulo de utilidades y funciones compartidas.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 /**
  * lib/notificaciones.js
  * Módulo centralizado de envío de emails transaccionales con Resend.

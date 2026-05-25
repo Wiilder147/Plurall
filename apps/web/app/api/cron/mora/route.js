@@ -1,3 +1,9 @@
+/* ==========================================================================
+ * ARCHIVO: route.js
+ * RUTA: apps/web/app/api/cron/mora/route.js
+ * DESCRIPCIÓN: Endpoint de API (Backend) para manejar la lógica de mora
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 

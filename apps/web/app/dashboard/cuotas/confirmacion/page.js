@@ -1,5 +1,12 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: page.js
+ * RUTA: apps/web/app/dashboard/cuotas/confirmacion/page.js
+ * DESCRIPCIÓN: Vista del panel de control del usuario.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -123,7 +130,7 @@ function ConfirmacionContent() {
   const refCorta = referencia ? referencia.split('-').slice(0, 2).join('-') : '—'
 
   return (
-    <div className="max-w-2xl mx-auto pb-12 mt-10">
+    <div className="w-full max-w-2xl mx-auto pb-12 mt-10">
       <div className="bg-white border border-slate-200 shadow-sm rounded-3xl overflow-hidden">
 
         {/* ── Cabecera de estado ── */}

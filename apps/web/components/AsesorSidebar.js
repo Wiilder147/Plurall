@@ -1,21 +1,29 @@
 'use client'
 
+/* ==========================================================================
+ * ARCHIVO: AsesorSidebar.js
+ * RUTA: apps/web/components/AsesorSidebar.js
+ * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
+ * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ========================================================================== */
+
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, AlertTriangle,
-  ClipboardList, PhoneCall, LogOut, Menu, X,
+  ClipboardList, PhoneCall, LogOut, Menu, X, FileCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ThemeToggle from './ThemeToggle'
 
 const navigation = [
-  { name: 'Mi Panel',    href: '/asesor',             icon: LayoutDashboard },
-  { name: 'Mis Clientes',href: '/asesor/clientes',    icon: Users           },
-  { name: 'Cobranza',    href: '/asesor/cobranza',    icon: AlertTriangle   },
-  { name: 'Gestiones',   href: '/asesor/gestiones',   icon: ClipboardList   },
-  { name: 'Pagos',       href: '/asesor/pagos',       icon: PhoneCall       },
+  { name: 'Mi Panel',     href: '/asesor',               icon: LayoutDashboard },
+  { name: 'Solicitudes',  href: '/asesor/solicitudes',   icon: FileCheck       },
+  { name: 'Mis Clientes', href: '/asesor/clientes',      icon: Users           },
+  { name: 'Cobranza',     href: '/asesor/cobranza',      icon: AlertTriangle   },
+  { name: 'Gestiones',    href: '/asesor/gestiones',     icon: ClipboardList   },
+  { name: 'Pagos',        href: '/asesor/pagos',         icon: PhoneCall       },
 ]
 
 export default function AsesorSidebar() {
