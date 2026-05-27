@@ -344,7 +344,7 @@ export default function SolicitarCredito() {
         <div className="absolute left-0 top-5 h-0.5 bg-orange-500 -z-10 transition-all duration-500"
           style={{ width: `${((step - 1) / (PASOS.length - 1)) * 100}%` }} />
         {PASOS.map(s => {
-          const autoCompleted = fromFunnel && s.num === 2 && step >= 3
+          const autoCompleted = false // el cuestionario siempre debe completarse
           const isDone        = step > s.num || autoCompleted
           const isActive      = step === s.num && !autoCompleted
           return (
@@ -420,8 +420,8 @@ export default function SolicitarCredito() {
             </div>
             <div className="mt-8 flex justify-end">
               <button onClick={() => {
-                  if (fromFunnel) { trackEvent('SALTO_CUESTIONARIO_FUNNEL', { monto, plazo }); goTo(3) }
-                  else            { trackEvent('INICIO_CUESTIONARIO', { monto, plazo });        goTo(2) }
+                  trackEvent('INICIO_CUESTIONARIO', { monto, plazo })
+                  goTo(2)
                 }}
                 className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg shadow-orange-500/20">
                 Continuar <ArrowRight className="w-5 h-5" />
@@ -565,7 +565,7 @@ export default function SolicitarCredito() {
               ))}
             </div>
             <div className="mt-8 flex justify-between">
-              <button onClick={() => goTo(fromFunnel ? 1 : 2)}
+              <button onClick={() => goTo(2)}
                 className="flex items-center gap-2 text-slate-500 hover:text-slate-700 font-medium py-3 px-4 rounded-xl transition-all">
                 <ArrowLeft className="w-5 h-5" /> Atrás
               </button>
