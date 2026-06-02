@@ -7,7 +7,7 @@
  * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
  * ========================================================================== */
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
   Pencil, X, Check, Loader2, Phone, MapPin,
   Building2, Store, Calendar, AlertCircle,
@@ -22,6 +22,16 @@ export default function EditarPerfilForm({ cliente }) {
   const [guardando,  setGuardando]  = useState(false)
   const [exito,      setExito]      = useState(false)
   const [error,      setError]      = useState('')
+  const [hints,      setHints]      = useState({})
+  const hintTimers = useRef({})
+
+  function showHint(field, msg) {
+    setHints(prev => ({ ...prev, [field]: msg }))
+    clearTimeout(hintTimers.current[field])
+    hintTimers.current[field] = setTimeout(
+      () => setHints(prev => ({ ...prev, [field]: '' })), 2500
+    )
+  }
 
   const [form, setForm] = useState({
     telefono:                  cliente?.telefono                  ?? '',
@@ -36,8 +46,14 @@ export default function EditarPerfilForm({ cliente }) {
   function handleChange(e) {
     const { name, value } = e.target
     let sanitized = value
-    if (name === 'telefono') sanitized = value.replace(/\D/g, '')
-    if (name === 'ciudad' || name === 'departamento') sanitized = value.replace(/[0-9]/g, '')
+    if (name === 'telefono') {
+      sanitized = value.replace(/\D/g, '')
+      if (sanitized !== value) showHint('telefono', 'Solo se permiten números en este campo')
+    }
+    if (name === 'ciudad' || name === 'departamento') {
+      sanitized = value.replace(/[0-9]/g, '')
+      if (sanitized !== value) showHint(name, 'Este campo no admite números')
+    }
     setForm(prev => ({ ...prev, [name]: sanitized }))
     setError('')
     setExito(false)
@@ -131,6 +147,7 @@ export default function EditarPerfilForm({ cliente }) {
               onChange={handleChange} maxLength={10}
               inputMode="numeric"
               placeholder="3001234567"
+              hint={hints.telefono}
             />
             <Campo
               icon={MapPin} label="Dirección"
@@ -143,12 +160,14 @@ export default function EditarPerfilForm({ cliente }) {
               name="ciudad" value={form.ciudad}
               onChange={handleChange}
               placeholder="Bogotá"
+              hint={hints.ciudad}
             />
             <Campo
               icon={MapPin} label="Departamento"
               name="departamento" value={form.departamento}
               onChange={handleChange}
               placeholder="Cundinamarca"
+              hint={hints.departamento}
             />
           </div>
         </fieldset>
@@ -213,7 +232,7 @@ export default function EditarPerfilForm({ cliente }) {
 }
 
 // ── Campo reutilizable ───────────────────────────────────────────────────────
-function Campo({ icon: Icon, label, name, value, onChange, type = 'text', ...rest }) {
+function Campo({ icon: Icon, label, name, value, onChange, type = 'text', hint, ...rest }) {
   return (
     <div>
       <label className="text-xs font-medium text-slate-500 flex items-center gap-1.5 mb-1.5 uppercase tracking-wide">
@@ -227,6 +246,7 @@ function Campo({ icon: Icon, label, name, value, onChange, type = 'text', ...res
         className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400"
         {...rest}
       />
+      {hint && <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hint}</p>}
     </div>
   )
 }

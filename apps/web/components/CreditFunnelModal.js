@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { calcularAmortizacion, formatCOP } from '@/lib/calculadora'
@@ -128,6 +128,16 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
   const [authLoading,  setAuthLoading]  = useState(false)
   const [currentUser,  setCurrentUser]  = useState(null)
   const [checkingUser, setCheckingUser] = useState(true)
+  const [hints,        setHints]        = useState({})
+  const hintTimers = useRef({})
+
+  function showHint(field, msg) {
+    setHints(prev => ({ ...prev, [field]: msg }))
+    clearTimeout(hintTimers.current[field])
+    hintTimers.current[field] = setTimeout(
+      () => setHints(prev => ({ ...prev, [field]: '' })), 2500
+    )
+  }
 
   // Derived
   const { cuotaMensual, totalPagar, totalIntereses } = useMemo(
@@ -589,8 +599,16 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                         value={regForm[f.id]}
                         onChange={e => {
                           let val = e.target.value
-                          if (f.id === 'nombre') val = val.replace(/[0-9]/g, '')
-                          if (f.id === 'dni' || f.id === 'telefono') val = val.replace(/\D/g, '')
+                          if (f.id === 'nombre') {
+                            const clean = val.replace(/[0-9]/g, '')
+                            if (clean !== val) showHint('nombre', 'El nombre no debe contener números')
+                            val = clean
+                          }
+                          if (f.id === 'dni' || f.id === 'telefono') {
+                            const clean = val.replace(/\D/g, '')
+                            if (clean !== val) showHint(f.id, 'Solo se permiten números en este campo')
+                            val = clean
+                          }
                           setRegForm(prev => ({ ...prev, [f.id]: val }))
                         }}
                         placeholder={f.placeholder}
@@ -598,6 +616,7 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                         maxLength={f.maxLength}
                         className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
                       />
+                      {hints[f.id] && <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hints[f.id]}</p>}
                     </div>
                   ))}
 
@@ -678,11 +697,17 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                       type="tel"
                       inputMode="numeric"
                       value={loginForm.celular}
-                      onChange={e => setLoginForm(prev => ({ ...prev, celular: e.target.value.replace(/\D/g, '') }))}
+                      onChange={e => {
+                        const raw = e.target.value
+                        const clean = raw.replace(/\D/g, '')
+                        if (raw !== clean) showHint('loginCelular', 'Solo se permiten números en este campo')
+                        setLoginForm(prev => ({ ...prev, celular: clean }))
+                      }}
                       placeholder="Ej. 3001234567"
                       required maxLength={10}
                       className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
                     />
+                    {hints.loginCelular && <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hints.loginCelular}</p>}
                   </div>
 
                   <div className="relative">

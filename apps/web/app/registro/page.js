@@ -8,7 +8,7 @@
  *                También permite autocompletar datos desde Google OAuth.
  * ========================================================================== */
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Lock, Phone, User, IdCard, CheckCircle, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react'
@@ -24,6 +24,16 @@ function RegistroContent() {
   const [initializing, setInitializing] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [hints, setHints] = useState({})
+  const hintTimers = useRef({})
+
+  function showHint(field, msg) {
+    setHints(prev => ({ ...prev, [field]: msg }))
+    clearTimeout(hintTimers.current[field])
+    hintTimers.current[field] = setTimeout(
+      () => setHints(prev => ({ ...prev, [field]: '' })), 2500
+    )
+  }
 
   useEffect(() => {
     async function checkOAuthSession() {
@@ -47,8 +57,14 @@ function RegistroContent() {
     const { name, value, type, checked } = e.target
     if (type === 'checkbox') { setForm(prev => ({ ...prev, [name]: checked })); return }
     let sanitized = value
-    if (name === 'nombre') sanitized = value.replace(/[0-9]/g, '')
-    if (name === 'dni' || name === 'telefono') sanitized = value.replace(/\D/g, '')
+    if (name === 'nombre') {
+      sanitized = value.replace(/[0-9]/g, '')
+      if (sanitized !== value) showHint('nombre', 'El nombre no debe contener números')
+    }
+    if (name === 'dni' || name === 'telefono') {
+      sanitized = value.replace(/\D/g, '')
+      if (sanitized !== value) showHint(name, 'Solo se permiten números en este campo')
+    }
     setForm(prev => ({ ...prev, [name]: sanitized }))
   }
 
@@ -276,6 +292,7 @@ function RegistroContent() {
               <div className="absolute left-4 top-[38px] -translate-y-[50%] text-navy-400"><User size={18} /></div>
               {/* INPUT — clase input-field (definida en globals.css) */}
               <input id="nombre" name="nombre" type="text" value={form.nombre} onChange={handleChange} placeholder="Ej. Juan Pérez" required className="input-field" />
+              {hints.nombre && <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hints.nombre}</p>}
             </div>
 
             {/* ── CAMPO CORREO ELECTRÓNICO ── */}
@@ -291,6 +308,7 @@ function RegistroContent() {
               <div className="absolute left-4 top-[38px] -translate-y-[50%] text-navy-400"><IdCard size={18} /></div>
               {/* maxLength={12} — máximo 12 caracteres para la cédula */}
               <input id="dni" name="dni" type="text" inputMode="numeric" value={form.dni} onChange={handleChange} placeholder="Ej. 1020304050" required maxLength={12} className="input-field" />
+              {hints.dni && <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hints.dni}</p>}
             </div>
 
             {/* ── CAMPO NÚMERO DE CELULAR ── */}
@@ -299,6 +317,7 @@ function RegistroContent() {
               <div className="absolute left-4 top-[38px] -translate-y-[50%] text-navy-400"><Phone size={18} /></div>
               {/* maxLength={10} — máximo 10 dígitos para el celular colombiano */}
               <input id="telefono" name="telefono" type="tel" inputMode="numeric" value={form.telefono} onChange={handleChange} placeholder="Ej. 3001234567" required maxLength={10} className="input-field" />
+              {hints.telefono && <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hints.telefono}</p>}
             </div>
 
             {/* ── CAMPO CONTRASEÑA NUEVA ── */}

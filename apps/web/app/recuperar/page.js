@@ -9,7 +9,7 @@
  *   Paso 2 — El usuario ingresa el código OTP + su nueva contraseña.
  * ========================================================================== */
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Phone, Lock, ArrowLeft, KeyRound, CheckCircle2 } from 'lucide-react'
@@ -25,6 +25,16 @@ export default function RecuperarPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [emailEnviado, setEmailEnviado] = useState('')
+  const [hints, setHints] = useState({})
+  const hintTimers = useRef({})
+
+  function showHint(field, msg) {
+    setHints(prev => ({ ...prev, [field]: msg }))
+    clearTimeout(hintTimers.current[field])
+    hintTimers.current[field] = setTimeout(
+      () => setHints(prev => ({ ...prev, [field]: '' })), 2500
+    )
+  }
 
   async function handleSendOTP(e) {
     e.preventDefault()
@@ -194,12 +204,18 @@ export default function RecuperarPage() {
                     type="tel"
                     inputMode="numeric"
                     value={celular}
-                    onChange={(e) => setCelular(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      const clean = raw.replace(/\D/g, '')
+                      if (raw !== clean) showHint('celular', 'Solo se permiten números en este campo')
+                      setCelular(clean)
+                    }}
                     placeholder="celular"
                     required
                     maxLength={10}
                     className="input-field"
                   />
+                  {hints.celular && <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hints.celular}</p>}
                 </div>
               )}
 
