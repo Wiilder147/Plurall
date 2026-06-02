@@ -575,18 +575,24 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
               {authMode === 'registro' && (
                 <form onSubmit={handleRegistro} className="space-y-3">
                   {[
-                    { id: 'nombre',   label: 'Nombre completo',          type: 'text',  icon: <User size={16} />,   placeholder: 'Ej. Juan Pérez' },
-                    { id: 'email',    label: 'Correo electrónico',       type: 'email', icon: <Mail size={16} />,   placeholder: 'tucorreo@ejemplo.com' },
-                    { id: 'dni',      label: 'Documento (CC)',           type: 'text',  icon: <IdCard size={16} />, placeholder: 'Ej. 1020304050', maxLength: 12 },
-                    { id: 'telefono', label: 'Celular (10 dígitos)',     type: 'tel',   icon: <Phone size={16} />,  placeholder: 'Ej. 3001234567', maxLength: 10 },
+                    { id: 'nombre',   label: 'Nombre completo',          type: 'text',  inputMode: undefined,   icon: <User size={16} />,   placeholder: 'Ej. Juan Pérez' },
+                    { id: 'email',    label: 'Correo electrónico',       type: 'email', inputMode: undefined,   icon: <Mail size={16} />,   placeholder: 'tucorreo@ejemplo.com' },
+                    { id: 'dni',      label: 'Documento (CC)',           type: 'text',  inputMode: 'numeric',   icon: <IdCard size={16} />, placeholder: 'Ej. 1020304050', maxLength: 12 },
+                    { id: 'telefono', label: 'Celular (10 dígitos)',     type: 'tel',   inputMode: 'numeric',   icon: <Phone size={16} />,  placeholder: 'Ej. 3001234567', maxLength: 10 },
                   ].map(f => (
                     <div key={f.id} className="relative">
                       <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">{f.label}</label>
                       <div className="absolute left-3 top-[34px] -translate-y-1/2 text-slate-400">{f.icon}</div>
                       <input
                         type={f.type}
+                        inputMode={f.inputMode}
                         value={regForm[f.id]}
-                        onChange={e => setRegForm(prev => ({ ...prev, [f.id]: e.target.value }))}
+                        onChange={e => {
+                          let val = e.target.value
+                          if (f.id === 'nombre') val = val.replace(/[0-9]/g, '')
+                          if (f.id === 'dni' || f.id === 'telefono') val = val.replace(/\D/g, '')
+                          setRegForm(prev => ({ ...prev, [f.id]: val }))
+                        }}
                         placeholder={f.placeholder}
                         required
                         maxLength={f.maxLength}
@@ -670,8 +676,9 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                     <div className="absolute left-3 top-[34px] -translate-y-1/2 text-slate-400"><Phone size={16} /></div>
                     <input
                       type="tel"
+                      inputMode="numeric"
                       value={loginForm.celular}
-                      onChange={e => setLoginForm(prev => ({ ...prev, celular: e.target.value }))}
+                      onChange={e => setLoginForm(prev => ({ ...prev, celular: e.target.value.replace(/\D/g, '') }))}
                       placeholder="Ej. 3001234567"
                       required maxLength={10}
                       className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"

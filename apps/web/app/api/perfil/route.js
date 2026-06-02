@@ -5,6 +5,7 @@
  * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 
 /**
@@ -80,4 +81,53 @@ export async function PATCH(request) {
   }
 
   return NextResponse.json({ ok: true, data: clienteActualizado })
+}
+
+/**
+ * DELETE /api/perfil
+ * Elimina permanentemente la cuenta del usuario autenticado.
+ * Regla de negocio: bloquea la eliminación si tiene un crédito activo o en mora.
+ * Usa el SERVICE_ROLE_KEY para poder llamar a auth.admin.deleteUser().
+ */
+export async function DELETE() {
+  const supabase = await createClient()
+
+  // ── 1. Verificar sesión activa ────────────────────────────────
+  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !user) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  // ── 2. Verificar que no tenga créditos activos ────────────────
+  const { data: clienteRow } = await supabase
+    .from('cliente')
+    .select('id_cliente')
+    .eq('id_usuario_cuenta', user.id)
+    .single()
+
+  if (clienteRow) {
+    const { count } = await supabase
+      .from('credito')
+      .select('*', { count: 'exact', head: true })
+      .eq('id_cliente', clienteRow.id_cliente)
+      .in('estado_credito', ['ACTIVO', 'EN_MORA'])
+
+    if (count > 0) {
+      return NextResponse.json(
+        { error: 'No puedes eliminar tu cuenta mientras tengas un crédito activo o en mora.' },
+        { status: 409 }
+      )
+    }
+  }
+
+  // ── 3. Eliminar el usuario con permisos de administrador ──────
+  const serviceClient = createServiceClient()
+  const { error: deleteErr } = await serviceClient.auth.admin.deleteUser(user.id)
+
+  if (deleteErr) {
+    console.error('[Perfil] Error al eliminar usuario:', deleteErr)
+    return NextResponse.json({ error: 'No se pudo eliminar la cuenta. Intenta más tarde.' }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
 }

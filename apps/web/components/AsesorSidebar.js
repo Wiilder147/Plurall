@@ -3,8 +3,9 @@
 /* ==========================================================================
  * ARCHIVO: AsesorSidebar.js
  * RUTA: apps/web/components/AsesorSidebar.js
- * DESCRIPCIÓN: Componente de interfaz de usuario (UI) reutilizable.
- * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * DESCRIPCIÓN: Barra lateral de navegación del panel de ASESOR.
+ * FUNCIONALIDAD: Menú de navegación para el rol de asesor de cobranza.
+ *                Usa color TEAL (verde azulado) como identidad visual del asesor.
  * ========================================================================== */
 
 import Link from 'next/link'
@@ -17,6 +18,8 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ThemeToggle from './ThemeToggle'
 
+// LISTA DE RUTAS DEL MENÚ ASESOR — para agregar ruta nueva:
+// { name: 'Mi Sección', href: '/asesor/mi-ruta', icon: IconName }
 const navigation = [
   { name: 'Mi Panel',     href: '/asesor',               icon: LayoutDashboard },
   { name: 'Solicitudes',  href: '/asesor/solicitudes',   icon: FileCheck       },
@@ -40,6 +43,10 @@ export default function AsesorSidebar() {
 
   return (
     <>
+      {/* BOTÓN HAMBURGUESA (solo móvil)
+          COLOR DE FONDO: bg-teal-900 (verde azulado muy oscuro — color identidad asesor)
+          Para cambiar: bg-green-900, bg-cyan-900
+          COLOR ÍCONO: text-white, TAMAÑO: p-2, ÍCONO: h-6 w-6 (24x24px) */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-teal-900 rounded-md shadow text-white"
@@ -47,10 +54,18 @@ export default function AsesorSidebar() {
         {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
 
+      {/* OVERLAY — bg-slate-900/40 (negro 40% opacidad) */}
       {isOpen && (
         <div className="md:hidden fixed inset-0 bg-slate-900/40 z-40" onClick={() => setIsOpen(false)} />
       )}
 
+      {/* ────────────────────────────────────────────────────────────────────────
+          SIDEBAR ASESOR — usa TEAL (verde azulado) como color principal
+          COLOR DE FONDO: bg-teal-950 (teal muy oscuro, casi negro)
+          Para cambiar TODO el tema: reemplaza teal por cyan, green, emerald, etc.
+          BORDE DERECHO: border-r border-teal-900 (línea teal oscura)
+          ANCHO: w-64 (256px)
+          ──────────────────────────────────────────────────────────────────────── */}
       <div className={`
         fixed md:static inset-y-0 left-0 z-40
         w-64 bg-teal-950 border-r border-teal-900
@@ -58,24 +73,45 @@ export default function AsesorSidebar() {
         flex flex-col
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        {/* Logo */}
+
+        {/* ── SECCIÓN LOGO ──
+            ALTURA: h-20 (80px)
+            BORDE INFERIOR: border-b border-teal-900 */}
         <div className="h-20 flex items-center justify-center border-b border-teal-900 px-6">
           <div className="flex items-center gap-2">
+            {/* CUADRADO LOGO "P"
+                COLOR DE FONDO: bg-teal-500 (teal/verde azulado medio)
+                Para cambiar: bg-green-500, bg-cyan-500
+                TAMAÑO: w-8 h-8 (32x32px), BORDES: rounded-md (6px) */}
             <div className="w-8 h-8 bg-teal-500 text-white flex items-center justify-center font-bold text-lg rounded-md">P</div>
             <div className="flex flex-col leading-none">
+              {/* NOMBRE "PLURALL" — text-white (blanco), text-base (16px) */}
               <span className="text-white font-bold text-base tracking-tight">PLURALL</span>
+              {/* SUBTÍTULO "Asesor"
+                  COLOR: text-teal-400 (teal claro — para cambiar: text-green-400, text-cyan-400)
+                  TAMAÑO: text-xs (12px) */}
               <span className="text-teal-400 text-xs font-medium">Asesor</span>
             </div>
           </div>
         </div>
 
-        {/* Navegación */}
+        {/* ── ZONA DE NAVEGACIÓN ──
+            overflow-y-auto — scroll si hay demasiados items
+            ESPACIO ENTRE ITEMS: gap-1 (4px)
+            PADDING: py-6 px-4 */}
         <div className="flex-1 py-6 px-4 flex flex-col gap-1 overflow-y-auto">
           {navigation.map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href !== '/asesor' && pathname.startsWith(item.href))
             return (
+              // ENLACE DE NAVEGACIÓN ASESOR
+              // ESTADO ACTIVO: bg-teal-500/20 text-teal-300 font-semibold
+              //   (fondo teal muy transparente, texto teal claro)
+              //   Para cambiar COLOR ACTIVO: reemplaza 'bg-teal-500/20 text-teal-300'
+              // ESTADO INACTIVO: text-teal-300/60 hover:bg-teal-900 hover:text-teal-200
+              //   (teal semi-transparente, hover fondo teal muy oscuro)
+              // TAMAÑO FUENTE: text-sm (14px)
               <Link key={item.name} href={item.href} onClick={() => setIsOpen(false)}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm
@@ -83,6 +119,9 @@ export default function AsesorSidebar() {
                     ? 'bg-teal-500/20 text-teal-300 font-semibold'
                     : 'text-teal-300/60 hover:bg-teal-900 hover:text-teal-200'}
                 `}>
+                {/* ÍCONO — h-4 w-4 (16x16px)
+                    COLOR ACTIVO: text-teal-400 (teal claro)
+                    COLOR INACTIVO: text-teal-500/60 (teal semi-transparente) */}
                 <item.icon className={`h-4 w-4 ${isActive ? 'text-teal-400' : 'text-teal-500/60'}`} />
                 {item.name}
               </Link>
@@ -90,13 +129,20 @@ export default function AsesorSidebar() {
           })}
         </div>
 
-        {/* Logout */}
+        {/* ── SECCIÓN INFERIOR: CERRAR SESIÓN + TOGGLE TEMA ──
+            BORDE: border-t border-teal-900
+            PADDING: p-4 (16px) */}
         <div className="p-4 border-t border-teal-900 flex items-center gap-2">
+          {/* BOTÓN CERRAR SESIÓN
+              COLOR EN REPOSO: text-teal-400/60 (teal semi-transparente)
+              HOVER: hover:bg-red-900/30 hover:text-red-400 (rojo al hover)
+              TAMAÑO FUENTE: text-sm (14px), ÍCONO: h-4 w-4 (16x16px) */}
           <button onClick={handleLogout}
             className="flex items-center gap-3 px-4 py-3 flex-1 rounded-xl text-teal-400/60 hover:bg-red-900/30 hover:text-red-400 transition-all text-sm">
             <LogOut className="h-4 w-4" />
             <span className="font-medium">Cerrar sesión</span>
           </button>
+          {/* TOGGLE TEMA — componente ThemeToggle.js */}
           <ThemeToggle />
         </div>
       </div>

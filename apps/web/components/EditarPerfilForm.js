@@ -34,7 +34,11 @@ export default function EditarPerfilForm({ cliente }) {
   })
 
   function handleChange(e) {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+    const { name, value } = e.target
+    let sanitized = value
+    if (name === 'telefono') sanitized = value.replace(/\D/g, '')
+    if (name === 'ciudad' || name === 'departamento') sanitized = value.replace(/[0-9]/g, '')
+    setForm(prev => ({ ...prev, [name]: sanitized }))
     setError('')
     setExito(false)
   }
@@ -125,6 +129,7 @@ export default function EditarPerfilForm({ cliente }) {
               icon={Phone} label="Teléfono (10 dígitos)"
               name="telefono" value={form.telefono}
               onChange={handleChange} maxLength={10}
+              inputMode="numeric"
               placeholder="3001234567"
             />
             <Campo
