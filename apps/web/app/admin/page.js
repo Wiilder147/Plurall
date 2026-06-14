@@ -9,18 +9,22 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { ClipboardList, Users, TrendingUp, AlertTriangle, ArrowRight, CheckCircle2, Clock } from 'lucide-react'
-import AnalyticsDashboard from '@/components/AnalyticsDashboard'
+import AnalyticsSection from '@/components/AnalyticsSection'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
 
+  // Todas las consultas del panel en paralelo (un solo round-trip lógico)
   const [
     { count: totalSolicitudes },
     { count: pendientes },
     { count: totalClientes },
     { count: creditosActivos },
+    { data: recientes },
+    { data: cartera },
+    { count: cuotasVencidas },
   ] = await Promise.all([
     supabase.from('solicitud_credito').select('*', { count: 'exact', head: true }),
     supabase.from('solicitud_credito')
@@ -31,25 +35,19 @@ export default async function AdminDashboardPage() {
     supabase.from('credito')
       .select('*', { count: 'exact', head: true })
       .in('estado_credito', ['ACTIVO', 'EN_MORA']),
+    supabase.from('solicitud_credito')
+      .select(`
+        id_solicitud, monto_solicitado, plazo_meses, fecha_solicitud,
+        estado_solicitud ( nombre ),
+        cliente ( nombre_completo )
+      `)
+      .order('fecha_solicitud', { ascending: false })
+      .limit(5),
+    supabase.from('credito').select('saldo_pendiente').in('estado_credito', ['ACTIVO', 'EN_MORA']),
+    supabase.from('cuota').select('*', { count: 'exact', head: true }).eq('estado_cuota', 'VENCIDA'),
   ])
 
-  const { data: recientes } = await supabase
-    .from('solicitud_credito')
-    .select(`
-      id_solicitud, monto_solicitado, plazo_meses, fecha_solicitud,
-      estado_solicitud ( nombre ),
-      cliente ( nombre_completo )
-    `)
-    .order('fecha_solicitud', { ascending: false })
-    .limit(5)
-
-  const { data: cartera } = await supabase
-    .from('credito').select('saldo_pendiente').in('estado_credito', ['ACTIVO', 'EN_MORA'])
-
   const totalCartera = cartera?.reduce((sum, c) => sum + (c.saldo_pendiente || 0), 0) || 0
-
-  const { count: cuotasVencidas } = await supabase
-    .from('cuota').select('*', { count: 'exact', head: true }).eq('estado_cuota', 'VENCIDA')
 
   // CONFIGURACIÓN DE LAS TARJETAS KPI
   // Para agregar un KPI nuevo: agrega un objeto con { label, value, icon, color, href }
@@ -119,7 +117,7 @@ export default async function AdminDashboardPage() {
       {/* ── PANEL DE ANALÍTICA (gráficas con filtros configurables) ── */}
       <section>
         <h2 className="text-xl font-bold text-white tracking-tight mb-4">Analítica e indicadores</h2>
-        <AnalyticsDashboard accent="orange" />
+        <AnalyticsSection accent="orange" />
       </section>
 
       {/* ── TABLA SOLICITUDES RECIENTES ──

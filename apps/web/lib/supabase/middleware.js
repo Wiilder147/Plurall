@@ -38,30 +38,35 @@ export async function updateSession(request) {
     }
   )
 
-  // Obtener usuario actual y validar acceso a rutas privadas.
-  const { data: { user } } = await supabase.auth.getUser()
-
   const path = request.nextUrl.pathname
 
-  if (
-    !user &&
-    !path.startsWith('/login') &&
-    !path.startsWith('/registro') &&
-    !path.startsWith('/recuperar') &&
-    !path.startsWith('/api/auth/') &&
-    !path.startsWith('/api/webhooks/') &&
-    path !== '/'
-  ) {
+  // OPTIMIZACIÓN: el middleware corre en CADA request y getUser() hace una
+  // llamada de red a Supabase Auth (~0.5-1s). Lo saltamos donde no aporta:
+  //   - Rutas públicas (no requieren sesión).
+  //   - Rutas /api/* : cada endpoint valida su propia sesión con getUser(),
+  //     así que validarla aquí duplica el round-trip de red.
+  // En esos casos devolvemos la respuesta directamente (la sesión sigue
+  // refrescándose dentro del propio endpoint cuando hace falta).
+  const esPublica =
+    path === '/' ||
+    path.startsWith('/login') ||
+    path.startsWith('/registro') ||
+    path.startsWith('/recuperar') ||
+    path.startsWith('/api/')
+
+  if (esPublica) {
+    return supabaseResponse
+  }
+
+  // Rutas privadas (páginas): validar sesión y refrescar cookies.
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Proteger rutas de supervisor y asesor — redirigir al login si no hay sesión
-  // La verificación de ROL se hace en el layout de cada sección
-  if (user && (path.startsWith('/supervisor') || path.startsWith('/asesor'))) {
-    // Sesión válida — el layout verificará el rol específico
-  }
-
+  // La verificación de ROL específica se hace en el layout de cada sección.
   return supabaseResponse
 }

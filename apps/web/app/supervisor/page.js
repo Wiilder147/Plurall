@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 import SupervisorCharts from '@/components/SupervisorCharts'
-import AnalyticsDashboard from '@/components/AnalyticsDashboard'
+import AnalyticsSection from '@/components/AnalyticsSection'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +58,7 @@ export default async function SupervisorDashboard() {
       {/* ── ANALÍTICA AMPLIADA (asesores, zonas, PQR, comparativas) ── */}
       <section>
         <h2 className="text-xl font-bold text-white tracking-tight mb-4 mt-2">Analítica detallada</h2>
-        <AnalyticsDashboard accent="indigo" />
+        <AnalyticsSection accent="indigo" />
       </section>
     </div>
   )
