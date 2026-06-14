@@ -5,10 +5,21 @@
  * FUNCIONALIDAD: Arma la estructura fija de dos columnas: sidebar izquierdo + contenido derecho.
  *                ForceLightMode fuerza el modo claro (sin importar el tema del sistema).
  * ========================================================================== */
+import { createClient } from '@/lib/supabase/server'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import ForceLightMode from '@/components/ForceLightMode'
 
-export default function DashboardLayout({ children }) {
+export default async function DashboardLayout({ children }) {
+  // Detectar si quien navega es ADMIN para ofrecerle el retorno a su panel.
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  let esAdmin = false
+  if (user) {
+    const { data: perfil } = await supabase
+      .from('perfil_usuario').select('rol ( nombre_rol )').eq('id', user.id).single()
+    esAdmin = perfil?.rol?.nombre_rol?.toUpperCase() === 'ADMIN'
+  }
+
   return (
     // CONTENEDOR PRINCIPAL — flex horizontal (sidebar + contenido)
     // COLOR DE FONDO DE LA PÁGINA: bg-slate-50 (gris muy claro casi blanco)
@@ -20,7 +31,7 @@ export default function DashboardLayout({ children }) {
       <ForceLightMode />
 
       {/* SIDEBAR IZQUIERDO — ocupa su ancho fijo (w-64 = 256px definido en DashboardSidebar.js) */}
-      <DashboardSidebar />
+      <DashboardSidebar esAdmin={esAdmin} />
 
       {/* ÁREA DE CONTENIDO PRINCIPAL (columna derecha)
           flex-1 — ocupa todo el espacio restante después del sidebar

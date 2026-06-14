@@ -8,10 +8,12 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
+import { urlPublicaDocumento } from '@/lib/documentos'
 import {
   ArrowLeft, User, Phone, Mail, Hash, MapPin, Store,
   CreditCard, CheckCircle2, XCircle, Clock, AlertTriangle,
   TrendingUp, Wallet, FileText, BarChart3, Shield, Calendar,
+  Download, Receipt, ExternalLink,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -46,7 +48,7 @@ export default async function AdminDetalleClientePage({ params }) {
     .single()
 
   const rol = perfil?.rol?.nombre_rol?.toUpperCase()
-  if (!['ADMIN', 'ANALISTA'].includes(rol)) redirect('/dashboard/inicio')
+  if (!['ADMIN', 'SUPERVISOR'].includes(rol)) redirect('/dashboard/inicio')
 
   const { id: clienteId } = await params
 
@@ -70,7 +72,7 @@ export default async function AdminDetalleClientePage({ params }) {
       .single(),
     supabase
       .from('documento_cliente')
-      .select('tipo_documento, estado_verificacion, created_at')
+      .select('tipo_documento, estado_verificacion, created_at, url_archivo')
       .eq('id_cliente', clienteId)
       .order('created_at', { ascending: false }),
     supabase
@@ -203,14 +205,22 @@ export default async function AdminDetalleClientePage({ params }) {
           ) : (
             <div className="flex flex-col gap-2">
               {documentos.map((doc) => (
-                <div key={doc.tipo_documento} className="flex items-center justify-between text-xs">
+                <div key={doc.tipo_documento} className="flex items-center justify-between gap-2 text-xs">
                   <span className="text-slate-400">{doc.tipo_documento.replace(/_/g, ' ')}</span>
-                  <span className={`font-semibold ${
-                    doc.estado_verificacion === 'APROBADO'  ? 'text-emerald-400' :
-                    doc.estado_verificacion === 'RECHAZADO' ? 'text-red-400' : 'text-yellow-400'
-                  }`}>
-                    {doc.estado_verificacion}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`font-semibold ${
+                      doc.estado_verificacion === 'APROBADO'  ? 'text-emerald-400' :
+                      doc.estado_verificacion === 'RECHAZADO' ? 'text-red-400' : 'text-yellow-400'
+                    }`}>
+                      {doc.estado_verificacion}
+                    </span>
+                    {doc.url_archivo && (
+                      <a href={urlPublicaDocumento(doc.url_archivo)} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-orange-400 hover:text-orange-300 bg-orange-500/10 px-2 py-1 rounded-lg font-semibold">
+                        Ver <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -256,6 +266,45 @@ export default async function AdminDetalleClientePage({ params }) {
             <p className="text-slate-500 text-xs mt-1">
               {Math.round((creditoActivo.cuotas_pagadas / creditoActivo.numero_cuotas) * 100)}% pagado
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Documentos descargables por crédito (PDF) ── */}
+      {creditos?.length > 0 && (
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-700">
+            <h2 className="font-semibold text-slate-300 text-sm flex items-center gap-2">
+              <Receipt className="w-4 h-4 text-orange-400" /> Documentos del crédito (PDF)
+            </h2>
+            <p className="text-slate-500 text-xs mt-0.5">Genera y descarga los documentos oficiales de cada crédito del cliente.</p>
+          </div>
+          <div className="divide-y divide-slate-700/50">
+            {creditos.map((c) => {
+              const ref = String(c.id_credito).slice(-8).toUpperCase()
+              const docs = [
+                { label: 'Contrato',       key: 'contrato' },
+                { label: 'Plan de pagos',  key: 'plan-pagos' },
+                { label: 'Estado de cuenta', key: 'estado-cuenta' },
+                ...(c.estado_credito === 'CANCELADO' ? [{ label: 'Paz y salvo', key: 'paz-y-salvo' }] : []),
+              ]
+              return (
+                <div key={c.id_credito} className="px-5 py-4">
+                  <div className="flex items-center justify-between gap-3 mb-2.5">
+                    <p className="text-slate-300 text-sm font-semibold">Crédito #{ref} <span className="text-slate-500 font-normal">· {formatCOP(c.monto_desembolsado)}</span></p>
+                    <span className="text-xs text-slate-500">{c.estado_credito}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {docs.map((d) => (
+                      <a key={d.key} href={`/api/documentos/${d.key}/${c.id_credito}`} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg transition-colors">
+                        <Download className="w-3.5 h-3.5" /> {d.label}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

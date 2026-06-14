@@ -11,8 +11,9 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, Users, AlertTriangle,
-  ClipboardList, PhoneCall, LogOut, Menu, X, FileCheck,
+  LayoutDashboard, Users, CreditCard, FileText,
+  Bell, CalendarClock, MessageSquare, XCircle, CheckCircle2,
+  LogOut, Menu, X, ArrowLeft,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -20,16 +21,22 @@ import ThemeToggle from './ThemeToggle'
 
 // LISTA DE RUTAS DEL MENÚ ASESOR — para agregar ruta nueva:
 // { name: 'Mi Sección', href: '/asesor/mi-ruta', icon: IconName }
+// Módulos del rol ASESOR: gestión de usuarios y créditos, documentación,
+// notificaciones, amortización, PQR, motivos de rechazo y PREAPROBACIÓN
+// (botón check que habilita el crédito para que el supervisor lo apruebe).
 const navigation = [
-  { name: 'Mi Panel',     href: '/asesor',               icon: LayoutDashboard },
-  { name: 'Solicitudes',  href: '/asesor/solicitudes',   icon: FileCheck       },
-  { name: 'Mis Clientes', href: '/asesor/clientes',      icon: Users           },
-  { name: 'Cobranza',     href: '/asesor/cobranza',      icon: AlertTriangle   },
-  { name: 'Gestiones',    href: '/asesor/gestiones',     icon: ClipboardList   },
-  { name: 'Pagos',        href: '/asesor/pagos',         icon: PhoneCall       },
+  { name: 'Mi Panel',             href: '/asesor',                 icon: LayoutDashboard },
+  { name: 'Gestión de usuarios',  href: '/asesor/clientes',        icon: Users           },
+  { name: 'Gestión de créditos',  href: '/asesor/creditos',        icon: CreditCard      },
+  { name: 'Documentación',        href: '/asesor/documentos',      icon: FileText        },
+  { name: 'Preaprobación',        href: '/asesor/preaprobacion',   icon: CheckCircle2    },
+  { name: 'Motivos de rechazo',   href: '/asesor/motivos-rechazo', icon: XCircle         },
+  { name: 'Amortización',         href: '/asesor/amortizacion',    icon: CalendarClock   },
+  { name: 'Notificaciones',       href: '/asesor/notificaciones',  icon: Bell            },
+  { name: 'PQR',                  href: '/asesor/pqr',             icon: MessageSquare   },
 ]
 
-export default function AsesorSidebar() {
+export default function AsesorSidebar({ esAdmin = false }) {
   const pathname = usePathname()
   const router   = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -100,6 +107,13 @@ export default function AsesorSidebar() {
             ESPACIO ENTRE ITEMS: gap-1 (4px)
             PADDING: py-6 px-4 */}
         <div className="flex-1 py-6 px-4 flex flex-col gap-1 overflow-y-auto">
+          {/* Enlace de retorno al panel Admin — solo visible para el ADMIN */}
+          {esAdmin && (
+            <Link href="/admin" onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 mb-2 rounded-xl text-sm bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-semibold transition-all">
+              <ArrowLeft className="h-4 w-4" /> Volver a Admin
+            </Link>
+          )}
           {navigation.map((item) => {
             const isActive =
               pathname === item.href ||

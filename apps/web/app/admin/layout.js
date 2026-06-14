@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }) {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) redirect('/login')
 
-  // Verificar que el usuario tenga rol ADMIN o ANALISTA
+  // Verificar que el usuario tenga rol ADMIN (acceso total)
   const { data: perfil } = await supabase
     .from('perfil_usuario')
     .select('id_rol, rol ( nombre_rol )')
@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }) {
 
   const nombreRol = perfil?.rol?.nombre_rol?.toUpperCase()
 
-  if (!perfil || !['ADMIN', 'ANALISTA'].includes(nombreRol)) {
+  if (!perfil || nombreRol !== 'ADMIN') {
     redirect('/dashboard/inicio')
   }
 

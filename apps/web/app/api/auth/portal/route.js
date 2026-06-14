@@ -30,7 +30,6 @@ export async function GET() {
 
   const portales = {
     ADMIN:      '/admin',
-    ANALISTA:   '/admin',
     SUPERVISOR: '/supervisor',
     ASESOR:     '/asesor',
     CLIENTE:    '/dashboard/inicio',

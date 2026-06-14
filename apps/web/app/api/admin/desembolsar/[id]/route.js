@@ -32,7 +32,7 @@ export async function POST(request, { params }) {
     .eq('id', user.id)
     .single()
 
-  if (!['ADMIN', 'ANALISTA'].includes(perfil?.rol?.nombre_rol?.toUpperCase())) {
+  if (!['ADMIN', 'SUPERVISOR'].includes(perfil?.rol?.nombre_rol?.toUpperCase())) {
     return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
   }
 

@@ -1,0 +1,44 @@
+{
+  "descripcion": "Usuarios de prueba de PLURALL — uno por cada rol del sistema. El login se hace con el CELULAR (10 dígitos) + la contraseña. Internamente Supabase usa el correo <celular>@plurall.app.",
+  "proyecto_supabase": "bnemrismjmvmemypokaz (Plurall-Fants)",
+  "password_comun": "Plurall2026*",
+  "actualizado": "2026-06-14",
+  "usuarios": [
+    {
+      "rol": "ADMIN",
+      "descripcion_rol": "Administrador / gerente: acceso total a todos los paneles",
+      "nombre": "Supervisor QA",
+      "celular": "3001234567",
+      "email_interno": "3001234567@plurall.app",
+      "password": "Plurall2026*",
+      "panel_inicial": "/admin"
+    },
+    {
+      "rol": "SUPERVISOR",
+      "descripcion_rol": "Analista de crédito: aprobación, desembolso, puntaje, mora, PQR",
+      "nombre": "Laura Supervisora",
+      "celular": "3100000001",
+      "email_interno": "3100000001@plurall.app",
+      "password": "Plurall2026*",
+      "panel_inicial": "/supervisor"
+    },
+    {
+      "rol": "ASESOR",
+      "descripcion_rol": "Gestión de usuarios/créditos, preaprobación, documentación, PQR",
+      "nombre": "Carlos Asesor",
+      "celular": "3100000002",
+      "email_interno": "3100000002@plurall.app",
+      "password": "Plurall2026*",
+      "panel_inicial": "/asesor"
+    },
+    {
+      "rol": "CLIENTE",
+      "descripcion_rol": "Usuario final: su crédito, pagos, documentos, notificaciones, PQR, ayuda",
+      "nombre": "Juan Maurello",
+      "celular": "3173784693",
+      "email_interno": "3173784693@plurall.app",
+      "password": "Plurall2026*",
+      "panel_inicial": "/dashboard/inicio"
+    }
+  ]
+}

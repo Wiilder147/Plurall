@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 import SupervisorCharts from '@/components/SupervisorCharts'
+import AnalyticsDashboard from '@/components/AnalyticsDashboard'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,6 +54,12 @@ export default async function SupervisorDashboard() {
           SupervisorCharts.js carga los datos desde el browser con fetch.
           Las gráficas, colores y tamaños se modifican en: components/SupervisorCharts.js */}
       <SupervisorCharts />
+
+      {/* ── ANALÍTICA AMPLIADA (asesores, zonas, PQR, comparativas) ── */}
+      <section>
+        <h2 className="text-xl font-bold text-white tracking-tight mb-4 mt-2">Analítica detallada</h2>
+        <AnalyticsDashboard accent="indigo" />
+      </section>
     </div>
   )
 }

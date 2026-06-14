@@ -11,9 +11,9 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, ClipboardList, Users,
-  AlertTriangle, BarChart3, UserCheck,
-  LogOut, Menu, X, ShieldCheck, Search, GitMerge,
+  LayoutDashboard, Users, CreditCard, FileText, Gauge,
+  ClipboardCheck, XCircle, CalendarClock, Banknote, Bell, MessageSquare,
+  LogOut, Menu, X, ArrowLeft,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -21,19 +21,23 @@ import ThemeToggle from './ThemeToggle'
 
 // LISTA DE RUTAS DEL MENÚ SUPERVISOR — para agregar ruta nueva:
 // { name: 'Mi Sección', href: '/supervisor/mi-ruta', icon: IconName }
+// Módulos del rol SUPERVISOR (analista de crédito): acceso a gestión de
+// usuarios, créditos, documentación, puntaje, aprobación, desembolso y más.
 const navigation = [
-  { name: 'Panel',        href: '/supervisor',                  icon: LayoutDashboard },
-  { name: 'Solicitudes',  href: '/supervisor/solicitudes',      icon: ClipboardList   },
-  { name: 'Cartera',      href: '/supervisor/cartera',          icon: BarChart3       },
-  { name: 'Mora',         href: '/supervisor/mora',             icon: AlertTriangle   },
-  { name: 'Embudo',       href: '/supervisor/funnel',           icon: GitMerge        },
-  { name: 'Clientes',     href: '/supervisor/clientes',         icon: Users           },
-  { name: 'Buscar',       href: '/supervisor/buscar',           icon: Search          },
-  { name: 'Asesores',     href: '/supervisor/asesores',         icon: UserCheck       },
-  { name: 'Auditoría',    href: '/supervisor/auditoria',        icon: ShieldCheck     },
+  { name: 'Panel',                href: '/supervisor',                  icon: LayoutDashboard },
+  { name: 'Gestión de usuarios',  href: '/supervisor/clientes',         icon: Users           },
+  { name: 'Gestión de créditos',  href: '/supervisor/creditos',         icon: CreditCard      },
+  { name: 'Documentación',        href: '/supervisor/documentos',       icon: FileText        },
+  { name: 'Puntaje crediticio',   href: '/supervisor/puntaje',          icon: Gauge           },
+  { name: 'Aprobación de crédito',href: '/supervisor/solicitudes',      icon: ClipboardCheck  },
+  { name: 'Motivos de rechazo',   href: '/supervisor/motivos-rechazo',  icon: XCircle         },
+  { name: 'Amortización',         href: '/supervisor/amortizacion',     icon: CalendarClock   },
+  { name: 'Desembolso',           href: '/supervisor/desembolsos',      icon: Banknote        },
+  { name: 'Notificaciones',       href: '/supervisor/notificaciones',   icon: Bell            },
+  { name: 'PQR',                  href: '/supervisor/pqr',              icon: MessageSquare   },
 ]
 
-export default function SupervisorSidebar() {
+export default function SupervisorSidebar({ esAdmin = false }) {
   const pathname = usePathname()
   const router   = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -107,6 +111,13 @@ export default function SupervisorSidebar() {
             ESPACIO ENTRE ITEMS: gap-1 (4px)
             PADDING: py-6 px-4 */}
         <div className="flex-1 py-6 px-4 flex flex-col gap-1 overflow-y-auto">
+          {/* Enlace de retorno al panel Admin — solo visible para el ADMIN */}
+          {esAdmin && (
+            <Link href="/admin" onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 mb-2 rounded-xl text-sm bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 font-semibold transition-all">
+              <ArrowLeft className="h-4 w-4" /> Volver a Admin
+            </Link>
+          )}
           {navigation.map((item) => {
             const isActive =
               pathname === item.href ||

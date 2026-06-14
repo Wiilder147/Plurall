@@ -34,7 +34,7 @@ export async function GET(request) {
     .single()
 
   const rol = perfil?.rol?.nombre_rol?.toUpperCase()
-  if (!['ADMIN', 'SUPERVISOR', 'ANALISTA'].includes(rol)) {
+  if (!['ADMIN', 'SUPERVISOR'].includes(rol)) {
     return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
   }
 

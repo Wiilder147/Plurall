@@ -10,21 +10,26 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, User, LogOut, Menu, X, CreditCard, FileText, DollarSign, Globe } from 'lucide-react'
+import { Home, User, LogOut, Menu, X, CreditCard, FileText, DollarSign, Bell, MessageSquare, HelpCircle, Globe, ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 // LISTA DE RUTAS DEL MENÚ — aquí se definen los enlaces que aparecen en la barra lateral
 // Para agregar una sección: agrega { name: 'Mi Sección', href: '/dashboard/mi-ruta', icon: IconName }
+// Módulos del USUARIO (cliente): su crédito, su usuario, documentación, plan
+// de pagos, notificaciones, PQR y ayuda.
 const navigation = [
-  { name: 'Inicio',       href: '/dashboard/inicio',    icon: Home       },
-  { name: 'Mis Créditos', href: '/dashboard/creditos',  icon: CreditCard },
-  { name: 'Mis Cuotas',   href: '/dashboard/cuotas',    icon: DollarSign },
-  { name: 'Documentos',   href: '/dashboard/documentos',icon: FileText   },
-  { name: 'Mi Perfil',    href: '/dashboard/perfil',    icon: User       },
+  { name: 'Inicio',        href: '/dashboard/inicio',       icon: Home          },
+  { name: 'Mi Crédito',    href: '/dashboard/creditos',     icon: CreditCard    },
+  { name: 'Plan de Pagos', href: '/dashboard/cuotas',       icon: DollarSign    },
+  { name: 'Documentación', href: '/dashboard/documentos',   icon: FileText      },
+  { name: 'Notificaciones',href: '/dashboard/notificaciones',icon: Bell         },
+  { name: 'PQR',           href: '/dashboard/pqr',          icon: MessageSquare },
+  { name: 'Ayuda',         href: '/dashboard/ayuda',        icon: HelpCircle    },
+  { name: 'Mi Usuario',    href: '/dashboard/perfil',       icon: User          },
 ]
 
-export default function DashboardSidebar() {
+export default function DashboardSidebar({ esAdmin = false }) {
   const pathname = usePathname()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -129,6 +134,13 @@ export default function DashboardSidebar() {
             PADDING HORIZONTAL: px-4 (16px lados)
             ESPACIO ENTRE ITEMS: gap-2 (8px) */}
         <div className="flex-1 py-6 px-4 flex flex-col gap-2">
+          {/* Retorno al panel Admin — solo visible cuando navega el ADMIN */}
+          {esAdmin && (
+            <Link href="/admin" onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 mb-1 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 font-semibold transition-all">
+              <ArrowLeft className="h-5 w-5" /> Volver a Admin
+            </Link>
+          )}
           {navigation.map((item) => {
             const isActive = pathname === item.href
             return (

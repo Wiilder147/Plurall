@@ -12,7 +12,7 @@ import { NextResponse } from 'next/server'
  * GET /api/reportes/export?tipo=clientes|creditos|pagos|solicitudes|mora
  *
  * Genera y descarga un archivo CSV con los datos del reporte solicitado.
- * Solo accesible para ADMIN y ANALISTA.
+ * Solo accesible para ADMIN y SUPERVISOR.
  */
 
 function getServiceClient() {
@@ -235,7 +235,7 @@ export async function GET(request) {
     .single()
 
   const rol = perfil?.rol?.nombre_rol?.toUpperCase()
-  if (!['ADMIN', 'ANALISTA'].includes(rol)) {
+  if (!['ADMIN', 'SUPERVISOR'].includes(rol)) {
     return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
   }
 

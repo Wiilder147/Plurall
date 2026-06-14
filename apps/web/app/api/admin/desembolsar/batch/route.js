@@ -164,7 +164,7 @@ export async function desembolsarSolicitud(solicitudId, service) {
  *
  * Desembolsa múltiples solicitudes APROBADAS en una sola operación.
  * Procesa cada una de forma independiente — si una falla, las demás continúan.
- * Solo accesible por ADMIN o ANALISTA.
+ * Solo accesible por ADMIN o SUPERVISOR.
  */
 export async function POST(request) {
   const supabase = await createClient()
@@ -179,7 +179,7 @@ export async function POST(request) {
     .single()
 
   const rol = perfil?.rol?.nombre_rol?.toUpperCase()
-  if (!['ADMIN', 'ANALISTA', 'SUPERVISOR'].includes(rol)) {
+  if (!['ADMIN', 'SUPERVISOR'].includes(rol)) {
     return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
   }
 

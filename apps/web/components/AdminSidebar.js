@@ -10,18 +10,24 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, ClipboardList, Users, LogOut, Menu, X, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Users, LogOut, Menu, X, BarChart3, ShieldCheck, Headset, UserCircle } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ThemeToggle from './ThemeToggle'
 
 // LISTA DE RUTAS DEL MENÚ ADMIN — para agregar una ruta nueva:
 // { name: 'Mi Sección', href: '/admin/mi-ruta', icon: IconName }
+// El ADMIN (gerente del proyecto) tiene ACCESO TOTAL: sus propios módulos
+// de gestión más accesos directos a los paneles de Supervisor, Asesor y Usuario.
 const navigation = [
-  { name: 'Panel',       href: '/admin',             icon: LayoutDashboard },
-  { name: 'Solicitudes', href: '/admin/solicitudes',  icon: ClipboardList   },
-  { name: 'Clientes',    href: '/admin/clientes',     icon: Users           },
-  { name: 'Reportes',    href: '/admin/reportes',     icon: BarChart3       },
+  { name: 'Panel',            href: '/admin',             icon: LayoutDashboard },
+  { name: 'Solicitudes',      href: '/admin/solicitudes', icon: ClipboardList   },
+  { name: 'Clientes',         href: '/admin/clientes',    icon: Users           },
+  { name: 'Reportes',         href: '/admin/reportes',    icon: BarChart3       },
+  // ── Accesos a los demás paneles (acceso total) ──
+  { name: 'Panel Supervisor', href: '/supervisor',        icon: ShieldCheck     },
+  { name: 'Panel Asesor',     href: '/asesor',            icon: Headset         },
+  { name: 'Vista Usuario',    href: '/dashboard/inicio',  icon: UserCircle      },
 ]
 
 export default function AdminSidebar() {

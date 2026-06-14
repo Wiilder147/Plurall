@@ -30,7 +30,7 @@ export async function PATCH(request, { params }) {
     .single()
 
   const rol = perfil?.rol?.nombre_rol?.toUpperCase()
-  if (!['ASESOR', 'SUPERVISOR', 'ADMIN', 'ANALISTA'].includes(rol)) {
+  if (!['ASESOR', 'SUPERVISOR', 'ADMIN'].includes(rol)) {
     return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
   }
 

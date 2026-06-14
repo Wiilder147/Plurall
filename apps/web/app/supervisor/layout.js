@@ -29,7 +29,7 @@ export default async function SupervisorLayout({ children }) {
 
   return (
     <div className="flex h-screen bg-indigo-950 overflow-hidden">
-      <SupervisorSidebar />
+      <SupervisorSidebar esAdmin={rol === 'ADMIN'} />
       <main className="flex-1 h-screen overflow-y-auto bg-slate-950 w-full">
         <div className="w-full p-4 md:p-8 max-w-7xl mx-auto mt-12 md:mt-0">
           {children}

@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { ClipboardList, Users, TrendingUp, AlertTriangle, ArrowRight, CheckCircle2, Clock } from 'lucide-react'
+import AnalyticsDashboard from '@/components/AnalyticsDashboard'
 
 export const dynamic = 'force-dynamic'
 
@@ -114,6 +115,12 @@ export default async function AdminDashboardPage() {
         {/* SUBTÍTULO — text-orange-200 (naranja claro), text-sm (14px) */}
         <p className="text-orange-200 text-sm mt-1">{(creditosActivos || 0).toLocaleString()} crédito{creditosActivos !== 1 ? 's' : ''} activo{creditosActivos !== 1 ? 's' : ''}</p>
       </div>
+
+      {/* ── PANEL DE ANALÍTICA (gráficas con filtros configurables) ── */}
+      <section>
+        <h2 className="text-xl font-bold text-white tracking-tight mb-4">Analítica e indicadores</h2>
+        <AnalyticsDashboard accent="orange" />
+      </section>
 
       {/* ── TABLA SOLICITUDES RECIENTES ──
           COLOR DE FONDO: bg-slate-800 (gris oscuro)

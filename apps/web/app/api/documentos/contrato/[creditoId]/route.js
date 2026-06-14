@@ -6,6 +6,7 @@
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
+import { resolverAccesoCredito } from '@/lib/documentos'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,13 +18,10 @@ export async function GET(request, { params }) {
 
   const { creditoId } = await params
 
-  const { data: clienteRow } = await supabase
-    .from('cliente')
-    .select('id_cliente, email, nombre_completo')
-    .eq('id_usuario_cuenta', user.id)
-    .single()
-
-  if (!clienteRow) return new Response('Cliente no encontrado', { status: 404 })
+  // Autoriza al cliente dueño o al staff (ADMIN/SUPERVISOR/ASESOR) y trae al titular
+  const acceso = await resolverAccesoCredito(supabase, creditoId)
+  if (acceso.error) return new Response(acceso.error, { status: acceso.status })
+  const clienteRow = acceso.titular
 
   const { data: credito } = await supabase
     .from('credito')
@@ -34,12 +32,12 @@ export async function GET(request, { params }) {
       id_solicitud
     `)
     .eq('id_credito', creditoId)
-    .eq('id_cliente', clienteRow.id_cliente)
     .single()
 
   if (!credito) return new Response('Crédito no encontrado', { status: 404 })
 
-  const { nombre_completo = 'Cliente', dni = '—' } = user.user_metadata || {}
+  const nombre_completo = clienteRow.nombre_completo || 'Cliente'
+  const dni = clienteRow.dni || '—'
   // Usar el email real del cliente (no el email autogenerado de Supabase Auth)
   const email = clienteRow.email || '—'
   const ref   = String(credito.id_credito).slice(-8).toUpperCase()
