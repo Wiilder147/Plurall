@@ -26,6 +26,7 @@ import {
   Send,
 } from 'lucide-react'
 import Link from 'next/link'
+import MoverPaso from '@/components/MoverPaso'
 
 const MOTIVOS_RECHAZO = [
   'Capacidad de pago insuficiente',
@@ -184,6 +185,9 @@ export default function AdminDetalleSolicitudPage() {
           }`}>{estadoNombre}</span>
         </div>
       </header>
+
+      {/* Control para mover la solicitud de paso (adelantar/retroceder) */}
+      <MoverPaso solicitudId={id} estadoActual={estadoNombre} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 

@@ -7,6 +7,7 @@
  * ========================================================================== */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { notificarPqrRespondida } from '@/lib/notificaciones'
 
 const ESTADOS = ['ABIERTO', 'EN_PROCESO', 'RESUELTO', 'CERRADO']
 
@@ -41,5 +42,29 @@ export async function PATCH(request, { params }) {
     console.error('[PQR PATCH]', error)
     return NextResponse.json({ error: 'No se pudo actualizar la PQR' }, { status: 500 })
   }
+
+  // Si se registró una respuesta, notificar al cliente por correo (best-effort).
+  if (patch.respuesta) {
+    try {
+      const { data: pqr } = await supabase
+        .from('pqr')
+        .select('asunto, estado, cliente ( nombre_completo, email )')
+        .eq('id_pqr', id)
+        .single()
+      const email = pqr?.cliente?.email
+      if (email) {
+        await notificarPqrRespondida({
+          email,
+          nombre: pqr.cliente?.nombre_completo,
+          asunto: pqr.asunto,
+          respuesta: patch.respuesta,
+          estado: pqr.estado,
+        })
+      }
+    } catch (e) {
+      console.error('[PQR email]', e) // no bloquea la respuesta
+    }
+  }
+
   return NextResponse.json({ ok: true })
 }

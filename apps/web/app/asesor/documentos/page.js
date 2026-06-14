@@ -6,13 +6,14 @@
  *                de verificación; permite abrir cada archivo.
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
-import { urlPublicaDocumento } from '@/lib/documentos'
 import { FileText, CheckCircle2, XCircle, Clock, ExternalLink } from 'lucide-react'
+import VerificarDoc from '@/components/VerificarDoc'
 
 export const dynamic = 'force-dynamic'
 
 const ESTADO = {
-  VERIFICADO: { label: 'Verificado', cls: 'bg-emerald-500/10 text-emerald-400', Icon: CheckCircle2 },
+  APROBADO:   { label: 'Aprobado',   cls: 'bg-emerald-500/10 text-emerald-400', Icon: CheckCircle2 },
+  VERIFICADO: { label: 'Aprobado',   cls: 'bg-emerald-500/10 text-emerald-400', Icon: CheckCircle2 },
   PENDIENTE:  { label: 'Pendiente',  cls: 'bg-yellow-500/10 text-yellow-400',   Icon: Clock },
   RECHAZADO:  { label: 'Rechazado',  cls: 'bg-red-500/10 text-red-400',         Icon: XCircle },
 }
@@ -52,29 +53,35 @@ export default async function DocumentosAsesorPage() {
             const est = ESTADO[d.estado_verificacion?.toUpperCase()] || ESTADO.PENDIENTE
             const fecha = new Date(d.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
             return (
-              <div key={d.id_documento} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center gap-3">
-                <div className="w-9 h-9 bg-teal-500/20 rounded-lg flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-teal-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-slate-200 text-sm">{d.tipo_documento || 'Documento'}</p>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${est.cls}`}>
-                      <est.Icon className="w-3 h-3" /> {est.label}
-                    </span>
+              <div key={d.id_documento} className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-teal-500/20 rounded-lg flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4 text-teal-400" />
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-500">
-                    <span>{d.cliente?.nombre_completo ?? '—'}</span>
-                    <span>CC {d.cliente?.dni ?? '—'}</span>
-                    <span>{fecha}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-slate-200 text-sm">{d.tipo_documento || 'Documento'}</p>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${est.cls}`}>
+                        <est.Icon className="w-3 h-3" /> {est.label}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-500">
+                      <span>{d.cliente?.nombre_completo ?? '—'}</span>
+                      <span>CC {d.cliente?.dni ?? '—'}</span>
+                      <span>{fecha}</span>
+                    </div>
                   </div>
+                  {d.url_archivo && (
+                    <a href={`/api/documentos/ver/${d.id_documento}`} target="_blank" rel="noopener noreferrer"
+                      className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-teal-400 hover:text-teal-300 bg-teal-500/10 px-3 py-1.5 rounded-lg">
+                      Ver / Descargar <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
-                {d.url_archivo && (
-                  <a href={urlPublicaDocumento(d.url_archivo)} target="_blank" rel="noopener noreferrer"
-                    className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-teal-400 hover:text-teal-300 bg-teal-500/10 px-3 py-1.5 rounded-lg">
-                    Ver / Descargar <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
+                {/* Acciones de verificación */}
+                <div className="flex justify-end mt-3 pt-3 border-t border-slate-700/60">
+                  <VerificarDoc idDocumento={d.id_documento} estadoActual={(d.estado_verificacion || 'PENDIENTE').toUpperCase()} />
+                </div>
               </div>
             )
           })}

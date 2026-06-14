@@ -270,3 +270,22 @@ export async function notificarPagoConfirmado({ email, nombre, numeroCuota, mont
     }),
   })
 }
+
+/**
+ * Email al cliente cuando el staff responde su PQR.
+ */
+export async function notificarPqrRespondida({ email, nombre, asunto, respuesta, estado }) {
+  const primerNombre = nombre?.split(' ')[0] || 'Cliente'
+  return enviar({
+    to:      email,
+    subject: `📩 Respondimos tu PQR — PLURALL`,
+    html:    layout({
+      titulo:    `Tenemos una respuesta, ${primerNombre}`,
+      subtitulo: `Sobre tu solicitud: "${asunto}"`,
+      cuerpo:    alertBox('green', `<strong>Estado:</strong> ${estado || 'Respondida'}`) +
+        `<p style="color:#334155;font-size:14px;line-height:1.7;margin:0 0 8px 0;white-space:pre-line;">${respuesta}</p>`,
+      ctaTexto: 'Ver mis PQR',
+      ctaUrl:   `${APP_URL}/dashboard/pqr`,
+    }),
+  })
+}

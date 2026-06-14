@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation'
 import { Trash2, AlertTriangle, X, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-export default function EliminarCuentaBtn() {
+export default function EliminarCuentaBtn({ tieneCreditoActivo = false }) {
   const router = useRouter()
   const [modalAbierto, setModalAbierto] = useState(false)
   const [confirmacion, setConfirmacion]   = useState('')
@@ -21,6 +21,7 @@ export default function EliminarCuentaBtn() {
   const [error, setError]                 = useState('')
 
   function abrirModal() {
+    if (tieneCreditoActivo) return // bloqueado: no abrir si hay crédito activo
     setConfirmacion('')
     setError('')
     setModalAbierto(true)
@@ -74,11 +75,23 @@ export default function EliminarCuentaBtn() {
           ÍCONO: w-4 h-4 (16x16px) */}
       <button
         onClick={abrirModal}
-        className="inline-flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors"
+        disabled={tieneCreditoActivo}
+        title={tieneCreditoActivo ? 'No disponible mientras tengas un crédito activo o en mora' : undefined}
+        className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors ${
+          tieneCreditoActivo
+            ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+            : 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100'
+        }`}
       >
         <Trash2 className="w-4 h-4" />
         Eliminar mi cuenta
       </button>
+      {tieneCreditoActivo && (
+        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+          No puedes eliminar tu cuenta mientras tengas un crédito activo o en mora.
+        </p>
+      )}
 
       {/* ── MODAL DE CONFIRMACIÓN (visible solo cuando modalAbierto = true) ── */}
       {modalAbierto && (

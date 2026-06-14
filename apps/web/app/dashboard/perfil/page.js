@@ -260,8 +260,9 @@ export default async function DashboardPerfil() {
           Esta acción <strong className="text-slate-700">no se puede deshacer</strong>.
           Solo disponible si no tienes créditos activos.
         </p>
-        {/* BOTÓN — componente cliente EliminarCuentaBtn.js */}
-        <EliminarCuentaBtn />
+        {/* BOTÓN — componente cliente EliminarCuentaBtn.js
+            Se deshabilita si el cliente tiene un crédito activo o en mora. */}
+        <EliminarCuentaBtn tieneCreditoActivo={creditosActivos > 0} />
       </section>
     </div>
   )

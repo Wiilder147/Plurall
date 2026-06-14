@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
-import { urlPublicaDocumento } from '@/lib/documentos'
+import CambiarCelular from '@/components/CambiarCelular'
 import {
   ArrowLeft, User, Phone, Mail, Hash, MapPin, Store,
   CreditCard, CheckCircle2, XCircle, Clock, AlertTriangle,
@@ -72,7 +72,7 @@ export default async function AdminDetalleClientePage({ params }) {
       .single(),
     supabase
       .from('documento_cliente')
-      .select('tipo_documento, estado_verificacion, created_at, url_archivo')
+      .select('id_documento, tipo_documento, estado_verificacion, created_at, url_archivo')
       .eq('id_cliente', clienteId)
       .order('created_at', { ascending: false }),
     supabase
@@ -118,7 +118,11 @@ export default async function AdminDetalleClientePage({ params }) {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">{nombre}</h1>
-              <p className="text-slate-400 text-sm">CC {cliente.dni} · {cliente.telefono}</p>
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                <span className="text-slate-400 text-sm">CC {cliente.dni}</span>
+                <span className="text-slate-600">·</span>
+                <CambiarCelular idCliente={cliente.id_cliente} celularActual={cliente.telefono} />
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -215,7 +219,7 @@ export default async function AdminDetalleClientePage({ params }) {
                       {doc.estado_verificacion}
                     </span>
                     {doc.url_archivo && (
-                      <a href={urlPublicaDocumento(doc.url_archivo)} target="_blank" rel="noopener noreferrer"
+                      <a href={`/api/documentos/ver/${doc.id_documento}`} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-orange-400 hover:text-orange-300 bg-orange-500/10 px-2 py-1 rounded-lg font-semibold">
                         Ver <ExternalLink className="w-3 h-3" />
                       </a>
