@@ -6,9 +6,12 @@
  * ========================================================================== */
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import { getOrCreateCorrelationId, CORRELATION_HEADER } from '@/lib/correlationId'
 
 export async function updateSession(request) {
+  const correlationId = getOrCreateCorrelationId(request)
   let supabaseResponse = NextResponse.next({ request })
+  supabaseResponse.headers.set(CORRELATION_HEADER, correlationId)
 
   // Si no hay credenciales de Supabase, dejar pasar sin proteger.
   // Esto permite trabajar en local cuando las variables de entorno no están configuradas.
@@ -58,7 +61,6 @@ export async function updateSession(request) {
     return supabaseResponse
   }
 
-  // Rutas privadas (páginas): validar sesión y refrescar cookies.
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -67,6 +69,5 @@ export async function updateSession(request) {
     return NextResponse.redirect(url)
   }
 
-  // La verificación de ROL específica se hace en el layout de cada sección.
   return supabaseResponse
 }

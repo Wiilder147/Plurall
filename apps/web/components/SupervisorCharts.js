@@ -8,18 +8,21 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import Link from 'next/link'
 import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line,
+  AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ReferenceLine,
+  ResponsiveContainer,
 } from 'recharts'
 import {
   TrendingUp, AlertTriangle, Users, DollarSign,
-  CheckCircle2, ShieldAlert, ArrowRight, RefreshCw,
+  CheckCircle2, ShieldAlert, RefreshCw,
   BarChart3, Activity, TrendingDown, Calendar,
-  ChevronLeft, ChevronRight, X, Filter,
+  ChevronLeft, ChevronRight, X,
 } from 'lucide-react'
+import KpiCard, { KpiGrid } from '@/components/dashboard/KpiCard'
+import DashboardPanel, { PanelList, PanelRow } from '@/components/dashboard/DashboardPanel'
+import HeroMetric from '@/components/dashboard/HeroMetric'
+import StatusBadge from '@/components/dashboard/StatusBadge'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const COP = (v) => new Intl.NumberFormat('es-CO', {
@@ -305,38 +308,41 @@ export default function SupervisorCharts() {
     <div className="flex flex-col gap-6">
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        {kpiCards.map(({ label, value, icon: Icon, color, href }) => (
-          <Link key={label} href={href}
-            className="bg-slate-800 border border-slate-700 rounded-2xl p-5 hover:border-indigo-600/50 transition-colors">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
-              <Icon className="w-5 h-5" />
-            </div>
-            <p className="text-2xl font-extrabold text-white">{value}</p>
-            <p className="text-slate-400 text-sm mt-0.5">{label}</p>
-          </Link>
+      <KpiGrid cols={3}>
+        {kpiCards.map(({ label, value, icon, color, href }, i) => (
+          <KpiCard
+            key={label}
+            label={label}
+            value={value}
+            icon={icon}
+            color={color}
+            href={href}
+            accent="indigo"
+            index={i}
+          />
         ))}
-      </div>
+      </KpiGrid>
 
       {/* Cartera + Mora */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-blue-100 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-2xl p-6">
-          <p className="text-orange-500 text-xs font-semibold uppercase tracking-wide mb-1">Cartera activa total</p>
-          <p className="text-4xl font-extrabold text-slate-900 dark:text-white">{COP(kpis.carteraSaldo)}</p>
-          <p className="text-slate-600 dark:text-blue-300 text-sm mt-1">Total desembolsado: {COP(kpis.totalDesembolsado)}</p>
-          <div className="mt-3 flex items-center gap-3 text-xs text-slate-500 dark:text-blue-200">
-            <span>{kpis.creditosActivos} activos</span>
-            <span>·</span>
-            <span className="text-red-600 dark:text-red-300">{kpis.creditosMora} en mora</span>
-          </div>
-        </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+        <HeroMetric
+          accent="indigo"
+          label="Cartera activa total"
+          value={COP(kpis.carteraSaldo)}
+          sublabel={`Total desembolsado: ${COP(kpis.totalDesembolsado)}`}
+          stats={[
+            { label: 'activos', value: kpis.creditosActivos, highlight: false },
+            { label: '·', value: '', highlight: false },
+            { label: 'en mora', value: kpis.creditosMora, highlight: true },
+          ]}
+        />
+        <div className="dash-panel bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6">
           <p className="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-2">Indicador de mora</p>
           <p className={`text-4xl font-extrabold ${parseFloat(kpis.indicadorMora) > 5 ? 'text-red-400' : 'text-emerald-400'}`}>
             {kpis.indicadorMora}%
           </p>
           <div className="w-full bg-slate-700 rounded-full h-2.5 mt-3">
-            <div className={`h-2.5 rounded-full transition-all ${parseFloat(kpis.indicadorMora) > 5 ? 'bg-red-500' : 'bg-emerald-500'}`}
+            <div className={`h-2.5 rounded-full transition-all duration-700 ${parseFloat(kpis.indicadorMora) > 5 ? 'bg-red-500' : 'bg-emerald-500'}`}
               style={{ width: `${Math.min(100, parseFloat(kpis.indicadorMora) * 5)}%` }} />
           </div>
           <p className="text-slate-500 text-xs mt-2">
@@ -562,24 +568,24 @@ export default function SupervisorCharts() {
 
       {/* Solicitudes + Mora crítica */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-            <h2 className="font-semibold text-white text-sm">📋 Solicitudes recientes</h2>
-            <Link href="/supervisor/solicitudes" className="text-indigo-400 text-xs font-medium flex items-center gap-1 hover:text-indigo-300">
-              Ver todas <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
+        <DashboardPanel
+          accent="indigo"
+          title="Solicitudes recientes"
+          icon={BarChart3}
+          iconColor="text-indigo-400"
+          href="/supervisor/solicitudes"
+        >
           <SolicitudesRecientes />
-        </div>
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-            <h2 className="font-semibold text-white text-sm">🔴 Mora crítica</h2>
-            <Link href="/supervisor/mora" className="text-indigo-400 text-xs font-medium flex items-center gap-1 hover:text-indigo-300">
-              Ver todas <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
+        </DashboardPanel>
+        <DashboardPanel
+          accent="indigo"
+          title="Mora crítica"
+          icon={AlertTriangle}
+          iconColor="text-red-400"
+          href="/supervisor/mora"
+        >
           <MoraCritica />
-        </div>
+        </DashboardPanel>
       </div>
     </div>
   )
@@ -592,22 +598,17 @@ function SolicitudesRecientes() {
   }, [])
   if (!items.length) return <p className="text-center text-slate-500 py-8 text-sm">Sin solicitudes.</p>
   return (
-    <div className="divide-y divide-slate-700/50">
-      {items.map(s => {
-        const estado = s.estado?.toUpperCase()
-        const color = estado === 'APROBADA' ? 'bg-emerald-500/10 text-emerald-400' : estado === 'RECHAZADA' ? 'bg-red-500/10 text-red-400' : estado === 'DESEMBOLSADA' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'
-        return (
-          <Link key={s.id} href={`/supervisor/solicitudes/${s.id}`}
-            className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-700/40 transition-colors">
-            <div>
-              <p className="font-semibold text-slate-200 text-sm">{s.nombre}</p>
-              <p className="text-slate-500 text-xs">{COP(s.monto)} · {s.plazo}m</p>
-            </div>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${color}`}>{estado}</span>
-          </Link>
-        )
-      })}
-    </div>
+    <PanelList>
+      {items.map(s => (
+        <PanelRow key={s.id} href={`/supervisor/solicitudes/${s.id}`}>
+          <div>
+            <p className="font-semibold text-slate-200 text-sm">{s.nombre}</p>
+            <p className="text-slate-500 text-xs">{COP(s.monto)} · {s.plazo}m</p>
+          </div>
+          <StatusBadge estado={s.estado} />
+        </PanelRow>
+      ))}
+    </PanelList>
   )
 }
 
@@ -618,9 +619,9 @@ function MoraCritica() {
   }, [])
   if (!items.length) return <p className="text-center text-slate-500 py-8 text-sm">Sin créditos en mora. ✓</p>
   return (
-    <div className="divide-y divide-slate-700/50">
+    <PanelList>
       {items.map(c => (
-        <div key={c.id} className="flex items-center justify-between px-5 py-3.5">
+        <PanelRow key={c.id}>
           <div>
             <p className="font-semibold text-slate-200 text-sm">{c.nombre}</p>
             <p className="text-slate-500 text-xs">{c.telefono} · {COP(c.saldo)}</p>
@@ -629,8 +630,8 @@ function MoraCritica() {
             <p className={`font-bold text-sm ${c.dias > 60 ? 'text-red-400' : 'text-orange-400'}`}>{c.dias}d</p>
             <p className="text-slate-500 text-xs">{c.cuotas} cuota{c.cuotas !== 1 ? 's' : ''}</p>
           </div>
-        </div>
+        </PanelRow>
       ))}
-    </div>
+    </PanelList>
   )
 }

@@ -191,3 +191,30 @@ html {
   border-color: var(--color-navy-200);
   box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
 }
+
+/* ── Dashboard staff (asesor / supervisor / admin) ───────────────────────── */
+.dash-kpi-card {
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+
+.dash-panel {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dash-panel:hover {
+  border-color: rgba(100, 116, 139, 0.5);
+}
+
+[data-theme="light"] .dash-kpi-card {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="light"] .dash-panel {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="light"] .dash-kpi-card:hover,
+[data-theme="light"] .dash-panel:hover {
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+}

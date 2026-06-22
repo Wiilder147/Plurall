@@ -2,15 +2,18 @@
  * ARCHIVO: page.js
  * RUTA: apps/web/app/asesor/page.js
  * DESCRIPCIÓN: Vista principal del panel del ASESOR de cobranza.
- * FUNCIONALIDAD: Muestra KPIs del asesor (clientes, mora, saldo, gestiones),
- *                top 5 mora crítica y promesas de pago pendientes.
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
-import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
+import DashboardHeader from '@/components/dashboard/DashboardHeader'
+import KpiCard, { KpiGrid } from '@/components/dashboard/KpiCard'
+import DashboardPanel, { PanelList, PanelRow } from '@/components/dashboard/DashboardPanel'
+import QuickActions from '@/components/dashboard/QuickActions'
+import HeroMetric from '@/components/dashboard/HeroMetric'
+import ProgressRing from '@/components/dashboard/ProgressRing'
 import {
   Users, AlertTriangle, CheckCircle2, PhoneCall,
-  ArrowRight, Clock, DollarSign, FileCheck,
+  Clock, DollarSign, FileCheck, Wallet, UserPlus,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +21,6 @@ export const dynamic = 'force-dynamic'
 export default async function AsesorDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   const hoy = new Date().toISOString().split('T')[0]
 
   const [
@@ -44,14 +46,14 @@ export default async function AsesorDashboard() {
   ])
 
   const primerNombre = perfil?.nombre_completo?.split(' ')[0] ?? 'Asesor'
-  const clientes     = asignaciones?.map(a => a.cliente).filter(Boolean) ?? []
+  const clientes = asignaciones?.map(a => a.cliente).filter(Boolean) ?? []
   const enMora = clientes.filter(c => c.credito?.some(cr => cr.estado_credito === 'EN_MORA'))
-  const alDia  = clientes.filter(c =>
+  const alDia = clientes.filter(c =>
     c.credito?.some(cr => cr.estado_credito === 'ACTIVO') &&
     !c.credito?.some(cr => cr.estado_credito === 'EN_MORA')
   )
   const saldoTotal = clientes.reduce((s, c) => {
-    const cr = c.credito?.find(cr => ['ACTIVO','EN_MORA'].includes(cr.estado_credito))
+    const cr = c.credito?.find(cr => ['ACTIVO', 'EN_MORA'].includes(cr.estado_credito))
     return s + (cr?.saldo_pendiente ?? 0)
   }, 0)
 
@@ -60,145 +62,145 @@ export default async function AsesorDashboard() {
     .sort((a, b) => (b.creditoMora?.dias_mora_maximo ?? 0) - (a.creditoMora?.dias_mora_maximo ?? 0))
     .slice(0, 5)
 
-  // CONFIGURACIÓN DE KPIS DEL ASESOR
-  // Para cambiar un COLOR: modifica el campo 'color' con clases Tailwind válidas
-  // Formato: 'text-[color]-[intensidad] bg-[color]-[intensidad]/10'
   const kpis = [
-    { label: 'Sol. por revisar',    value: solsPendientes?.length ?? 0, icon: FileCheck,     color: 'text-violet-400 bg-violet-500/10',   href: '/asesor/solicitudes'},
-    { label: 'Clientes asignados',  value: clientes.length,             icon: Users,         color: 'text-teal-400 bg-teal-500/10',       href: '/asesor/clientes'  },
-    { label: 'En mora',             value: enMora.length,               icon: AlertTriangle, color: 'text-red-400 bg-red-500/10',         href: '/asesor/cobranza'  },
-    { label: 'Al día',              value: alDia.length,                icon: CheckCircle2,  color: 'text-emerald-400 bg-emerald-500/10', href: '/asesor/clientes'  },
-    { label: 'Gestiones hoy',       value: gestionesHoy ?? 0,           icon: PhoneCall,     color: 'text-blue-400 bg-blue-500/10',       href: '/asesor/gestiones' },
-    { label: 'Saldo en cartera',    value: formatCOP(saldoTotal),       icon: DollarSign,    color: 'text-orange-400 bg-orange-500/10',   href: '/asesor/clientes'  },
-    { label: 'Promesas pendientes', value: promesas?.length ?? 0,       icon: Clock,         color: 'text-yellow-400 bg-yellow-500/10',   href: '/asesor/gestiones' },
+    { label: 'Sol. por revisar', value: solsPendientes?.length ?? 0, icon: FileCheck, color: 'text-violet-400 bg-violet-500/10', href: '/asesor/solicitudes' },
+    { label: 'Clientes asignados', value: clientes.length, icon: Users, color: 'text-teal-400 bg-teal-500/10', href: '/asesor/clientes' },
+    { label: 'En mora', value: enMora.length, icon: AlertTriangle, color: 'text-red-400 bg-red-500/10', href: '/asesor/cobranza' },
+    { label: 'Al día', value: alDia.length, icon: CheckCircle2, color: 'text-emerald-400 bg-emerald-500/10', href: '/asesor/clientes' },
+    { label: 'Gestiones hoy', value: gestionesHoy ?? 0, icon: PhoneCall, color: 'text-blue-400 bg-blue-500/10', href: '/asesor/gestiones' },
+    { label: 'Promesas pendientes', value: promesas?.length ?? 0, icon: Clock, color: 'text-yellow-400 bg-yellow-500/10', href: '/asesor/gestiones' },
+  ]
+
+  const quickActions = [
+    { label: 'Cola de cobranza', href: '/asesor/cobranza', icon: AlertTriangle },
+    { label: 'Registrar gestión', href: '/asesor/gestiones', icon: PhoneCall },
+    { label: 'Preaprobación', href: '/asesor/preaprobacion', icon: CheckCircle2 },
+    { label: 'Registrar pago', href: '/asesor/pagos', icon: Wallet },
   ]
 
   return (
-    // CONTENEDOR — fondo oscuro heredado del layout asesor
-    <div className="flex flex-col gap-8 pb-10">
+    <div className="flex flex-col gap-6 md:gap-8 pb-10">
+      <DashboardHeader
+        accent="teal"
+        badge="Portal Asesor"
+        title={`Hola, ${primerNombre}`}
+        subtitle="Gestión de cobranza, seguimiento de clientes y promesas de pago."
+        actions={
+          <QuickActions accent="teal" actions={[
+            { label: 'Mis clientes', href: '/asesor/clientes', icon: Users },
+            { label: 'Cobranza', href: '/asesor/cobranza', icon: AlertTriangle },
+          ]} />
+        }
+      />
 
-      {/* ── ENCABEZADO ──
-          TÍTULO: text-3xl (30px), text-white (blanco sobre fondo oscuro)
-          SUBTÍTULO: text-slate-400 (gris claro) */}
-      <header>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Hola, {primerNombre} 👋</h1>
-        <p className="text-slate-400 mt-1">Tu panel de gestión de cobranza y seguimiento de clientes.</p>
-      </header>
-
-      {/* ── GRID DE KPIs ──
-          COLUMNAS: 2 en móvil (grid-cols-2), 3 en desktop (lg:grid-cols-3)
-          ESPACIO: gap-4 (16px) */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        {kpis.map(({ label, value, icon: Icon, color, href }) => (
-          // TARJETA KPI
-          // COLOR FONDO: bg-slate-800 (gris oscuro)
-          // BORDE: border border-slate-700, hover:border-teal-600/40 (teal semi-transparente al hover)
-          // BORDES: rounded-2xl (16px), PADDING: p-5 (20px)
-          <Link key={label} href={href}
-            className="bg-slate-800 border border-slate-700 rounded-2xl p-5 hover:border-teal-600/40 transition-colors">
-            {/* ÍCONO CONTENEDOR — w-10 h-10 (40x40px), rounded-xl (12px), mb-3 (12px margen) */}
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
-              <Icon className="w-5 h-5" />
-            </div>
-            {/* VALOR — text-2xl (24px), font-extrabold, text-white */}
-            <p className="text-2xl font-extrabold text-white">
-              {typeof value === 'number' ? value.toLocaleString('es-CO') : value}
-            </p>
-            {/* ETIQUETA — text-sm (14px), text-slate-400 */}
-            <p className="text-slate-400 text-sm mt-0.5">{label}</p>
-          </Link>
+      <KpiGrid cols={3}>
+        {kpis.map((kpi, i) => (
+          <KpiCard key={kpi.label} {...kpi} accent="teal" index={i} />
         ))}
+      </KpiGrid>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <HeroMetric
+            accent="teal"
+            label="Saldo en cartera asignada"
+            value={formatCOP(saldoTotal)}
+            sublabel={`${clientes.length} cliente${clientes.length !== 1 ? 's' : ''} bajo tu gestión`}
+            stats={[
+              { label: 'al día', value: alDia.length, highlight: false },
+              { label: '·', value: '', highlight: false },
+              { label: 'en mora', value: enMora.length, highlight: true },
+            ]}
+          />
+        </div>
+        <div className="dash-panel bg-slate-800/80 border border-slate-700/80 rounded-2xl p-6 flex flex-col items-center justify-center">
+          <ProgressRing
+            value={alDia.length}
+            max={clientes.length || 1}
+            label="Cartera al día"
+            sublabel={`${alDia.length} de ${clientes.length} clientes`}
+            color="#14b8a6"
+          />
+        </div>
       </div>
 
-      {/* ── GRID DE DOS COLUMNAS: MORA CRÍTICA + PROMESAS ──
-          COLUMNAS: 1 en móvil, 2 en desktop (lg:grid-cols-2)
-          ESPACIO: gap-6 (24px) */}
+      <QuickActions accent="teal" actions={quickActions} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* TARJETA: MORA CRÍTICA
-            COLOR FONDO: bg-slate-800, BORDE: border border-slate-700
-            BORDES: rounded-2xl (16px), overflow-hidden */}
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
-          {/* ENCABEZADO — borde inferior border-slate-700, padding px-5 py-4 */}
-          <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-            {/* TÍTULO — text-white, font-semibold, text-sm (14px)
-                ÍCONO: text-red-400 (rojo claro), w-4 h-4 (16x16px) */}
-            <h2 className="font-semibold text-white text-sm flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-400" /> Mora crítica
-            </h2>
-            {/* ENLACE "Ver todos" — text-teal-400 (teal claro), text-xs (12px) */}
-            <Link href="/asesor/cobranza" className="text-teal-400 text-xs font-medium flex items-center gap-1 hover:text-teal-300">
-              Ver todos <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          {moraCritica.length === 0 ? (
-            <p className="text-center text-slate-500 py-8 text-sm">Sin clientes en mora. ✓</p>
-          ) : (
-            <div className="divide-y divide-slate-700/50">
-              {moraCritica.map((c) => (
-                // FILA DE CLIENTE EN MORA
-                // HOVER: hover:bg-slate-700/40
-                // PADDING: px-5 py-3.5 (20px horizontal, 14px vertical)
-                <Link key={c.id_cliente} href={`/asesor/cobranza/${c.id_cliente}`}
-                  className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-700/40 transition-colors">
-                  <div>
-                    {/* NOMBRE — text-slate-200, font-semibold, text-sm */}
-                    <p className="font-semibold text-slate-200 text-sm">{c.nombre_completo}</p>
-                    {/* TELÉFONO — text-slate-500, text-xs (12px) */}
-                    <p className="text-slate-500 text-xs">{c.telefono}</p>
-                  </div>
-                  <div className="text-right">
-                    {/* DÍAS DE MORA — text-red-400 (rojo claro), font-bold, text-sm */}
-                    <p className="text-red-400 font-bold text-sm">{c.creditoMora?.dias_mora_maximo}d mora</p>
-                    {/* SALDO — text-slate-500, text-xs */}
-                    <p className="text-slate-500 text-xs">{formatCOP(c.creditoMora?.saldo_pendiente)}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* TARJETA: PROMESAS DE PAGO
-            Misma estructura que Mora crítica */}
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
-            {/* ÍCONO RELOJ — text-yellow-400 (amarillo claro) */}
-            <h2 className="font-semibold text-white text-sm flex items-center gap-2">
-              <Clock className="w-4 h-4 text-yellow-400" /> Promesas de pago pendientes
-            </h2>
-            <Link href="/asesor/gestiones" className="text-teal-400 text-xs font-medium flex items-center gap-1 hover:text-teal-300">
-              Ver todas <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          {!promesas?.length ? (
-            <p className="text-center text-slate-500 py-8 text-sm">Sin promesas pendientes.</p>
-          ) : (
-            <div className="divide-y divide-slate-700/50">
-              {promesas.map((p) => (
-                <div key={p.id_gestion} className="flex items-center justify-between px-5 py-3.5">
-                  <div>
-                    <p className="font-semibold text-slate-200 text-sm">{p.cliente?.nombre_completo}</p>
-                    <p className="text-slate-500 text-xs">{p.cliente?.telefono}</p>
-                  </div>
-                  <div className="text-right">
-                    {/* MONTO PROMETIDO — text-yellow-400 (amarillo claro), font-bold */}
-                    <p className="text-yellow-400 font-bold text-sm">{formatCOP(p.monto_prometido)}</p>
-                    {/* FECHA DE PROMESA — text-slate-500, text-xs */}
-                    <p className="text-slate-500 text-xs">
-                      {p.fecha_promesa
-                        ? new Date(p.fecha_promesa + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
-                        : '—'}
-                    </p>
-                  </div>
+        <DashboardPanel
+          accent="teal"
+          title="Mora crítica"
+          icon={AlertTriangle}
+          iconColor="text-red-400"
+          href="/asesor/cobranza"
+          isEmpty={moraCritica.length === 0}
+          empty="Sin clientes en mora. Excelente trabajo."
+        >
+          <PanelList>
+            {moraCritica.map((c) => (
+              <PanelRow key={c.id_cliente} href={`/asesor/cobranza/${c.id_cliente}`}>
+                <div>
+                  <p className="font-semibold text-slate-200 text-sm">{c.nombre_completo}</p>
+                  <p className="text-slate-500 text-xs">{c.telefono}</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <div className="text-right">
+                  <p className="text-red-400 font-bold text-sm">{c.creditoMora?.dias_mora_maximo}d mora</p>
+                  <p className="text-slate-500 text-xs">{formatCOP(c.creditoMora?.saldo_pendiente)}</p>
+                </div>
+              </PanelRow>
+            ))}
+          </PanelList>
+        </DashboardPanel>
+
+        <DashboardPanel
+          accent="teal"
+          title="Promesas de pago pendientes"
+          icon={Clock}
+          iconColor="text-yellow-400"
+          href="/asesor/gestiones"
+          linkLabel="Ver todas"
+          isEmpty={!promesas?.length}
+          empty="Sin promesas pendientes para hoy."
+        >
+          <PanelList>
+            {promesas?.map((p) => (
+              <PanelRow key={p.id_gestion}>
+                <div>
+                  <p className="font-semibold text-slate-200 text-sm">{p.cliente?.nombre_completo}</p>
+                  <p className="text-slate-500 text-xs">{p.cliente?.telefono}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-yellow-400 font-bold text-sm">{formatCOP(p.monto_prometido)}</p>
+                  <p className="text-slate-500 text-xs">
+                    {p.fecha_promesa
+                      ? new Date(p.fecha_promesa + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
+                      : '—'}
+                  </p>
+                </div>
+              </PanelRow>
+            ))}
+          </PanelList>
+        </DashboardPanel>
       </div>
+
+      {(solsPendientes?.length ?? 0) > 0 && (
+        <DashboardPanel
+          accent="teal"
+          title="Solicitudes pendientes de revisión"
+          icon={UserPlus}
+          iconColor="text-violet-400"
+          href="/asesor/solicitudes"
+        >
+          <PanelList>
+            <PanelRow href="/asesor/solicitudes">
+              <p className="text-slate-300 text-sm">
+                Tienes <span className="font-bold text-violet-400">{solsPendientes.length}</span> solicitud{solsPendientes.length !== 1 ? 'es' : ''} esperando tu revisión.
+              </p>
+              <span className="text-teal-400 text-xs font-medium">Revisar →</span>
+            </PanelRow>
+          </PanelList>
+        </DashboardPanel>
+      )}
     </div>
   )
 }

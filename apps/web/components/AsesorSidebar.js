@@ -13,21 +13,22 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, CreditCard, FileText,
   Bell, CalendarClock, MessageSquare, XCircle, CheckCircle2,
-  LogOut, Menu, X, ArrowLeft,
+  Menu, X, ArrowLeft, AlertTriangle, PhoneCall,
+  ClipboardList, Wallet,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import ThemeToggle from './ThemeToggle'
+import SidebarFooter from './SidebarFooter'
 
-// LISTA DE RUTAS DEL MENÚ ASESOR — para agregar ruta nueva:
-// { name: 'Mi Sección', href: '/asesor/mi-ruta', icon: IconName }
-// Módulos del rol ASESOR: gestión de usuarios y créditos, documentación,
-// notificaciones, amortización, PQR, motivos de rechazo y PREAPROBACIÓN
-// (botón check que habilita el crédito para que el supervisor lo apruebe).
+// LISTA DE RUTAS DEL MENÚ ASESOR
 const navigation = [
   { name: 'Mi Panel',             href: '/asesor',                 icon: LayoutDashboard },
-  { name: 'Gestión de usuarios',  href: '/asesor/clientes',        icon: Users           },
-  { name: 'Gestión de créditos',  href: '/asesor/creditos',        icon: CreditCard      },
+  { name: 'Clientes',             href: '/asesor/clientes',        icon: Users           },
+  { name: 'Créditos',             href: '/asesor/creditos',        icon: CreditCard      },
+  { name: 'Solicitudes',          href: '/asesor/solicitudes',     icon: ClipboardList   },
+  { name: 'Cobranza',             href: '/asesor/cobranza',        icon: AlertTriangle   },
+  { name: 'Gestiones',            href: '/asesor/gestiones',       icon: PhoneCall       },
+  { name: 'Pagos en efectivo',    href: '/asesor/pagos',           icon: Wallet          },
   { name: 'Documentación',        href: '/asesor/documentos',      icon: FileText        },
   { name: 'Preaprobación',        href: '/asesor/preaprobacion',   icon: CheckCircle2    },
   { name: 'Motivos de rechazo',   href: '/asesor/motivos-rechazo', icon: XCircle         },
@@ -75,9 +76,9 @@ export default function AsesorSidebar({ esAdmin = false }) {
           ──────────────────────────────────────────────────────────────────────── */}
       <div className={`
         fixed md:static inset-y-0 left-0 z-40
-        w-64 bg-teal-950 border-r border-teal-900
+        w-64 max-w-[85vw] bg-teal-950 border-r border-teal-900
         transform transition-transform duration-300 ease-in-out
-        flex flex-col
+        flex flex-col overflow-hidden
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
 
@@ -146,19 +147,11 @@ export default function AsesorSidebar({ esAdmin = false }) {
         {/* ── SECCIÓN INFERIOR: CERRAR SESIÓN + TOGGLE TEMA ──
             BORDE: border-t border-teal-900
             PADDING: p-4 (16px) */}
-        <div className="p-4 border-t border-teal-900 flex items-center gap-2">
-          {/* BOTÓN CERRAR SESIÓN
-              COLOR EN REPOSO: text-teal-400/60 (teal semi-transparente)
-              HOVER: hover:bg-red-900/30 hover:text-red-400 (rojo al hover)
-              TAMAÑO FUENTE: text-sm (14px), ÍCONO: h-4 w-4 (16x16px) */}
-          <button onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 flex-1 rounded-xl text-teal-400/60 hover:bg-red-900/30 hover:text-red-400 transition-all text-sm">
-            <LogOut className="h-4 w-4" />
-            <span className="font-medium">Cerrar sesión</span>
-          </button>
-          {/* TOGGLE TEMA — componente ThemeToggle.js */}
-          <ThemeToggle />
-        </div>
+        <SidebarFooter
+          onLogout={handleLogout}
+          accent="teal"
+          notificationHref="/asesor/notificaciones"
+        />
       </div>
     </>
   )

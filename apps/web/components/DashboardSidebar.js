@@ -10,9 +10,10 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, User, LogOut, Menu, X, CreditCard, FileText, DollarSign, Bell, MessageSquare, HelpCircle, Globe, ArrowLeft } from 'lucide-react'
+import { Home, User, Menu, X, CreditCard, FileText, DollarSign, Bell, MessageSquare, HelpCircle, Globe, ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import SidebarFooter from './SidebarFooter'
 
 // LISTA DE RUTAS DEL MENÚ — aquí se definen los enlaces que aparecen en la barra lateral
 // Para agregar una sección: agrega { name: 'Mi Sección', href: '/dashboard/mi-ruta', icon: IconName }
@@ -80,9 +81,9 @@ export default function DashboardSidebar({ esAdmin = false }) {
           ──────────────────────────────────────────────────────────────────────── */}
       <div className={`
         fixed md:static inset-y-0 left-0 z-40
-        w-64 bg-white border-r border-slate-200
+        w-64 max-w-[85vw] bg-white border-r border-slate-200
         transform transition-transform duration-300 ease-in-out
-        flex flex-col
+        flex flex-col overflow-hidden
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
 
@@ -176,22 +177,11 @@ export default function DashboardSidebar({ esAdmin = false }) {
         {/* ── SECCIÓN INFERIOR: BOTÓN CERRAR SESIÓN ──
             BORDE SUPERIOR: border-t border-slate-100 (línea divisoria)
             PADDING: p-4 (16px en todos lados) */}
-        <div className="p-4 border-t border-slate-100 flex items-center gap-2">
-          {/* BOTÓN CERRAR SESIÓN
-              COLOR EN REPOSO: text-slate-500 (gris medio)
-              HOVER: hover:bg-red-50 hover:text-red-600 (fondo rojo muy claro, texto rojo)
-              Para cambiar el COLOR HOVER: cambia 'hover:bg-red-50 hover:text-red-600'
-              PADDING: px-4 py-3 (16px horizontal, 12px vertical)
-              BORDES: rounded-xl (12px)
-              ÍCONO: h-5 w-5 (20x20px) */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 flex-1 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="font-medium">Cerrar sesión</span>
-          </button>
-        </div>
+        <SidebarFooter
+          onLogout={handleLogout}
+          accent="light"
+          showThemeToggle={false}
+        />
       </div>
     </>
   )

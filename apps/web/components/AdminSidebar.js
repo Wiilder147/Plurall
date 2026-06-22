@@ -10,10 +10,10 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, ClipboardList, Users, LogOut, Menu, X, BarChart3, ShieldCheck, Headset, UserCircle } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Users, Menu, X, BarChart3, ShieldCheck, Headset, UserCircle, Gauge, Activity } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import ThemeToggle from './ThemeToggle'
+import SidebarFooter from './SidebarFooter'
 
 // LISTA DE RUTAS DEL MENÚ ADMIN — para agregar una ruta nueva:
 // { name: 'Mi Sección', href: '/admin/mi-ruta', icon: IconName }
@@ -24,6 +24,8 @@ const navigation = [
   { name: 'Solicitudes',      href: '/admin/solicitudes', icon: ClipboardList   },
   { name: 'Clientes',         href: '/admin/clientes',    icon: Users           },
   { name: 'Reportes',         href: '/admin/reportes',    icon: BarChart3       },
+  { name: 'Scoring',          href: '/admin/scoring',     icon: Gauge           },
+  { name: 'Salud sistema',    href: '/admin/salud',       icon: Activity        },
   // ── Accesos a los demás paneles (acceso total) ──
   { name: 'Panel Supervisor', href: '/supervisor',        icon: ShieldCheck     },
   { name: 'Panel Asesor',     href: '/asesor',            icon: Headset         },
@@ -71,9 +73,9 @@ export default function AdminSidebar() {
           ──────────────────────────────────────────────────────────────────────── */}
       <div className={`
         fixed md:static inset-y-0 left-0 z-40
-        w-64 bg-slate-900 border-r border-slate-800
+        w-64 max-w-[85vw] bg-slate-900 border-r border-slate-800
         transform transition-transform duration-300 ease-in-out
-        flex flex-col
+        flex flex-col overflow-hidden
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
 
@@ -139,23 +141,11 @@ export default function AdminSidebar() {
         {/* ── SECCIÓN INFERIOR: CERRAR SESIÓN + TOGGLE TEMA ──
             BORDE: border-t border-slate-800 (línea gris oscura)
             PADDING: p-4 (16px) */}
-        <div className="p-4 border-t border-slate-800 flex items-center gap-2">
-          {/* BOTÓN CERRAR SESIÓN
-              COLOR EN REPOSO: text-slate-400 (gris claro)
-              HOVER: hover:bg-red-900/30 hover:text-red-400
-              (fondo rojo oscuro muy transparente, texto rojo claro)
-              TAMAÑO FUENTE: text-sm (14px)
-              ÍCONO: h-4 w-4 (16x16px) */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 flex-1 rounded-xl text-slate-400 hover:bg-red-900/30 hover:text-red-400 transition-all text-sm"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="font-medium">Cerrar sesión</span>
-          </button>
-          {/* TOGGLE TEMA (claro/oscuro) — componente ThemeToggle.js */}
-          <ThemeToggle />
-        </div>
+        <SidebarFooter
+          onLogout={handleLogout}
+          accent="slate"
+          notificationHref="/admin/notificaciones"
+        />
       </div>
     </>
   )

@@ -17,6 +17,7 @@ function RegistroContent() {
   const [form, setForm] = useState({
     nombre: '', dni: '', telefono: '', email: '',
     password: '', confirmPassword: '', aceptaTerminos: false,
+    website: '', // honeypot anti-bot
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -84,11 +85,28 @@ function RegistroContent() {
     e.preventDefault()
     setError('')
 
+    if (form.website) {
+      setError('No se pudo completar el registro.')
+      return
+    }
+
     const telLimpio = form.telefono.replace(/\D/g, '')
     if (telLimpio.length !== 10) { setError('El celular debe tener 10 dígitos.'); return }
     if (!form.aceptaTerminos) { setError('Acepta los términos y condiciones.'); return }
     if (form.password !== form.confirmPassword) { setError('Las contraseñas no coinciden.'); return }
-    if (form.password.length < 6) { setError('La contraseña requiere 6 caracteres.'); return }
+    if (form.password.length < 8) { setError('La contraseña requiere al menos 8 caracteres.'); return }
+
+    try {
+      const rl = await fetch('/api/auth/rate-limit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'registro' }),
+      })
+      if (!rl.ok) {
+        setError('Demasiados intentos de registro. Espera unos minutos.')
+        return
+      }
+    } catch { /* continuar */ }
 
     setLoading(true)
     const supabase = createClient()
@@ -273,6 +291,7 @@ function RegistroContent() {
           {/* FORMULARIO MANUAL
               ESPACIO ENTRE CAMPOS: space-y-4 (16px entre cada campo) */}
           <form onSubmit={handleRegistro} className="w-full space-y-4 flex flex-col items-center">
+            <input type="text" name="website" value={form.website} onChange={handleChange} tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
 
             {/* MENSAJE DE ERROR
                 COLOR DE FONDO: bg-danger/10 (rojo muy suave)

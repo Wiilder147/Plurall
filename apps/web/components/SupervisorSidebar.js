@@ -13,28 +13,31 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, CreditCard, FileText, Gauge,
   ClipboardCheck, XCircle, CalendarClock, Banknote, Bell, MessageSquare,
-  LogOut, Menu, X, ArrowLeft,
+  Menu, X, ArrowLeft, AlertTriangle, BarChart3, Search,
+  Shield, History, UserCog,
 } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import ThemeToggle from './ThemeToggle'
+import SidebarFooter from './SidebarFooter'
 
-// LISTA DE RUTAS DEL MENÚ SUPERVISOR — para agregar ruta nueva:
-// { name: 'Mi Sección', href: '/supervisor/mi-ruta', icon: IconName }
-// Módulos del rol SUPERVISOR (analista de crédito): acceso a gestión de
-// usuarios, créditos, documentación, puntaje, aprobación, desembolso y más.
 const navigation = [
-  { name: 'Panel',                href: '/supervisor',                  icon: LayoutDashboard },
-  { name: 'Gestión de usuarios',  href: '/supervisor/clientes',         icon: Users           },
-  { name: 'Gestión de créditos',  href: '/supervisor/creditos',         icon: CreditCard      },
-  { name: 'Documentación',        href: '/supervisor/documentos',       icon: FileText        },
-  { name: 'Puntaje crediticio',   href: '/supervisor/puntaje',          icon: Gauge           },
-  { name: 'Aprobación de crédito',href: '/supervisor/solicitudes',      icon: ClipboardCheck  },
-  { name: 'Motivos de rechazo',   href: '/supervisor/motivos-rechazo',  icon: XCircle         },
-  { name: 'Amortización',         href: '/supervisor/amortizacion',     icon: CalendarClock   },
-  { name: 'Desembolso',           href: '/supervisor/desembolsos',      icon: Banknote        },
-  { name: 'Notificaciones',       href: '/supervisor/notificaciones',   icon: Bell            },
-  { name: 'PQR',                  href: '/supervisor/pqr',              icon: MessageSquare   },
+  { name: 'Panel',                 href: '/supervisor',                  icon: LayoutDashboard },
+  { name: 'Buscar cliente',        href: '/supervisor/buscar',           icon: Search          },
+  { name: 'Clientes',              href: '/supervisor/clientes',         icon: Users           },
+  { name: 'Créditos',              href: '/supervisor/creditos',         icon: CreditCard      },
+  { name: 'Cartera',               href: '/supervisor/cartera',          icon: Shield          },
+  { name: 'Mora',                  href: '/supervisor/mora',             icon: AlertTriangle   },
+  { name: 'Documentación',         href: '/supervisor/documentos',       icon: FileText        },
+  { name: 'Puntaje crediticio',    href: '/supervisor/puntaje',          icon: Gauge           },
+  { name: 'Aprobación de crédito', href: '/supervisor/solicitudes',      icon: ClipboardCheck  },
+  { name: 'Motivos de rechazo',    href: '/supervisor/motivos-rechazo',  icon: XCircle         },
+  { name: 'Amortización',          href: '/supervisor/amortizacion',     icon: CalendarClock   },
+  { name: 'Desembolso',            href: '/supervisor/desembolsos',      icon: Banknote        },
+  { name: 'Asesores',              href: '/supervisor/asesores',         icon: UserCog         },
+  { name: 'Funnel originación',    href: '/supervisor/funnel',           icon: BarChart3       },
+  { name: 'Auditoría',             href: '/supervisor/auditoria',        icon: History         },
+  { name: 'Notificaciones',        href: '/supervisor/notificaciones',   icon: Bell            },
+  { name: 'PQR',                   href: '/supervisor/pqr',              icon: MessageSquare   },
 ]
 
 export default function SupervisorSidebar({ esAdmin = false }) {
@@ -79,9 +82,9 @@ export default function SupervisorSidebar({ esAdmin = false }) {
           ──────────────────────────────────────────────────────────────────────── */}
       <div className={`
         fixed md:static inset-y-0 left-0 z-40
-        w-64 bg-indigo-950 border-r border-indigo-900
+        w-64 max-w-[85vw] bg-indigo-950 border-r border-indigo-900
         transform transition-transform duration-300 ease-in-out
-        flex flex-col
+        flex flex-col overflow-hidden
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
 
@@ -155,21 +158,11 @@ export default function SupervisorSidebar({ esAdmin = false }) {
         {/* ── SECCIÓN INFERIOR: CERRAR SESIÓN + TOGGLE TEMA ──
             BORDE: border-t border-indigo-900
             PADDING: p-4 (16px) */}
-        <div className="p-4 border-t border-indigo-900 flex items-center gap-2">
-          {/* BOTÓN CERRAR SESIÓN
-              COLOR EN REPOSO: text-indigo-400/60 (indigo semi-transparente)
-              HOVER: hover:bg-red-900/30 hover:text-red-400 (rojo al hover)
-              TAMAÑO FUENTE: text-sm (14px), ÍCONO: h-4 w-4 (16x16px) */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 flex-1 rounded-xl text-indigo-400/60 hover:bg-red-900/30 hover:text-red-400 transition-all text-sm"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="font-medium">Cerrar sesión</span>
-          </button>
-          {/* TOGGLE TEMA — componente ThemeToggle.js */}
-          <ThemeToggle />
-        </div>
+        <SidebarFooter
+          onLogout={handleLogout}
+          accent="indigo"
+          notificationHref="/supervisor/notificaciones"
+        />
       </div>
     </>
   )

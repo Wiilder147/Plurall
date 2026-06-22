@@ -6,6 +6,7 @@
  * ========================================================================== */
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { notificarAsesorCliente } from '@/lib/notificacionesInApp'
 
 /**
  * GET /api/cron/mora
@@ -125,7 +126,18 @@ export async function GET(request) {
               .eq('id_credito', creditoId)
               .eq('estado_credito', 'ACTIVO') // solo si estaba ACTIVO
 
-            if (!errMora) resumen.creditosEnMora++
+            if (!errMora) {
+              resumen.creditosEnMora++
+              const { data: cr } = await supabase.from('credito').select('id_cliente').eq('id_credito', creditoId).single()
+              if (cr?.id_cliente) {
+                await notificarAsesorCliente(cr.id_cliente, {
+                  codigoTipo: 'MORA_ASESOR',
+                  titulo: 'Cliente entró en mora',
+                  mensaje: `Crédito ${creditoId.slice(-8).toUpperCase()} — ${diasMora} días de mora.`,
+                  metadata: { id_credito: creditoId, dias_mora: diasMora },
+                })
+              }
+            }
           }
         }
       }

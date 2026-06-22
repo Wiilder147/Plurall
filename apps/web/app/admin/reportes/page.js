@@ -48,6 +48,29 @@ export default async function AdminReportesPage() {
 
   const maxEstado = Math.max(...Object.values(conteoEstados), 1)
 
+  // Comparativa mes actual vs anterior
+  const ahora = new Date()
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString()
+  const inicioMesAnt = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).toISOString()
+  const finMesAnt = new Date(ahora.getFullYear(), ahora.getMonth(), 0, 23, 59, 59).toISOString()
+
+  const [
+    { count: solsMes },
+    { count: solsMesAnt },
+    { data: pagosMes },
+    { data: pagosMesAnt },
+  ] = await Promise.all([
+    supabase.from('solicitud_credito').select('*', { count: 'exact', head: true }).gte('fecha_solicitud', inicioMes),
+    supabase.from('solicitud_credito').select('*', { count: 'exact', head: true }).gte('fecha_solicitud', inicioMesAnt).lte('fecha_solicitud', finMesAnt),
+    supabase.from('pago').select('monto_pagado').eq('estado', 'CONFIRMADO').gte('fecha_pago', inicioMes),
+    supabase.from('pago').select('monto_pagado').eq('estado', 'CONFIRMADO').gte('fecha_pago', inicioMesAnt).lte('fecha_pago', finMesAnt),
+  ])
+
+  const recaudoMes = pagosMes?.reduce((s, p) => s + (p.monto_pagado || 0), 0) || 0
+  const recaudoMesAnt = pagosMesAnt?.reduce((s, p) => s + (p.monto_pagado || 0), 0) || 0
+  const varSols = solsMesAnt ? Math.round(((solsMes - solsMesAnt) / solsMesAnt) * 100) : 0
+  const varRecaudo = recaudoMesAnt ? Math.round(((recaudoMes - recaudoMesAnt) / recaudoMesAnt) * 100) : 0
+
   const kpis = [
     { label: 'Cartera activa',         value: formatCOP(carteraTotal),        icon: DollarSign, color: 'text-orange-400 bg-orange-500/10' },
     { label: 'Total desembolsado',      value: formatCOP(desembolsadoTotal),   icon: TrendingUp, color: 'text-emerald-400 bg-emerald-500/10' },
@@ -122,6 +145,24 @@ export default async function AdminReportesPage() {
           {Object.keys(conteoEstados).length === 0 && (
             <p className="text-slate-500 text-sm text-center py-4">Sin datos de solicitudes.</p>
           )}
+        </div>
+      </div>
+
+      {/* Comparativa mensual */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+          <h2 className="font-semibold text-slate-300 mb-3 text-sm">Solicitudes — mes vs mes anterior</h2>
+          <p className="text-3xl font-extrabold text-white">{solsMes ?? 0}</p>
+          <p className={`text-sm mt-1 ${varSols >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {varSols >= 0 ? '+' : ''}{varSols}% vs mes anterior ({solsMesAnt ?? 0})
+          </p>
+        </div>
+        <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+          <h2 className="font-semibold text-slate-300 mb-3 text-sm">Recaudo — mes vs mes anterior</h2>
+          <p className="text-3xl font-extrabold text-white">{formatCOP(recaudoMes)}</p>
+          <p className={`text-sm mt-1 ${varRecaudo >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {varRecaudo >= 0 ? '+' : ''}{varRecaudo}% vs mes anterior ({formatCOP(recaudoMesAnt)})
+          </p>
         </div>
       </div>
 

@@ -8,7 +8,8 @@
  * ========================================================================== */
 
 import { useState } from 'react'
-import { PhoneCall, CheckCircle2, Loader2, AlertCircle, DollarSign } from 'lucide-react'
+import { PhoneCall, CheckCircle2, Loader2, AlertCircle, DollarSign, FileText } from 'lucide-react'
+import { PLANTILLAS_GESTION } from '@/lib/cobranza'
 
 const TIPOS = ['LLAMADA', 'WHATSAPP', 'VISITA', 'EMAIL', 'PAGO_EFECTIVO', 'PROMESA_PAGO', 'NO_CONTESTA']
 const RESULTADOS = {
@@ -40,6 +41,14 @@ export default function RegistrarGestionForm({ clienteId, creditoId, clienteNomb
     setTipo(t)
     const opts = RESULTADOS[t] ?? []
     setResultado(opts[0] ?? 'EXITOSO')
+  }
+
+  function aplicarPlantilla(p) {
+    setTipo(p.tipo)
+    setResultado(p.resultado)
+    setObservaciones(p.texto)
+    const opts = RESULTADOS[p.tipo] ?? []
+    if (!opts.includes(p.resultado)) setResultado(opts[0] ?? p.resultado)
   }
 
   async function handleSubmit(e) {
@@ -95,6 +104,17 @@ export default function RegistrarGestionForm({ clienteId, creditoId, clienteNomb
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div>
+          <label className="text-xs text-slate-400 mb-2 block uppercase tracking-wide">Plantillas rápidas</label>
+          <div className="flex flex-wrap gap-2">
+            {PLANTILLAS_GESTION.map(p => (
+              <button key={p.id} type="button" onClick={() => aplicarPlantilla(p)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-700 border border-slate-600 text-slate-300 hover:border-teal-500/40 transition-all">
+                <FileText className="w-3 h-3" /> {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Tipo de gestión */}
           <div>

@@ -36,7 +36,7 @@ export default async function SupervisorAuditoriaPage({ searchParams }) {
     .from('auditoria')
     .select(`
       id_auditoria, tabla_afectada, accion_realizada, id_registro_afectado,
-      fecha_evento, ip_origen,
+      fecha_evento, ip_origen, valor_anterior, valor_nuevo,
       perfil_usuario:id_usuario_responsable ( nombre_completo )
     `, { count: 'exact' })
     .order('fecha_evento', { ascending: false })
@@ -97,6 +97,7 @@ export default async function SupervisorAuditoriaPage({ searchParams }) {
                   <th className="px-5 py-3 text-center">Acción</th>
                   <th className="px-5 py-3 text-left">ID Registro</th>
                   <th className="px-5 py-3 text-left">Usuario</th>
+                  <th className="px-5 py-3 text-left">Cambios</th>
                   <th className="px-5 py-3 text-left">IP</th>
                 </tr>
               </thead>
@@ -119,6 +120,13 @@ export default async function SupervisorAuditoriaPage({ searchParams }) {
                       </td>
                       <td className="px-5 py-3 text-slate-400">
                         {r.perfil_usuario?.nombre_completo ?? 'Sistema'}
+                      </td>
+                      <td className="px-5 py-3 text-slate-400 max-w-xs truncate" title={JSON.stringify(r.valor_nuevo)}>
+                        {r.valor_anterior || r.valor_nuevo ? (
+                          <span className="text-indigo-300 font-mono text-[10px]">
+                            {r.valor_anterior ? 'Δ ' : ''}{JSON.stringify(r.valor_nuevo)?.slice(0, 60)}…
+                          </span>
+                        ) : '—'}
                       </td>
                       <td className="px-5 py-3 text-slate-500">{r.ip_origen ?? '—'}</td>
                     </tr>
