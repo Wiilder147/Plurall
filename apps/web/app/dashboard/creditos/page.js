@@ -10,6 +10,8 @@ import { ArrowRight, CheckCircle2, AlertCircle, Clock, CreditCard, Lock, History
 import { formatCOP } from '@/lib/calculadora'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getSolicitudAprobadaPendiente } from '@/lib/solicitudCliente'
+import SolicitudDesembolsoPendiente from '@/components/cliente/SolicitudDesembolsoPendiente'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +26,7 @@ export default async function MisCreditos() {
 
   let creditoActivo = null
   let creditosHistoricos = []
+  let solicitudAprobada = null
 
   if (clienteRow) {
     const { data: activo } = await supabase
@@ -35,6 +38,10 @@ export default async function MisCreditos() {
       .from('credito').select('*').eq('id_cliente', clienteRow.id_cliente)
       .in('estado_credito', ['PAGADO', 'CANCELADO', 'CASTIGADO']).order('created_at', { ascending: false })
     creditosHistoricos = historicos || []
+
+    if (!creditoActivo) {
+      solicitudAprobada = await getSolicitudAprobadaPendiente(supabase, clienteRow.id_cliente)
+    }
   }
 
   const tieneActivo = !!creditoActivo
@@ -57,7 +64,9 @@ export default async function MisCreditos() {
           <p className="text-slate-500 mt-2">
             {tieneActivo
               ? 'Regla de negocio: solo puedes mantener 1 crédito activo a la vez.'
-              : 'Consulta el estado de tus préstamos y paga a tiempo.'}
+              : solicitudAprobada
+                ? 'Tu crédito fue aprobado. Estamos preparando el desembolso.'
+                : 'Consulta el estado de tus préstamos y paga a tiempo.'}
           </p>
         </div>
 
@@ -69,6 +78,11 @@ export default async function MisCreditos() {
           <div className="inline-flex items-center gap-2 bg-slate-200 text-slate-500 px-4 py-2 rounded-lg font-medium cursor-not-allowed select-none">
             <Lock className="w-4 h-4" />
             Crédito activo vigente
+          </div>
+        ) : solicitudAprobada ? (
+          <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg font-medium border border-emerald-200 select-none">
+            <Clock className="w-4 h-4" />
+            Desembolso en proceso
           </div>
         ) : (
           // BOTÓN "+ Solicitar Crédito" (cuando NO tiene crédito activo)
@@ -172,6 +186,8 @@ export default async function MisCreditos() {
             <span className="text-xs text-slate-400">Toca para ver plan de pagos →</span>
           </div>
         </Link>
+      ) : solicitudAprobada ? (
+        <SolicitudDesembolsoPendiente solicitud={solicitudAprobada} variant="card" />
       ) : (
         // ESTADO VACÍO (sin crédito activo)
         // COLOR FONDO: bg-white, BORDE: border border-slate-200

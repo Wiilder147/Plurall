@@ -10,6 +10,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
+import { getSolicitudAprobadaPendiente } from '@/lib/solicitudCliente'
+import SolicitudDesembolsoPendiente from '@/components/cliente/SolicitudDesembolsoPendiente'
 import {
   CreditCard, ArrowRight, Activity, Zap,
   AlertTriangle, CheckCircle2, CalendarDays,
@@ -34,6 +36,7 @@ export default async function DashboardInicio() {
   let cuotasPagadas = 0
   let cuotasVencidas = 0
   let proximaCuota = null
+  let solicitudAprobada = null
 
   if (clienteRow) {
     const { data: cred } = await supabase
@@ -61,6 +64,10 @@ export default async function DashboardInicio() {
           proximaCuota = cuotas.find(c => c.estado_cuota === 'VENCIDA' || c.estado_cuota === 'PENDIENTE') || null
         }
       }
+    }
+
+    if (!credito) {
+      solicitudAprobada = await getSolicitudAprobadaPendiente(supabase, clienteRow.id_cliente)
     }
   }
 
@@ -335,6 +342,8 @@ export default async function DashboardInicio() {
             </Link>
           </section>
         </>
+      ) : solicitudAprobada ? (
+        <SolicitudDesembolsoPendiente solicitud={solicitudAprobada} variant="hero" />
       ) : (
         <>
           {/* ── SIN CRÉDITO ACTIVO: TARJETA DE INVITACIÓN ──
