@@ -28,6 +28,7 @@
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "playwright": "^1.61.1",
     "puppeteer": "^22.15.0",
     "tailwindcss": "^4"
   }
