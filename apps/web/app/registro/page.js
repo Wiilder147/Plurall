@@ -124,6 +124,31 @@ function RegistroContent() {
 
     setLoading(true)
     const supabase = createClient()
+
+    // Disponibilidad de correo y documento ANTES de crear la cuenta: el celular
+    // es la identidad única en auth, pero el correo/dni son únicos en `cliente`.
+    // Sin esto, un correo/dni repetido dejaba una cuenta sin perfil de cliente.
+    const emailReal = form.email.trim().toLowerCase()
+    const dniLimpio = form.dni.replace(/\D/g, '')
+    try {
+      const { data: disp, error: dispError } = await supabase.rpc('fn_verificar_disponibilidad', {
+        p_email: emailReal,
+        p_dni:   dniLimpio,
+      })
+      if (!dispError && disp) {
+        if (disp.email_disponible === false) {
+          setError('Este correo ya está registrado. Inicia sesión o usa otro correo.')
+          setLoading(false)
+          return
+        }
+        if (disp.dni_disponible === false) {
+          setError('Este número de documento ya está registrado. Si es tuyo, inicia sesión.')
+          setLoading(false)
+          return
+        }
+      }
+    } catch { /* si la verificación falla no bloqueamos: el trigger revalida */ }
+
     // El login es por celular: se usa un email sintético para Supabase Auth
     // y el correo real viaja en metadata (el trigger de BD lo persiste en cliente)
     const fakeEmail = `${telLimpio}@plurall.app`.toLowerCase()
@@ -135,8 +160,8 @@ function RegistroContent() {
         data: {
           nombre_completo: form.nombre,
           telefono: telLimpio,
-          dni: form.dni,
-          email_real: form.email.trim().toLowerCase()
+          dni: dniLimpio,
+          email_real: emailReal
         },
       },
     })
