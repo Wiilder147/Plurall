@@ -12,6 +12,8 @@ export async function middleware(request) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Se excluye la carpeta /legal (documentos públicos: política de datos, etc.)
+    // y la extensión .pdf para que el middleware de auth no los redirija a /login.
+    '/((?!_next/static|_next/image|favicon.ico|legal/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|pdf)$).*)',
   ],
 }
