@@ -6,11 +6,11 @@
  *                También muestra el historial de créditos pagados/finalizados.
  * ========================================================================== */
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, AlertCircle, Clock, CreditCard, Lock, History, Award } from 'lucide-react'
+import { ArrowRight, CheckCircle2, AlertCircle, Clock, CreditCard, Lock, History, Award, Search, XCircle, CalendarClock } from 'lucide-react'
 import { formatCOP } from '@/lib/calculadora'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getSolicitudAprobadaPendiente } from '@/lib/solicitudCliente'
+import { getSolicitudAprobadaPendiente, getUltimaSolicitudCliente } from '@/lib/solicitudCliente'
 import SolicitudDesembolsoPendiente from '@/components/cliente/SolicitudDesembolsoPendiente'
 
 export const dynamic = 'force-dynamic'
@@ -27,6 +27,7 @@ export default async function MisCreditos() {
   let creditoActivo = null
   let creditosHistoricos = []
   let solicitudAprobada = null
+  let ultimaSolicitud = null
 
   if (clienteRow) {
     const { data: activo } = await supabase
@@ -41,6 +42,9 @@ export default async function MisCreditos() {
 
     if (!creditoActivo) {
       solicitudAprobada = await getSolicitudAprobadaPendiente(supabase, clienteRow.id_cliente)
+      if (!solicitudAprobada) {
+        ultimaSolicitud = await getUltimaSolicitudCliente(supabase, clienteRow.id_cliente)
+      }
     }
   }
 
@@ -48,6 +52,13 @@ export default async function MisCreditos() {
   const enMora = creditoActivo?.estado_credito === 'EN_MORA'
   const progreso = tieneActivo ? Math.round((creditoActivo.cuotas_pagadas / creditoActivo.numero_cuotas) * 100) : 0
   const totalDesembolsadoHistorico = creditosHistoricos.reduce((acc, c) => acc + c.monto_desembolsado, 0)
+
+  // Estado de la última solicitud (para mostrar la solicitud y su estado aquí)
+  const fmtFecha = (f) => f
+    ? new Date(f).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+    : ''
+  const solicitudEnCurso = ['PENDIENTE', 'EN_ESTUDIO'].includes(ultimaSolicitud?.estado)
+  const solicitudRechazada = ultimaSolicitud?.estado === 'RECHAZADA'
 
   return (
     // CONTENEDOR — gap-8 (32px entre secciones), pb-10 (40px abajo)
@@ -66,7 +77,11 @@ export default async function MisCreditos() {
               ? 'Regla de negocio: solo puedes mantener 1 crédito activo a la vez.'
               : solicitudAprobada
                 ? 'Tu crédito fue aprobado. Estamos preparando el desembolso.'
-                : 'Consulta el estado de tus préstamos y paga a tiempo.'}
+                : solicitudEnCurso
+                  ? 'Tu solicitud está en evaluación. Aquí puedes ver su estado.'
+                  : solicitudRechazada
+                    ? 'Aquí puedes ver el estado de tu última solicitud.'
+                    : 'Consulta el estado de tus préstamos y paga a tiempo.'}
           </p>
         </div>
 
@@ -83,6 +98,11 @@ export default async function MisCreditos() {
           <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg font-medium border border-emerald-200 select-none">
             <Clock className="w-4 h-4" />
             Desembolso en proceso
+          </div>
+        ) : solicitudEnCurso ? (
+          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-medium border border-blue-200 select-none">
+            <Search className="w-4 h-4" />
+            En evaluación
           </div>
         ) : (
           // BOTÓN "+ Solicitar Crédito" (cuando NO tiene crédito activo)
@@ -188,6 +208,93 @@ export default async function MisCreditos() {
         </Link>
       ) : solicitudAprobada ? (
         <SolicitudDesembolsoPendiente solicitud={solicitudAprobada} variant="card" />
+      ) : solicitudEnCurso ? (
+        // ── SOLICITUD EN EVALUACIÓN ──
+        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0">
+              <Search className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Solicitud en evaluación</h3>
+              <p className="text-sm text-slate-500">Enviada el {fmtFecha(ultimaSolicitud.fechaSolicitud)}</p>
+            </div>
+            {/* BADGE DE ESTADO */}
+            <span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200 self-start">
+              <Clock className="w-3.5 h-3.5" /> En evaluación
+            </span>
+          </div>
+
+          {/* DATOS DE LA SOLICITUD */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-slate-100 pt-6">
+            <div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Monto solicitado</span>
+              <p className="text-lg font-bold text-slate-900 mt-1">{formatCOP(ultimaSolicitud.monto)}</p>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Plazo</span>
+              <p className="text-lg font-bold text-slate-900 mt-1">{ultimaSolicitud.plazo} meses</p>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Estado</span>
+              <p className="text-lg font-bold text-blue-600 mt-1">En evaluación</p>
+            </div>
+          </div>
+
+          <p className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
+            Nuestro equipo está revisando tu información. Un asesor te contactará muy pronto para confirmar tus datos.
+            No necesitas hacer nada más por ahora.
+          </p>
+        </div>
+      ) : solicitudRechazada ? (
+        // ── SOLICITUD RECHAZADA ──
+        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center shrink-0">
+              <XCircle className="w-6 h-6 text-slate-500" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-800">Solicitud no aprobada</h3>
+              <p className="text-sm text-slate-500">Enviada el {fmtFecha(ultimaSolicitud.fechaSolicitud)}</p>
+            </div>
+            <span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 self-start">
+              No aprobada
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t border-slate-100 pt-6">
+            <div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Monto solicitado</span>
+              <p className="text-lg font-bold text-slate-900 mt-1">{formatCOP(ultimaSolicitud.monto)}</p>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Plazo</span>
+              <p className="text-lg font-bold text-slate-900 mt-1">{ultimaSolicitud.plazo} meses</p>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Estado</span>
+              <p className="text-lg font-bold text-slate-600 mt-1">No aprobada</p>
+            </div>
+          </div>
+
+          {/* REINTENTO */}
+          {!ultimaSolicitud.puedeReintentar ? (
+            <div className="flex items-center gap-3 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+              <CalendarClock className="w-5 h-5 text-orange-500 shrink-0" />
+              <p className="text-sm text-slate-600">
+                Podrás volver a solicitar tu crédito a partir del{' '}
+                <strong className="text-slate-800">{fmtFecha(ultimaSolicitud.fechaReintento)}</strong>.
+              </p>
+            </div>
+          ) : (
+            <Link
+              href="/dashboard/creditos/solicitar"
+              className="self-start bg-orange-500 hover:bg-orange-400 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-md"
+            >
+              Solicitar de nuevo
+            </Link>
+          )}
+        </div>
       ) : (
         // ESTADO VACÍO (sin crédito activo)
         // COLOR FONDO: bg-white, BORDE: border border-slate-200

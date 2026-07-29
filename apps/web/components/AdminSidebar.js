@@ -104,8 +104,10 @@ export default function AdminSidebar() {
 
         {/* ── ZONA DE NAVEGACIÓN ──
             ESPACIO ENTRE ITEMS: gap-1 (4px — más compacto que el dashboard)
-            PADDING: py-6 px-4 (24px vertical, 16px horizontal) */}
-        <div className="flex-1 py-6 px-4 flex flex-col gap-1">
+            PADDING: py-6 px-4 (24px vertical, 16px horizontal)
+            overflow-y-auto + min-h-0 — scroll interno en pantallas bajas para que
+            el botón "Cerrar sesión" del footer siempre quede visible */}
+        <div className="flex-1 min-h-0 py-6 px-4 flex flex-col gap-1 overflow-y-auto">
           {navigation.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href))
             return (

@@ -133,8 +133,10 @@ export default function DashboardSidebar({ esAdmin = false }) {
         {/* ── ZONA DE NAVEGACIÓN (enlaces del menú) ──
             PADDING VERTICAL: py-6 (24px arriba/abajo)
             PADDING HORIZONTAL: px-4 (16px lados)
-            ESPACIO ENTRE ITEMS: gap-2 (8px) */}
-        <div className="flex-1 py-6 px-4 flex flex-col gap-2">
+            ESPACIO ENTRE ITEMS: gap-2 (8px)
+            overflow-y-auto + min-h-0 — scroll interno en pantallas bajas para que
+            el botón "Cerrar sesión" del footer siempre quede visible */}
+        <div className="flex-1 min-h-0 py-6 px-4 flex flex-col gap-2 overflow-y-auto">
           {/* Retorno al panel Admin — solo visible cuando navega el ADMIN */}
           {esAdmin && (
             <Link href="/admin" onClick={() => setIsOpen(false)}

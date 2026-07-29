@@ -36,6 +36,10 @@ Thumbs.db
 .~lock.*
 *.~lock.*#
 
+# Material de estudio personal / capturas temporales (no van al repo)
+estudio/
+image.png
+
 # Archivos de trabajo / generación (no van al repo)
 generar_cronograma.py
 Cronograma_PLURALL.xlsx

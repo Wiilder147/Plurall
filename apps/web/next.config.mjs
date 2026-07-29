@@ -9,6 +9,12 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  images: {
+    // Fotos del carrusel de historias de clientes (landing)
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+    ],
+  },
   async headers() {
     return [
       {

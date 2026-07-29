@@ -12,6 +12,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight, Shield, Clock, Smartphone, TrendingUp, CheckCircle2, ArrowRight, Star } from "lucide-react";
 import CreditFunnelModal from "@/components/CreditFunnelModal";
+import TestimonialCarousel from "@/components/TestimonialCarousel";
 
 export default function HomePage() {
   const [funnelOpen, setFunnelOpen] = useState(false)
@@ -63,17 +64,10 @@ export default function HomePage() {
             <Link href="/login" className="text-slate-600 hover:text-navy-900 font-semibold text-sm transition-colors hidden sm:block">
               Iniciar Sesión
             </Link>
-            {/* BOTÓN "INGRESA" (CTA principal del navbar)
-                COLOR DE FONDO: bg-accent-500 (naranja/acento — definido en tailwind.config)
-                hover: bg-accent-600 (más oscuro al hover)
-                COLOR TEXTO: text-white (blanco)
-                PADDING: py-2.5 (10px vertical), px-6 (24px horizontal)
-                BORDES: rounded-full (completamente ovalado — pill shape)
-                TAMAÑO: text-sm (14px), font-bold
-                SOMBRA: shadow-md shadow-accent-500/20 (sombra naranja suave)
-                HOVER: hover:scale-105 (crece 5%) */}
-            <Link href="/login" className="bg-accent-500 hover:bg-accent-600 text-white font-bold py-2.5 px-6 rounded-full text-sm transition-all hover:scale-105 shadow-md shadow-accent-500/20">
-              INGRESA
+            {/* BOTÓN "CREAR CUENTA" (CTA principal del navbar → registro)
+                El enlace "Iniciar Sesión" de al lado cubre a quienes ya tienen cuenta */}
+            <Link href="/registro" className="bg-accent-500 hover:bg-accent-600 text-white font-bold py-2.5 px-6 rounded-full text-sm transition-all hover:scale-105 shadow-md shadow-accent-500/20">
+              CREAR CUENTA
             </Link>
           </div>
         </div>
@@ -92,10 +86,10 @@ export default function HomePage() {
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-navy-900/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4"></div>
 
         <div className="relative w-full max-w-7xl mx-auto px-6 lg:px-12 py-16 lg:py-24">
-          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
-            {/* COLUMNA IZQUIERDA: TEXTO HERO */}
-            <div className="w-full lg:w-1/2 flex flex-col items-center text-center lg:items-start lg:text-left animate-fade-in">
+            {/* COLUMNA IZQUIERDA: TEXTO HERO (42% en desktop para dar más espacio a la imagen) */}
+            <div className="w-full lg:w-[42%] flex flex-col items-center text-center lg:items-start lg:text-left animate-fade-in">
 
               {/* BADGE SUPERIOR
                   COLOR FONDO: bg-accent-50 (naranja muy claro)
@@ -181,8 +175,9 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* COLUMNA DERECHA: IMAGEN HERO */}
-            <div className="w-full lg:w-1/2 animate-slide-in" style={{ animationDelay: '0.2s' }}>
+            {/* COLUMNA DERECHA: IMAGEN HERO (58% en desktop — protagonista de la sección)
+                lg:-mr-6 / xl:-mr-12 la desplazan hacia el borde derecho para dar amplitud */}
+            <div className="w-full lg:w-[58%] lg:-mr-6 xl:-mr-12 animate-slide-in" style={{ animationDelay: '0.2s' }}>
               <div className="relative">
                 {/* MARCO DECORATIVO DETRÁS DE LA IMAGEN — degradado naranja/azul borroso */}
                 <div className="absolute -inset-4 bg-gradient-to-br from-accent-500/20 to-navy-900/10 rounded-3xl blur-2xl"></div>
@@ -191,13 +186,14 @@ export default function HomePage() {
                     BORDE: border-2 border-white */}
                 <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-navy-900/15 border-2 border-white">
                   {/* IMAGEN HERO — aspect-ratio 4:3
-                      Para cambiar la imagen: reemplaza "/hero.png" por otra ruta */}
+                      WebP (~170 KB vs 900 KB del PNG original) para carga rápida */}
                   <div className="aspect-[4/3] relative">
                     <Image
-                      src="/hero.png"
+                      src="/hero.webp"
                       alt="Comerciante colombiana exitosa en su negocio"
                       fill
                       priority
+                      sizes="(max-width: 1024px) 100vw, 58vw"
                       className="object-cover object-center"
                     />
                   </div>
@@ -310,6 +306,24 @@ export default function HomePage() {
                 <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
               </div>
             ))}
+          </div>
+
+          {/* ── HISTORIAS DE CLIENTES (carrusel) ──
+              Testimonios con foto del negocio que rotan automáticamente;
+              refuerzan la credibilidad debajo de los 4 beneficios */}
+          <div className="mt-20 lg:mt-24">
+            <div className="text-center mb-12">
+              <span className="text-accent-500 font-bold text-sm uppercase tracking-wider">HISTORIAS REALES</span>
+              <h3 className="text-3xl sm:text-4xl font-extrabold text-navy-900 mt-3 tracking-tight">
+                Comerciantes que ya están rodando
+              </h3>
+              <p className="text-slate-500 mt-4 max-w-2xl mx-auto text-lg">
+                Ellos confiaron en PLURALL para hacer crecer su negocio. Esta es su historia.
+              </p>
+            </div>
+            <div className="max-w-5xl mx-auto">
+              <TestimonialCarousel />
+            </div>
           </div>
         </div>
       </section>

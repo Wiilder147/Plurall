@@ -37,17 +37,18 @@ export default async function DashboardLayout({ children }) {
           flex-1 — ocupa todo el espacio restante después del sidebar
           h-screen overflow-y-auto — scroll vertical en esta columna
           w-full — ancho completo en móvil (cuando el sidebar está oculto) */}
-      <main className="flex-1 h-screen overflow-y-auto w-full relative">
+      <main className="flex-1 h-screen overflow-y-auto overflow-x-hidden w-full relative">
 
-        {/* DECORACIÓN DE FONDO — círculos borrosos decorativos
-            CÍRCULO SUPERIOR DERECHO: naranja muy suave (bg-orange-400/5 = naranja 5% opacidad)
-            TAMAÑO: w-[500px] h-[500px] (500x500px)
-            DESENFOQUE: blur-3xl (desenfoque máximo)
-            Para quitar la decoración: elimina estos dos divs */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-400/5 rounded-full blur-3xl -z-10 -translate-y-1/2 translate-x-1/3"></div>
-
-        {/* CÍRCULO INFERIOR IZQUIERDO: azul muy suave (bg-blue-900/5 = azul 5% opacidad) */}
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-blue-900/5 rounded-full blur-3xl -z-10 translate-y-1/3 -translate-x-1/4"></div>
+        {/* DECORACIÓN DE FONDO — círculos borrosos decorativos.
+            Encerrados en un contenedor con overflow-hidden + inset-0 para que los
+            translate NO extiendan el área scrolleable (evita scroll horizontal/vertical
+            hacia el vacío). pointer-events-none: no interfieren con clics. */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+          {/* CÍRCULO SUPERIOR DERECHO: naranja muy suave (bg-orange-400/5) */}
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+          {/* CÍRCULO INFERIOR IZQUIERDO: azul muy suave (bg-blue-900/5) */}
+          <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-blue-900/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4"></div>
+        </div>
 
         {/* CONTENEDOR DEL CONTENIDO DE LA PÁGINA
             PADDING: p-4 (16px) en móvil, md:p-8 (32px) en tablet, lg:px-12 (48px horizontal) en desktop
