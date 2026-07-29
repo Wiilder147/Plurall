@@ -684,10 +684,12 @@ export default function SolicitarCredito() {
                         <div className="relative">
                           {/* SÍMBOLO $ — absolute left-4, centrado vertical, text-slate-400 */}
                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm pointer-events-none">$</span>
+                          {/* type="text" + filtrado de no-dígitos: type="number" dejaba
+                              escribir letras (p.ej. "el6542"); aquí solo se aceptan números */}
                           <input
-                            type="number" min="0" step="1000" inputMode="numeric"
+                            type="text" inputMode="numeric"
                             value={respActual?.respuesta_texto ?? ''}
-                            onChange={e => handleRespuesta(p.id_pregunta, 'respuesta_texto', e.target.value)}
+                            onChange={e => handleRespuesta(p.id_pregunta, 'respuesta_texto', e.target.value.replace(/\D/g, ''))}
                             placeholder="0"
                             className="w-full border border-slate-200 rounded-xl pl-8 pr-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
