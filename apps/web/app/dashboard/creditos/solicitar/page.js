@@ -31,8 +31,9 @@ const LocationPicker = dynamic(() => import('@/components/LocationPicker'), {
 
 const TASA_ANUAL_DEFAULT = 28
 
-// LISTA DE BANCOS Y BILLETERAS para el campo tipo BANCO del cuestionario
-const BANCOS = [
+// LISTA DE BANCOS Y BILLETERAS de respaldo — la fuente principal es la tabla
+// `banco` en la BD (db/14_catalogos.sql); esto solo se usa si la consulta falla
+const BANCOS_FALLBACK = [
   { grupo: 'Bancos',
     opciones: [
       'Bancolombia','Banco de Bogotá','Davivienda','BBVA Colombia',
@@ -50,6 +51,18 @@ const BANCOS = [
     ],
   },
 ]
+
+// TIPOS DE DOCUMENTO ADICIONAL que el cliente puede adjuntar como soporte
+// Los códigos coinciden con documento_cliente.tipo_documento en la BD
+const TIPOS_DOC_ADICIONAL = [
+  { codigo: 'RECIBO_PUBLICO',    label: 'Recibo de servicio público' },
+  { codigo: 'FOTO_NEGOCIO',      label: 'Foto del negocio' },
+  { codigo: 'RUT',               label: 'RUT' },
+  { codigo: 'EXTRACTO_BANCARIO', label: 'Extracto bancario' },
+  { codigo: 'CAMARA_COMERCIO',   label: 'Cámara de comercio' },
+  { codigo: 'OTRO_COMPROBANTE',  label: 'Otro comprobante' },
+]
+const MAX_DOCS_ADICIONALES = 8
 
 // CONFIGURACIÓN DE LOS PASOS DEL FORMULARIO
 // Para cambiar el nombre o ícono de un paso: modifica este array
@@ -86,9 +99,12 @@ export default function SolicitarCredito() {
   const [preguntas,  setPreguntas]  = useState([])
   const [respuestas, setRespuestas] = useState({})
   const [cargandoQ,  setCargandoQ]  = useState(false)
+  const [bancos,     setBancos]     = useState(BANCOS_FALLBACK)
 
   const [cedulaFrontal, setCedulaFrontal] = useState(null)
   const [cedulaTrasera, setCedulaTrasera] = useState(null)
+  const [docsAdicionales, setDocsAdicionales] = useState([]) // [{ id, file, tipo }]
+  const [tipoDocNuevo,    setTipoDocNuevo]    = useState(TIPOS_DOC_ADICIONAL[0].codigo)
 
   const { cuotaMensual, totalPagar, totalIntereses } = useMemo(
     () => calcularAmortizacion(monto, TASA_ANUAL_DEFAULT, plazo),
@@ -114,53 +130,49 @@ export default function SolicitarCredito() {
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [step, resultado])
 
+  // Elegibilidad desde el endpoint único (misma regla que aplica el backend
+  // al crear la solicitud — ver fn_verificar_elegibilidad en la BD)
   useEffect(() => {
-    async function auditar() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return setBloqueo({ isLoading: false, isBlocked: false, message: '' })
-
-      const { data: clienteRow } = await supabase
-        .from('cliente').select('id_cliente').eq('id_usuario_cuenta', user.id).single()
-
-      if (clienteRow) {
-        const { data: creditoActivo } = await supabase
-          .from('credito').select('id_credito').eq('id_cliente', clienteRow.id_cliente)
-          .in('estado_credito', ['ACTIVO', 'EN_MORA']).limit(1).single()
-
-        if (creditoActivo) {
-          trackEvent('BLOQUEADO_CREDITO_ACTIVO')
-          return setBloqueo({ isLoading: false, isBlocked: true,
-            message: 'Tienes un crédito activo. Debes finalizar todos los pagos antes de solicitar uno nuevo.' })
+    async function verificarElegibilidad() {
+      try {
+        const res  = await fetch('/api/creditos/elegibilidad')
+        const data = await res.json()
+        if (res.ok && data.elegible === false) {
+          trackEvent(
+            data.codigo === 'CREDITO_ACTIVO' ? 'BLOQUEADO_CREDITO_ACTIVO' : 'BLOQUEADO_COOLDOWN_90',
+            data.dias_restantes ? { dias_restantes: data.dias_restantes } : {},
+          )
+          return setBloqueo({ isLoading: false, isBlocked: true, message: data.mensaje })
         }
-
-        const { data: lastReq } = await supabase
-          .from('solicitud_credito').select('fecha_solicitud').eq('id_cliente', clienteRow.id_cliente)
-          .order('fecha_solicitud', { ascending: false }).limit(1).single()
-
-        if (lastReq) {
-          const diffDias = (Date.now() - new Date(lastReq.fecha_solicitud)) / 86400000
-          if (diffDias < 90) {
-            trackEvent('BLOQUEADO_COOLDOWN_90', { dias_restantes: Math.ceil(90 - diffDias) })
-            return setBloqueo({ isLoading: false, isBlocked: true,
-              message: `Debes esperar ${Math.ceil(90 - diffDias)} días antes de realizar una nueva solicitud.` })
-          }
-        }
-      }
+      } catch { /* si la consulta falla no bloqueamos: la RPC revalida al enviar */ }
       setBloqueo({ isLoading: false, isBlocked: false, message: '' })
       trackEvent('INICIO_CALCULADORA')
     }
-    auditar()
+    verificarElegibilidad()
   }, [])
 
   useEffect(() => {
     if (step !== 2 || preguntas.length > 0) return
     async function cargarPreguntas() {
       setCargandoQ(true)
-      const { data } = await supabase
-        .from('pregunta')
-        .select('id_pregunta, enunciado, tipo_pregunta, tipo_input, obligatoria, opcion_pregunta ( id_opcion, texto_opcion, valor_puntos, orden )')
-        .eq('activo', true).order('orden', { ascending: true })
+      const [{ data }, { data: bancosDb }] = await Promise.all([
+        supabase
+          .from('pregunta')
+          .select('id_pregunta, enunciado, tipo_pregunta, tipo_input, obligatoria, opcion_pregunta ( id_opcion, texto_opcion, valor_puntos, orden )')
+          .eq('activo', true).order('orden', { ascending: true }),
+        supabase
+          .from('banco')
+          .select('nombre, tipo')
+          .eq('activo', true)
+          .order('orden', { ascending: true }),
+      ])
       setPreguntas(data ?? [])
+      if (bancosDb?.length) {
+        setBancos([
+          { grupo: 'Bancos',              opciones: bancosDb.filter(b => b.tipo === 'BANCO').map(b => b.nombre) },
+          { grupo: 'Billeteras digitales', opciones: bancosDb.filter(b => b.tipo === 'BILLETERA').map(b => b.nombre) },
+        ].filter(g => g.opciones.length > 0))
+      }
       setCargandoQ(false)
     }
     cargarPreguntas()
@@ -179,6 +191,34 @@ export default function SolicitarCredito() {
     if (tipo === 'trasera') { setCedulaTrasera(file); trackEvent('SUBIO_CEDULA_TRASERA') }
   }
 
+  // Agrega uno o varios archivos de soporte con el tipo seleccionado
+  function agregarDocsAdicionales(e) {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    setDocsAdicionales(prev => [
+      ...prev,
+      ...files.map(f => ({ id: `${Date.now()}_${f.name}_${Math.random().toString(36).slice(2)}`, file: f, tipo: tipoDocNuevo })),
+    ].slice(0, MAX_DOCS_ADICIONALES))
+    trackEvent('SUBIO_DOC_ADICIONAL', { tipo: tipoDocNuevo, cantidad: files.length })
+    e.target.value = '' // permite volver a seleccionar el mismo archivo
+  }
+
+  function quitarDocAdicional(id) {
+    setDocsAdicionales(prev => prev.filter(d => d.id !== id))
+  }
+
+  // Las preguntas MONEDA y NUMERO alimentan el score, por eso su respuesta
+  // debe ser un número válido y no negativo; las abiertas aceptan texto libre
+  function esPreguntaNumerica(p) {
+    return p.tipo_input === 'MONEDA' || p.tipo_input === 'NUMERO'
+  }
+
+  function respuestaNumericaValida(r) {
+    if (r?.respuesta_texto == null || r.respuesta_texto === '') return false
+    const n = Number(r.respuesta_texto)
+    return Number.isFinite(n) && n >= 0
+  }
+
   function cuestionarioCompleto() {
     return preguntas.filter(p => p.obligatoria).every(p => {
       const r = respuestas[p.id_pregunta]
@@ -188,6 +228,7 @@ export default function SolicitarCredito() {
           return !!(ub?.departamento && ub?.ciudad && ub?.direccion)
         } catch { return false }
       }
+      if (esPreguntaNumerica(p)) return respuestaNumericaValida(r)
       return !!(r?.id_opcion || r?.respuesta_texto)
     })
   }
@@ -211,7 +252,8 @@ export default function SolicitarCredito() {
       if (msg.includes('bucket')) {
         throw new Error('El almacenamiento no está configurado. Contacta a soporte (error: bucket).')
       }
-      throw new Error(`Error al subir ${sufijo === 'frontal' ? 'cédula frontal' : 'cédula trasera'}: ${error.message}`)
+      const etiqueta = sufijo === 'frontal' ? 'cédula frontal' : sufijo === 'trasera' ? 'cédula trasera' : `documento (${file.name})`
+      throw new Error(`Error al subir ${etiqueta}: ${error.message}`)
     }
     return data.path
   }
@@ -229,13 +271,29 @@ export default function SolicitarCredito() {
       if (cedulaFrontal) frontUrl = await subirArchivo(cedulaFrontal, 'frontal', user.id)
       if (cedulaTrasera) backUrl  = await subirArchivo(cedulaTrasera, 'trasera', user.id)
 
-      const respuestasArray = Object.entries(respuestas).map(([id_pregunta, r]) => ({
-        id_pregunta, id_opcion: r.id_opcion || null, respuesta_texto: r.respuesta_texto || null,
-      }))
+      // Documentos adicionales de soporte (recibo público, fotos del negocio, etc.)
+      const extraDocs = []
+      for (const d of docsAdicionales) {
+        const path = await subirArchivo(d.file, d.tipo.toLowerCase(), user.id)
+        extraDocs.push({ tipo: d.tipo, url: path, mime: d.file.type || null, tamanio: d.file.size || null })
+      }
+
+      const respuestasArray = Object.entries(respuestas).map(([id_pregunta, r]) => {
+        const preg  = preguntas.find(p => p.id_pregunta === id_pregunta)
+        const esNum = preg ? esPreguntaNumerica(preg) : false
+        const num   = Number(r.respuesta_texto)
+        return {
+          id_pregunta,
+          id_opcion:          r.id_opcion || null,
+          respuesta_texto:    r.respuesta_texto || null,
+          // respuesta_numerica permite usar el valor en cálculos de score y métricas
+          respuesta_numerica: esNum && r.respuesta_texto !== '' && Number.isFinite(num) ? num : null,
+        }
+      })
 
       const res  = await fetch('/api/creditos/solicitar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monto, plazo, frontUrl, backUrl, respuestas: respuestasArray }),
+        body: JSON.stringify({ monto, plazo, frontUrl, backUrl, extraDocs, respuestas: respuestasArray }),
       })
       const data = await res.json()
 
@@ -380,8 +438,8 @@ export default function SolicitarCredito() {
 
   // ── FLUJO PRINCIPAL (4 pasos) ──────────────────────────────────────────────
   return (
-    // CONTENEDOR — max-w-3xl (768px), centrado, pb-12 (48px abajo)
-    <div ref={topRef} className="w-full max-w-3xl mx-auto pb-12">
+    // CONTENEDOR — max-w-5xl (1024px), centrado, pb-12 (48px abajo)
+    <div ref={topRef} className="w-full max-w-5xl mx-auto pb-12">
 
       {/* ENCABEZADO
           TÍTULO: text-3xl (30px), text-slate-900, font-bold
@@ -463,14 +521,17 @@ export default function SolicitarCredito() {
               </div>
             )}
 
-            <div className="space-y-8">
+            {/* COTIZADOR EN 2 COLUMNAS — izquierda: monto+plazo · derecha: tarjeta de cuota */}
+            <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+              {/* COLUMNA IZQUIERDA */}
+              <div className="flex flex-col justify-between gap-8">
               {/* SLIDER DE MONTO */}
-              <div>
-                <div className="flex justify-between mb-3">
+              <div className="mt-6">
+                <div className="flex justify-between mb-4">
                   {/* ETIQUETA — font-semibold, text-slate-700 */}
-                  <label className="font-semibold text-slate-700">Monto a solicitar</label>
-                  {/* VALOR ACTUAL — text-xl (20px), font-bold, text-blue-900 */}
-                  <span className="text-xl font-bold text-blue-900">{formatCOP(monto)}</span>
+                  <label className="font-semibold text-slate-850 text-sm sm:text-base">Monto a solicitar</label>
+                  {/* VALOR ACTUAL — text-xl/2xl, font-bold, text-blue-900 */}
+                  <span className="text-xl sm:text-2xl font-bold text-blue-900 tracking-tight">{formatCOP(monto)}</span>
                 </div>
                 {/* INPUT RANGE (slider)
                     ALTURA: h-2 (8px), FONDO: bg-slate-200 (gris)
@@ -479,8 +540,8 @@ export default function SolicitarCredito() {
                     RANGO: 100.000 a 10.000.000 en pasos de 50.000 */}
                 <input type="range" min="100000" max="10000000" step="50000" value={monto}
                   onChange={e => { setMonto(Number(e.target.value)); trackEvent('AJUSTO_MONTO', { monto: Number(e.target.value) }) }}
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500" />
-                <div className="flex justify-between text-xs text-slate-400 mt-1">
+                  className="w-full h-2 mt-20 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500" />
+                <div className="flex justify-between text-base font-semibold text-slate-500 mt-2">
                   <span>$100.000</span><span>$10.000.000</span>
                 </div>
               </div>
@@ -506,35 +567,25 @@ export default function SolicitarCredito() {
                 </div>
               </div>
 
-              {/* TARJETA RESUMEN DE LA CUOTA
-                  COLOR FONDO: bg-gradient-to-br from-slate-900 to-blue-900 (oscuro azulado)
-                  Para cambiar: from-navy-900 to-navy-950, from-gray-900 to-slate-900
-                  PADDING: p-6 (24px), BORDES: rounded-2xl (16px)
-                  CUOTA: text-4xl (36px), font-extrabold, text-orange-400 (naranja claro)
-                  DETALLES: text-blue-200 (azul claro), text-sm (14px) */}
-              <div className="bg-gradient-to-br from-slate-900 to-blue-900 p-6 rounded-2xl text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <span className="text-blue-200 text-sm">Cuota mensual estimada</span>
-                  <p className="text-4xl font-extrabold text-orange-400 mt-1">{formatCOP(cuotaMensual)}</p>
-                  <p className="text-blue-300 text-xs mt-1">TEA {TASA_ANUAL_DEFAULT}% · sujeto a evaluación</p>
-                </div>
-                <div className="text-sm text-blue-200 md:text-right space-y-1">
-                  <p>Intereses: <strong className="text-white">{formatCOP(totalIntereses)}</strong></p>
-                  <p>Total a pagar: <strong className="text-white">{formatCOP(totalPagar)}</strong></p>
-                </div>
-              </div>
-            </div>
+              </div>{/* ── fin COLUMNA IZQUIERDA ── */}
 
-            {/* BOTÓN "Continuar"
-                COLOR: bg-orange-500 hover:bg-orange-400 (naranja)
-                PADDING: py-3 px-6 (12px vertical, 24px horizontal)
-                BORDES: rounded-xl (12px), SOMBRA: shadow-lg shadow-orange-500/20
-                ALINEADO A LA DERECHA: flex justify-end, mt-8 */}
-            <div className="mt-8 flex justify-end">
-              <button onClick={() => { trackEvent('INICIO_CUESTIONARIO', { monto, plazo }); goTo(2) }}
-                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg shadow-orange-500/20">
-                Continuar <ArrowRight className="w-5 h-5" />
-              </button>
+              {/* COLUMNA DERECHA — tarjeta de cuota + botón continuar (la acción junto a la cotización) */}
+              <div className="flex flex-col gap-5">
+                <div className="bg-gradient-to-br from-slate-900 to-blue-900 p-6 sm:p-8 rounded-2xl text-white flex flex-col justify-center flex-1">
+                  <span className="text-blue-200 text-sm sm:text-base font-medium">Cuota mensual estimada</span>
+                  <p className="text-4xl sm:text-5xl font-extrabold text-orange-400 mt-1.5 tracking-tight">{formatCOP(cuotaMensual)}</p>
+                  <p className="text-blue-300 text-xs sm:text-sm mt-1">TEA {TASA_ANUAL_DEFAULT}% · sujeto a evaluación</p>
+                  <div className="mt-5 pt-5 border-t border-white/10 text-base text-blue-200 space-y-2.5">
+                    <p className="flex justify-between gap-4">Intereses: <strong className="text-white">{formatCOP(totalIntereses)}</strong></p>
+                    <p className="flex justify-between gap-4">Total a pagar: <strong className="text-white">{formatCOP(totalPagar)}</strong></p>
+                  </div>
+                </div>
+                {/* BOTÓN CONTINUAR — ancho completo de la columna, debajo de la cuota */}
+                <button onClick={() => { trackEvent('INICIO_CUESTIONARIO', { monto, plazo }); goTo(2) }}
+                  className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-semibold py-3.5 rounded-xl transition-all shadow-lg shadow-orange-500/20">
+                  Continuar <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -566,6 +617,8 @@ export default function SolicitarCredito() {
                   const respActual    = respuestas[p.id_pregunta]
                   const respondida    = p.tipo_input === 'UBICACION'
                     ? (() => { try { const u = JSON.parse(respActual?.respuesta_texto ?? 'null'); return !!(u?.departamento && u?.ciudad && u?.direccion) } catch { return false } })()
+                    : esPreguntaNumerica(p)
+                    ? respuestaNumericaValida(respActual)
                     : !!(respActual?.id_opcion || respActual?.respuesta_texto)
 
                   return (
@@ -603,7 +656,7 @@ export default function SolicitarCredito() {
                             onChange={e => handleRespuesta(p.id_pregunta, 'respuesta_texto', e.target.value || null)}
                             className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 appearance-none focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
                             <option value="">— Selecciona banco o billetera —</option>
-                            {BANCOS.map(grupo => (
+                            {bancos.map(grupo => (
                               <optgroup key={grupo.grupo} label={grupo.grupo}>
                                 {grupo.opciones.map(op => (
                                   <option key={op} value={op}>{op}</option>
@@ -730,6 +783,57 @@ export default function SolicitarCredito() {
               ))}
             </div>
 
+            {/* ── DOCUMENTOS ADICIONALES (opcional) ──
+                Permite adjuntar varios soportes: recibo público, fotos del negocio,
+                RUT, extractos u otros comprobantes que respalden la solicitud */}
+            <div className="mt-8 border-t border-slate-100 pt-6">
+              <h3 className="font-bold text-slate-900">Documentos adicionales <span className="text-slate-400 font-medium text-sm">(opcional)</span></h3>
+              <p className="text-slate-500 text-sm mt-1 mb-4">
+                Si tienes recibos de servicios públicos, fotos de tu negocio u otros comprobantes, adjúntalos aquí: ayudan a evaluar mejor tu solicitud. Máximo {MAX_DOCS_ADICIONALES} archivos de 10 MB cada uno.
+              </p>
+
+              {/* SELECTOR DE TIPO + BOTÓN AGREGAR */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <select value={tipoDocNuevo} onChange={e => setTipoDocNuevo(e.target.value)}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 appearance-none focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
+                    {TIPOS_DOC_ADICIONAL.map(t => <option key={t.codigo} value={t.codigo}>{t.label}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+                <label className={`flex items-center justify-center gap-2 border-2 border-dashed rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${
+                  docsAdicionales.length >= MAX_DOCS_ADICIONALES
+                    ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                    : 'border-slate-300 text-slate-600 hover:border-orange-400 hover:text-orange-600 cursor-pointer'
+                }`}>
+                  <input type="file" accept="image/*,.pdf" multiple className="hidden"
+                    disabled={docsAdicionales.length >= MAX_DOCS_ADICIONALES}
+                    onChange={agregarDocsAdicionales} />
+                  <UploadCloud className="w-4 h-4" /> Agregar archivo(s)
+                </label>
+              </div>
+
+              {/* LISTA DE ARCHIVOS ADJUNTOS */}
+              {docsAdicionales.length > 0 && (
+                <ul className="mt-4 space-y-2">
+                  {docsAdicionales.map(d => (
+                    <li key={d.id} className="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-sm animate-fade-in">
+                      <FileText className="w-4 h-4 text-orange-500 shrink-0" />
+                      <span className="font-medium text-slate-800 truncate">{d.file.name}</span>
+                      <span className="text-xs text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded-full shrink-0">
+                        {TIPOS_DOC_ADICIONAL.find(t => t.codigo === d.tipo)?.label ?? d.tipo}
+                      </span>
+                      <button type="button" onClick={() => quitarDocAdicional(d.id)}
+                        aria-label={`Quitar ${d.file.name}`}
+                        className="ml-auto text-slate-400 hover:text-red-500 transition-colors shrink-0">
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             {/* BOTONES ATRÁS / VER RESUMEN */}
             <div className="mt-8 flex justify-between">
               <button onClick={() => goTo(2)}
@@ -765,6 +869,7 @@ export default function SolicitarCredito() {
                   ['Total a financiar',       formatCOP(totalPagar)],
                   ['Preguntas respondidas',  `${Object.keys(respuestas).length} de ${preguntas.length}`],
                   ['Documentos KYC',          `${[cedulaFrontal, cedulaTrasera].filter(Boolean).length} / 2 subidos`],
+                  ['Documentos adicionales',  docsAdicionales.length > 0 ? `${docsAdicionales.length} adjunto${docsAdicionales.length > 1 ? 's' : ''}` : 'Ninguno'],
                 ].map(([label, value]) => (
                   // FILA DE RESUMEN — borde inferior entre filas (excepto la última)
                   // ETIQUETA: text-slate-500 (gris), VALOR: font-bold text-slate-900

@@ -208,7 +208,7 @@ export default function LoginPage() {
             COLOR: text-navy-400 (gris azulado medio — para cambiar: text-slate-500, text-gray-400)
             TAMAÑO: text-sm (14px)
             MARGEN INFERIOR: mb-8 (32px) */}
-        <p className="text-navy-400 text-sm mb-8 text-center lowercase">
+        <p className="text-navy-500 text-base mb-8 text-center lowercase">
           ingresa tu celular registrado
         </p>
 
@@ -261,7 +261,7 @@ export default function LoginPage() {
               aria-label="Celular"
             />
             {hints.celular && (
-              <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hints.celular}</p>
+              <p className="text-sm text-amber-600 mt-1 ml-1 animate-fade-in">⚠ {hints.celular}</p>
             )}
           </div>
 

@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { calcularAmortizacion, formatCOP } from '@/lib/calculadora'
+import { esEmailValido } from '@/lib/validacion'
 import {
   X, ArrowRight, ArrowLeft, CheckCircle,
   Phone, Lock, User, IdCard, Mail, Eye, EyeOff,
@@ -218,6 +219,10 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
 
     const telLimpio = regForm.telefono.replace(/\D/g, '')
     if (telLimpio.length !== 10)               { setAuthError('El celular debe tener 10 dígitos.'); return }
+    // El type="email" nativo acepta "usuario@gmail" sin TLD; esta validación exige dominio completo
+    if (!esEmailValido(regForm.email)) {
+      setAuthError('Ingresa un correo completo y válido, por ejemplo: tucorreo@gmail.com'); return
+    }
     if (!regForm.aceptaTerminos)               { setAuthError('Acepta los términos y condiciones.'); return }
     if (regForm.password !== regForm.confirmPassword) { setAuthError('Las contraseñas no coinciden.'); return }
     if (regForm.password.length < 6)           { setAuthError('La contraseña requiere mínimo 6 caracteres.'); return }
@@ -233,7 +238,7 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
           nombre_completo: regForm.nombre,
           telefono:        telLimpio,
           dni:             regForm.dni,
-          email_real:      regForm.email,
+          email_real:      regForm.email.trim().toLowerCase(),
         },
       },
     })
@@ -321,7 +326,7 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
       />
 
       {/* Panel */}
-      <div className="relative bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg max-h-[92vh] sm:max-h-[88vh] overflow-y-auto animate-fade-in">
+      <div className="relative bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[88vh] overflow-y-auto animate-fade-in">
 
         {/* Progress bar */}
         <div className="h-1 bg-slate-100 rounded-tl-3xl rounded-tr-3xl overflow-hidden">
@@ -347,21 +352,21 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
           {step === 1 && (
             <div className="animate-fade-in">
               <p className="text-xs font-bold text-accent-500 uppercase tracking-wider mb-1">Paso 1 de 4</p>
-              <h2 className="text-2xl font-bold text-navy-900">¿Cuánto necesitas?</h2>
-              <p className="text-slate-500 text-sm mt-1 mb-6">Ajusta el monto y plazo que se adapten a tu negocio.</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-navy-900">¿Cuánto necesitas?</h2>
+              <p className="text-slate-500 text-sm sm:text-base mt-1 mb-6">Ajusta el monto y plazo que se adapten a tu negocio.</p>
 
               <div className="space-y-6">
                 <div>
-                  <div className="flex justify-between mb-2">
-                    <label className="font-semibold text-slate-700 text-sm">Monto a solicitar</label>
-                    <span className="font-bold text-navy-900 text-sm">{formatCOP(monto)}</span>
+                  <div className="flex justify-between items-baseline mb-2">
+                    <label className="font-semibold text-slate-700 text-sm sm:text-base">Monto a solicitar</label>
+                    <span className="font-bold text-navy-900 text-xl sm:text-2xl tracking-tight">{formatCOP(monto)}</span>
                   </div>
                   <input
                     type="range" min="100000" max="10000000" step="50000" value={monto}
                     onChange={e => setMonto(Number(e.target.value))}
                     className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
                   />
-                  <div className="flex justify-between text-xs text-slate-400 mt-1">
+                  <div className="flex justify-between text-base font-semibold text-slate-500 mt-2">
                     <span>$100.000</span><span>$10.000.000</span>
                   </div>
                 </div>
@@ -386,10 +391,10 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-slate-900 to-blue-900 rounded-2xl p-5 text-white">
-                  <span className="text-blue-200 text-xs">Cuota mensual estimada</span>
-                  <p className="text-3xl font-extrabold text-orange-400 mt-1">{formatCOP(cuotaMensual)}</p>
-                  <div className="flex items-center justify-between mt-3 text-blue-200 text-xs gap-2">
+                <div className="bg-gradient-to-br from-slate-900 to-blue-900 rounded-2xl p-6 sm:p-7 text-white">
+                  <span className="text-blue-200 text-sm font-medium">Cuota mensual estimada</span>
+                  <p className="text-4xl sm:text-5xl font-extrabold text-orange-400 mt-1.5 tracking-tight">{formatCOP(cuotaMensual)}</p>
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10 text-blue-200 text-base gap-3">
                     <span>Intereses: <strong className="text-white">{formatCOP(totalIntereses)}</strong></span>
                     <span>Total: <strong className="text-white">{formatCOP(totalPagar)}</strong></span>
                   </div>
@@ -465,32 +470,32 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
           {step === 3 && (
             <div className="animate-fade-in">
               <p className="text-xs font-bold text-accent-500 uppercase tracking-wider mb-1">Paso 3 de 4</p>
-              <h2 className="text-2xl font-bold text-navy-900 mb-5">Tu resultado</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mb-5">Tu resultado</h2>
 
-              <div className={`border rounded-2xl p-6 text-center mb-5 ${softResult.bg}`}>
-                <div className="text-4xl mb-3">{softResult.emoji}</div>
-                <h3 className={`font-bold text-lg mb-2 ${softResult.color}`}>{softResult.title}</h3>
-                <p className="text-slate-600 text-sm leading-relaxed">{softResult.desc}</p>
+              <div className={`border rounded-2xl p-6 sm:p-7 text-center mb-5 ${softResult.bg}`}>
+                <div className="text-5xl mb-3">{softResult.emoji}</div>
+                <h3 className={`font-bold text-lg sm:text-xl mb-2 ${softResult.color}`}>{softResult.title}</h3>
+                <p className="text-slate-600 text-sm sm:text-base leading-relaxed">{softResult.desc}</p>
               </div>
 
               {/* Resumen del crédito */}
-              <div className="bg-slate-50 rounded-xl p-4 mb-5">
-                <p className="font-semibold text-slate-800 text-sm mb-3 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-accent-500" />
+              <div className="bg-slate-50 rounded-xl p-5 sm:p-6 mb-5">
+                <p className="font-semibold text-slate-800 text-base mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-accent-500" />
                   Tu crédito estimado
                 </p>
-                <div className="space-y-2 text-sm text-slate-600">
-                  <div className="flex justify-between">
+                <div className="space-y-3 text-base text-slate-600">
+                  <div className="flex justify-between items-baseline">
                     <span>Monto</span>
-                    <strong className="text-slate-900">{formatCOP(monto)}</strong>
+                    <strong className="text-slate-900 text-lg">{formatCOP(monto)}</strong>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-baseline">
                     <span>Plazo</span>
-                    <strong className="text-slate-900">{plazo} meses</strong>
+                    <strong className="text-slate-900 text-lg">{plazo} meses</strong>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-baseline">
                     <span>Cuota estimada</span>
-                    <strong className="text-accent-600">{formatCOP(cuotaMensual)}</strong>
+                    <strong className="text-accent-600 text-lg">{formatCOP(cuotaMensual)}</strong>
                   </div>
                 </div>
               </div>
@@ -543,10 +548,10 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
           {step === 4 && (
             <div className="animate-fade-in">
               <p className="text-xs font-bold text-accent-500 uppercase tracking-wider mb-1">Paso 4 de 4</p>
-              <h2 className="text-2xl font-bold text-navy-900 mt-1">
+              <h2 className="text-2xl sm:text-3xl font-bold text-navy-900 mt-1">
                 {authMode === 'registro' ? 'Crea tu cuenta' : 'Inicia sesión'}
               </h2>
-              <p className="text-slate-500 text-sm mt-1 mb-5">
+              <p className="text-slate-500 text-sm sm:text-base mt-1 mb-5">
                 {authMode === 'registro'
                   ? 'Un paso más para completar tu solicitud.'
                   : 'Ingresa tus datos para continuar con tu solicitud.'}
@@ -557,7 +562,7 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                 <button
                   type="button"
                   onClick={() => switchAuthMode('registro')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  className={`flex-1 py-2.5 rounded-lg text-base font-semibold transition-all ${
                     authMode === 'registro' ? 'bg-white shadow text-navy-900' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
@@ -566,7 +571,7 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                 <button
                   type="button"
                   onClick={() => switchAuthMode('login')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  className={`flex-1 py-2.5 rounded-lg text-base font-semibold transition-all ${
                     authMode === 'login' ? 'bg-white shadow text-navy-900' : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
@@ -592,7 +597,7 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                   ].map(f => (
                     <div key={f.id} className="relative">
                       <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">{f.label}</label>
-                      <div className="absolute left-3 top-[34px] -translate-y-1/2 text-slate-400">{f.icon}</div>
+                      <div className="absolute left-3 top-[36px] -translate-y-1/2 text-slate-400">{f.icon}</div>
                       <input
                         type={f.type}
                         inputMode={f.inputMode}
@@ -614,7 +619,7 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                         placeholder={f.placeholder}
                         required
                         maxLength={f.maxLength}
-                        className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
+                        className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
                       />
                       {hints[f.id] && <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hints[f.id]}</p>}
                     </div>
@@ -622,34 +627,34 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
 
                   <div className="relative">
                     <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Contraseña</label>
-                    <div className="absolute left-3 top-[34px] -translate-y-1/2 text-slate-400"><Lock size={16} /></div>
+                    <div className="absolute left-3 top-[36px] -translate-y-1/2 text-slate-400"><Lock size={16} /></div>
                     <input
                       type={showPwd ? 'text' : 'password'}
                       value={regForm.password}
                       onChange={e => setRegForm(prev => ({ ...prev, password: e.target.value }))}
                       placeholder="Mínimo 6 caracteres"
                       required minLength={6}
-                      className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
+                      className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
                     />
                     <button type="button" onClick={() => setShowPwd(v => !v)}
-                      className="absolute right-3 top-[34px] -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      className="absolute right-3 top-[36px] -translate-y-1/2 text-slate-400 hover:text-slate-600">
                       {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
 
                   <div className="relative">
                     <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Repetir contraseña</label>
-                    <div className="absolute left-3 top-[34px] -translate-y-1/2 text-slate-400"><Lock size={16} /></div>
+                    <div className="absolute left-3 top-[36px] -translate-y-1/2 text-slate-400"><Lock size={16} /></div>
                     <input
                       type={showConfirm ? 'text' : 'password'}
                       value={regForm.confirmPassword}
                       onChange={e => setRegForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
                       placeholder="Repite tu contraseña"
                       required minLength={6}
-                      className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
+                      className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
                     />
                     <button type="button" onClick={() => setShowConfirm(v => !v)}
-                      className="absolute right-3 top-[34px] -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      className="absolute right-3 top-[36px] -translate-y-1/2 text-slate-400 hover:text-slate-600">
                       {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
@@ -692,7 +697,7 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="relative">
                     <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Celular</label>
-                    <div className="absolute left-3 top-[34px] -translate-y-1/2 text-slate-400"><Phone size={16} /></div>
+                    <div className="absolute left-3 top-[36px] -translate-y-1/2 text-slate-400"><Phone size={16} /></div>
                     <input
                       type="tel"
                       inputMode="numeric"
@@ -705,24 +710,24 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                       }}
                       placeholder="Ej. 3001234567"
                       required maxLength={10}
-                      className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
+                      className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
                     />
                     {hints.loginCelular && <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hints.loginCelular}</p>}
                   </div>
 
                   <div className="relative">
                     <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Contraseña</label>
-                    <div className="absolute left-3 top-[34px] -translate-y-1/2 text-slate-400"><Lock size={16} /></div>
+                    <div className="absolute left-3 top-[36px] -translate-y-1/2 text-slate-400"><Lock size={16} /></div>
                     <input
                       type={showPwd ? 'text' : 'password'}
                       value={loginForm.password}
                       onChange={e => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
                       placeholder="Tu contraseña"
                       required
-                      className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
+                      className="w-full pl-9 pr-10 py-2.5 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
                     />
                     <button type="button" onClick={() => setShowPwd(v => !v)}
-                      className="absolute right-3 top-[34px] -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      className="absolute right-3 top-[36px] -translate-y-1/2 text-slate-400 hover:text-slate-600">
                       {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>

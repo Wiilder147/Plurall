@@ -1,10 +1,11 @@
 'use client'
 
 import 'leaflet/dist/leaflet.css'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { ChevronDown, Navigation, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 delete L.Icon.Default.prototype._getIconUrl
 
@@ -91,6 +92,60 @@ export default function LocationPicker({ value, onChange }) {
   const [geoError,    setGeoError]    = useState('')
   const [geocoding,   setGeocoding]   = useState(false)
 
+  // Catálogo de municipios (DANE) para autocompletar ciudad de forma canónica.
+  // Se mantiene el input libre (la geocodificación del mapa sigue funcionando),
+  // pero el datalist sugiere los nombres oficiales del departamento elegido.
+  const [muniPorDepto, setMuniPorDepto] = useState({})
+  useEffect(() => {
+    let activo = true
+    createClient()
+      .from('municipio')
+      .select('nombre, departamento(nombre)')
+      .eq('activo', true)
+      .order('nombre')
+      .then(({ data }) => {
+        if (!activo || !data) return
+        const mapa = {}
+        for (const m of data) {
+          const dep = m.departamento?.nombre
+          if (!dep) continue
+          ;(mapa[dep] ??= []).push(m.nombre)
+        }
+        setMuniPorDepto(mapa)
+      })
+    return () => { activo = false }
+  }, [])
+  const municipiosDepto = muniPorDepto[depto] ?? []
+
+  // Desplegable propio de departamento (reemplaza el <select> nativo para que
+  // el listado se abra ABAJO y con el diseño de la página, no el del navegador)
+  const [deptoOpen, setDeptoOpen] = useState(false)
+  const deptoRef = useRef(null)
+  useEffect(() => {
+    if (!deptoOpen) return
+    function handleClickFuera(e) {
+      if (deptoRef.current && !deptoRef.current.contains(e.target)) setDeptoOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickFuera)
+    return () => document.removeEventListener('mousedown', handleClickFuera)
+  }, [deptoOpen])
+
+  // Autocompletado propio de ciudad (reemplaza el <datalist> nativo). Mantiene
+  // texto libre y sugiere municipios del departamento filtrando por lo escrito.
+  const [ciudadOpen, setCiudadOpen] = useState(false)
+  const ciudadRef = useRef(null)
+  useEffect(() => {
+    if (!ciudadOpen) return
+    function handleClickFuera(e) {
+      if (ciudadRef.current && !ciudadRef.current.contains(e.target)) setCiudadOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickFuera)
+    return () => document.removeEventListener('mousedown', handleClickFuera)
+  }, [ciudadOpen])
+  const ciudadesSugeridas = municipiosDepto.filter(
+    m => m.toLowerCase().includes(ciudad.trim().toLowerCase()),
+  )
+
   // Build and emit the full object, overrides take precedence over stale state
   function emit(overrides = {}) {
     onChange(JSON.stringify({
@@ -152,28 +207,68 @@ export default function LocationPicker({ value, onChange }) {
 
   return (
     <div className="space-y-3">
-      {/* Departamento */}
-      <div className="relative">
-        <select
-          value={depto}
-          onChange={e => { setDepto(e.target.value); emit({ departamento: e.target.value }) }}
-          className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 appearance-none focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
-          <option value="">— Departamento —</option>
-          {DEPARTAMENTOS.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+      {/* Departamento — desplegable propio (no nativo): se abre abajo y con el diseño de la página */}
+      <div className="relative" ref={deptoRef}>
+        {/* BOTÓN/DISPARADOR — mismos estilos que un input (borde gris, rounded-xl, foco naranja) */}
+        <button
+          type="button"
+          onClick={() => setDeptoOpen(o => !o)}
+          className={`w-full flex items-center justify-between border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-left bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 ${
+            depto ? 'text-slate-900' : 'text-slate-400'
+          }`}>
+          <span className="truncate">{depto || '— Departamento —'}</span>
+          <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${deptoOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* PANEL DEL LISTADO — absolute debajo del botón, z alto para quedar sobre el mapa */}
+        {deptoOpen && (
+          <ul className="absolute left-0 top-full mt-1 w-full max-h-60 overflow-auto bg-white border border-slate-200 rounded-xl shadow-lg z-[1000] py-1 animate-fade-in">
+            {DEPARTAMENTOS.map(d => (
+              <li key={d}>
+                <button
+                  type="button"
+                  onClick={() => { setDepto(d); emit({ departamento: d }); setDeptoOpen(false) }}
+                  className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-orange-50 ${
+                    depto === d ? 'text-orange-600 font-semibold bg-orange-50' : 'text-slate-700'
+                  }`}>
+                  {d}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      {/* Ciudad */}
-      <div className="relative">
+      {/* Ciudad — autocompletado propio (no nativo): sugerencias abajo con el diseño de la página */}
+      <div className="relative" ref={ciudadRef}>
         <input
           type="text"
-          placeholder="Ciudad o municipio"
+          placeholder={depto ? 'Ciudad o municipio' : 'Elige primero el departamento'}
           value={ciudad}
-          onChange={e => { setCiudad(e.target.value); emit({ ciudad: e.target.value }) }}
+          autoComplete="off"
+          onChange={e => { setCiudad(e.target.value); emit({ ciudad: e.target.value }); setCiudadOpen(true) }}
+          onFocus={() => setCiudadOpen(true)}
           className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400"
         />
         {geocoding && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400 animate-spin" />}
+
+        {/* PANEL DE SUGERENCIAS — solo si hay departamento y coincidencias */}
+        {ciudadOpen && ciudadesSugeridas.length > 0 && (
+          <ul className="absolute left-0 top-full mt-1 w-full max-h-60 overflow-auto bg-white border border-slate-200 rounded-xl shadow-lg z-[1000] py-1 animate-fade-in">
+            {ciudadesSugeridas.map(m => (
+              <li key={m}>
+                <button
+                  type="button"
+                  onClick={() => { setCiudad(m); emit({ ciudad: m }); setCiudadOpen(false) }}
+                  className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-orange-50 ${
+                    ciudad === m ? 'text-orange-600 font-semibold bg-orange-50' : 'text-slate-700'
+                  }`}>
+                  {m}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Dirección */}
