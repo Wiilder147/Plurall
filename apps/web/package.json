@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "pdf:politica": "node scripts/generar_politica_pdf.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

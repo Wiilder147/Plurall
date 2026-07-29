@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { esEmailValido } from '@/lib/validacion'
+import { POLITICA_TRATAMIENTO_DATOS } from '@/lib/legal'
 import { Lock, Phone, User, IdCard, CheckCircle, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
 function RegistroContent() {
@@ -333,7 +334,17 @@ function RegistroContent() {
             <label className="flex items-start gap-3 cursor-pointer w-full text-left mt-2 px-1">
               <input type="checkbox" name="aceptaTerminos" checked={form.aceptaTerminos} onChange={handleChange} className="mt-1 accent-accent-600 w-4 h-4 rounded" />
               <span className="text-navy-600 text-sm leading-relaxed lowercase">
-                acepto la política de tratamiento de datos personales conforme a la ley 1581 de 2012 (habeas data)
+                acepto la{' '}
+                <a
+                  href={POLITICA_TRATAMIENTO_DATOS.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="text-accent-600 font-semibold underline hover:text-accent-500"
+                >
+                  política de tratamiento de datos personales
+                </a>{' '}
+                conforme a la ley 1581 de 2012 (habeas data)
               </span>
             </label>
 
