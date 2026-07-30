@@ -40,6 +40,9 @@ Thumbs.db
 estudio/
 image.png
 
+# Capturas de documentación (regenerables con apps/web/scripts/screenshots.mjs)
+apps/web/scripts/screenshots/
+
 # Archivos de trabajo / generación (no van al repo)
 generar_cronograma.py
 Cronograma_PLURALL.xlsx
