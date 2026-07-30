@@ -271,6 +271,11 @@ export default function RecuperarPage() {
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
+                      onPaste={(e) => e.preventDefault()}
+                      onCopy={(e) => e.preventDefault()}
+                      onCut={(e) => e.preventDefault()}
+                      onDrop={(e) => e.preventDefault()}
+                      autoComplete="new-password"
                       placeholder="confirmar contraseña"
                       required
                       minLength={6}

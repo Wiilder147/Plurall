@@ -321,7 +321,10 @@ function RegistroContent() {
               <label htmlFor="confirmPassword" className="block text-sm font-bold text-navy-500 mb-1.5 ml-1 uppercase tracking-wide">Repetir Contraseña</label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400"><Lock size={18} /></div>
-                <input id="confirmPassword" name="confirmPassword" type={showConfirm ? 'text' : 'password'} value={form.confirmPassword} onChange={handleChange} placeholder="Mínimo 8 caracteres" required minLength={8} className="input-field pr-12" />
+                <input id="confirmPassword" name="confirmPassword" type={showConfirm ? 'text' : 'password'} value={form.confirmPassword} onChange={handleChange}
+                  onPaste={(e) => e.preventDefault()} onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()} onDrop={(e) => e.preventDefault()}
+                  autoComplete="new-password"
+                  placeholder="Mínimo 8 caracteres" required minLength={8} className="input-field pr-12" />
                 <button type="button" onClick={() => setShowConfirm(v => !v)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-700 transition-colors"
                   aria-label={showConfirm ? 'Ocultar contraseña' : 'Ver contraseña'}>
