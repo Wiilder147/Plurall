@@ -1,8 +1,8 @@
 {
-  "descripcion": "Usuarios de prueba de PLURALL — uno por cada rol del sistema. El login se hace con el CELULAR (10 dígitos) + la contraseña. Internamente Supabase usa el correo <celular>@plurall.app.",
+  "descripcion": "Usuarios de prueba de PLURALL — uno por cada rol del sistema, más los 4 asesores. El login se hace con el CELULAR (10 dígitos) + la contraseña. Internamente Supabase usa el correo <celular>@plurall.app.",
   "proyecto_supabase": "bnemrismjmvmemypokaz (Plurall-Fants)",
   "password_comun": "Plurall2026*",
-  "actualizado": "2026-06-14",
+  "actualizado": "2026-08-01",
   "usuarios": [
     {
       "rol": "ADMIN",
@@ -29,7 +29,35 @@
       "celular": "3100000002",
       "email_interno": "3100000002@plurall.app",
       "password": "Plurall2026*",
-      "panel_inicial": "/asesor"
+      "panel_inicial": "/asesor",
+      "clientes_asignados": ["Pedro Mora Leve", "Ana Mora Media", "Luis Mora Critica"]
+    },
+    {
+      "rol": "ASESOR",
+      "nombre": "María López",
+      "celular": "3100000003",
+      "email_interno": "3100000003@plurall.app",
+      "password": "Plurall2026*",
+      "panel_inicial": "/asesor",
+      "clientes_asignados": ["Rosa Mora Alta", "Natalia Histórica 14"]
+    },
+    {
+      "rol": "ASESOR",
+      "nombre": "Andrés Vargas",
+      "celular": "3100000004",
+      "email_interno": "3100000004@plurall.app",
+      "password": "Plurall2026*",
+      "panel_inicial": "/asesor",
+      "clientes_asignados": ["Quintín Histórico 17", "Sofía Al Día"]
+    },
+    {
+      "rol": "ASESOR",
+      "nombre": "Luisa Martínez",
+      "celular": "3100000005",
+      "email_interno": "3100000005@plurall.app",
+      "password": "Plurall2026*",
+      "panel_inicial": "/asesor",
+      "clientes_asignados": ["Helena Histórica 8", "Miguel Puntual"]
     },
     {
       "rol": "CLIENTE",
@@ -38,6 +66,28 @@
       "celular": "3173784693",
       "email_interno": "3173784693@plurall.app",
       "password": "Plurall2026*",
+      "panel_inicial": "/dashboard/inicio"
+    },
+    {
+      "rol": "CLIENTE",
+      "descripcion_rol": "Cliente APROBADO — solicitud desembolsada, con crédito activo (útil para probar cuotas, pagos y documentos)",
+      "nombre": "Luis Mora Critica",
+      "celular": "3200000003",
+      "dni": "10200003",
+      "email_interno": "3200000003@plurall.app",
+      "password": "Plurall2026*",
+      "estado_solicitud": "DESEMBOLSADA",
+      "panel_inicial": "/dashboard/inicio"
+    },
+    {
+      "rol": "CLIENTE",
+      "descripcion_rol": "Cliente RECHAZADO — solicitud de crédito rechazada (útil para probar el flujo de rechazo y motivos)",
+      "nombre": "xavi",
+      "celular": "3214345354",
+      "dni": "21344",
+      "email_interno": "3214345354@plurall.app",
+      "password": "Plurall2026*",
+      "estado_solicitud": "RECHAZADA",
       "panel_inicial": "/dashboard/inicio"
     }
   ]

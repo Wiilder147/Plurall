@@ -53,18 +53,17 @@ export async function POST(request) {
     return NextResponse.json({ error: 'El usuario no tiene rol de ASESOR' }, { status: 400 })
   }
 
-  // Upsert de la asignación (si ya existe, reactivar)
-  const { error: upsertErr } = await service
-    .from('asignacion_asesor')
-    .upsert({
-      id_asesor:        asesorId,
-      id_cliente:       clienteId,
-      activa:           true,
-      fecha_asignacion: new Date().toISOString(),
-    }, { onConflict: 'id_asesor,id_cliente' })
+  // Asignación atómica (migración 22): cierra la asignación activa previa del
+  // cliente y crea/reactiva la nueva en una sola transacción. Es obligatorio
+  // pasar por el RPC porque existe un índice único parcial que impide que un
+  // cliente tenga más de un asesor activo; un upsert directo fallaría (23505).
+  const { error: rpcErr } = await service.rpc('asignar_asesor_a_cliente', {
+    p_id_cliente: clienteId,
+    p_id_asesor:  asesorId,
+  })
 
-  if (upsertErr) {
-    console.error('[Asignar asesor]', upsertErr)
+  if (rpcErr) {
+    console.error('[Asignar asesor]', rpcErr)
     return NextResponse.json({ error: 'Error al asignar asesor' }, { status: 500 })
   }
 
