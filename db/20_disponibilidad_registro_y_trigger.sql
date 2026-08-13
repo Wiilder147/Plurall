@@ -67,15 +67,50 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_rol_id UUID;
+  v_rol_id    UUID;
   v_estado_id UUID;
+  v_dni       TEXT;
+  v_parsed    RECORD;
+  v_pn        TEXT;
+  v_sn        TEXT;
+  v_pa        TEXT;
+  v_sa        TEXT;
+  v_raw_name  TEXT;
 BEGIN
-  SELECT id_rol INTO v_rol_id FROM public.rol WHERE nombre_rol ILIKE 'CLIENTE' LIMIT 1;
-  SELECT id_estado_cliente INTO v_estado_id FROM public.estado_cliente WHERE nombre ILIKE 'ACTIVO' LIMIT 1;
+  SELECT id_rol            INTO v_rol_id    FROM public.rol            WHERE nombre_rol ILIKE 'CLIENTE' LIMIT 1;
+  SELECT id_estado_cliente INTO v_estado_id FROM public.estado_cliente WHERE nombre    ILIKE 'ACTIVO'  LIMIT 1;
+
+  -- Preferir partes atómicas; si no, parsear full_name / name / legado nombre_completo
+  v_pn := NULLIF(trim(NEW.raw_user_meta_data->>'primer_nombre'), '');
+  v_sn := NULLIF(trim(NEW.raw_user_meta_data->>'segundo_nombre'), '');
+  v_pa := NULLIF(trim(NEW.raw_user_meta_data->>'primer_apellido'), '');
+  v_sa := NULLIF(trim(NEW.raw_user_meta_data->>'segundo_apellido'), '');
+
+  IF v_pn IS NULL THEN
+    v_raw_name := COALESCE(
+      NULLIF(NEW.raw_user_meta_data->>'full_name', ''),
+      NULLIF(NEW.raw_user_meta_data->>'name', ''),
+      NULLIF(NEW.raw_user_meta_data->>'nombre_completo', '')
+    );
+    SELECT * INTO v_parsed FROM fn_parse_nombre(v_raw_name);
+    v_pn := v_parsed.primer_nombre;
+    v_sn := v_parsed.segundo_nombre;
+    v_pa := v_parsed.primer_apellido;
+    v_sa := v_parsed.segundo_apellido;
+  END IF;
+
+  v_pn := COALESCE(NULLIF(trim(v_pn), ''), 'SIN');
+  v_pa := COALESCE(NULLIF(trim(v_pa), ''), 'NOMBRE');
+
+  v_dni := COALESCE(
+    NULLIF(NEW.raw_user_meta_data->>'dni', ''),
+    'SN' || substr(replace(NEW.id::text, '-', ''), 1, 16)
+  );
 
   BEGIN
-    INSERT INTO public.perfil_usuario (id, id_rol, nombre_completo)
-    VALUES (NEW.id, v_rol_id, NEW.raw_user_meta_data->>'nombre_completo')
+    -- Perfil de CLIENTE: sin nombre (canónico en cliente)
+    INSERT INTO public.perfil_usuario (id, id_rol)
+    VALUES (NEW.id, v_rol_id)
     ON CONFLICT (id) DO NOTHING;
 
     -- Sin ON CONFLICT: si el correo o el documento ya existen, el UNIQUE lanza
@@ -84,7 +119,10 @@ BEGIN
     INSERT INTO public.cliente (
       id_usuario_cuenta,
       id_estado_cliente,
-      nombre_completo,
+      primer_nombre,
+      segundo_nombre,
+      primer_apellido,
+      segundo_apellido,
       dni,
       email,
       telefono
@@ -92,10 +130,13 @@ BEGIN
     VALUES (
       NEW.id,
       v_estado_id,
-      NEW.raw_user_meta_data->>'nombre_completo',
-      COALESCE(NEW.raw_user_meta_data->>'dni', 'SN-' || NEW.id),
+      v_pn,
+      v_sn,
+      v_pa,
+      v_sa,
+      v_dni,
       COALESCE(NEW.raw_user_meta_data->>'email_real', NEW.email),
-      COALESCE(NEW.raw_user_meta_data->>'telefono', '0000000000')
+      COALESCE(NULLIF(NEW.raw_user_meta_data->>'telefono', ''), '0000000000')
     );
   EXCEPTION WHEN OTHERS THEN
     -- El usuario se crea igual en auth.users (no bloqueamos el registro),
