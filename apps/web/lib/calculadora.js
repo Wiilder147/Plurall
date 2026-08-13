@@ -41,6 +41,38 @@ export function calcularAmortizacion(monto, tasaAnual, plazoMeses) {
   };
 }
 
+/**
+ * Días de mora transcurridos desde una fecha de vencimiento hasta hoy.
+ * Devuelve 0 si aún no ha vencido. Trabaja a nivel de día (sin horas).
+ *
+ * @param {string|Date} fechaVencimiento - fecha de vencimiento (YYYY-MM-DD o Date)
+ * @param {Date}        [hoy=new Date()]  - fecha de referencia
+ * @returns {number} días de mora (>= 0)
+ */
+export function diasMoraDesde(fechaVencimiento, hoy = new Date()) {
+  if (!fechaVencimiento) return 0
+  // Normalizamos ambas fechas a medianoche UTC para contar días completos.
+  const venc = new Date(`${String(fechaVencimiento).split('T')[0]}T00:00:00Z`)
+  const ref  = new Date(`${hoy.toISOString().split('T')[0]}T00:00:00Z`)
+  const dias = Math.floor((ref - venc) / 86400000)
+  return dias > 0 ? dias : 0
+}
+
+/**
+ * Interés de mora sobre el capital vencido.
+ * mora = capitalBase × tasaMoraDiaria × díasMora
+ *
+ * @param {object} p
+ * @param {number} p.capitalBase      - capital de la cuota en mora (COP)
+ * @param {number} p.tasaMoraDiaria   - tasa diaria en fracción (0.001 = 0.1%/día)
+ * @param {number} p.diasMora         - días de mora (>= 0)
+ * @returns {number} monto de mora en COP, redondeado a peso
+ */
+export function calcularMora({ capitalBase = 0, tasaMoraDiaria = 0, diasMora = 0 }) {
+  if (capitalBase <= 0 || tasaMoraDiaria <= 0 || diasMora <= 0) return 0
+  return Math.round(capitalBase * tasaMoraDiaria * diasMora)
+}
+
 // Formatea valores numéricos a moneda COP sin decimales.
 export function formatCOP(valor) {
   return new Intl.NumberFormat('es-CO', {

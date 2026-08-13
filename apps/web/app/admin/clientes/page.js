@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { Users, Search, ArrowRight, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { orBusquedaNombre, formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,8 +20,7 @@ export default async function AdminClientesPage({ searchParams }) {
   let query = supabase
     .from('cliente')
     .select(`
-      id_cliente,
-      nombre_completo,
+      id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
       dni,
       telefono,
       email,
@@ -38,7 +38,7 @@ export default async function AdminClientesPage({ searchParams }) {
     .order('created_at', { ascending: false })
 
   if (buscar) {
-    query = query.or(`nombre_completo.ilike.%${buscar}%,dni.ilike.%${buscar}%,telefono.ilike.%${buscar}%`)
+    query = query.or(orBusquedaNombre(buscar, ['dni', 'telefono']))
   }
 
   const { data: clientes } = await query
@@ -91,7 +91,7 @@ export default async function AdminClientesPage({ searchParams }) {
                   return (
                     <tr key={cli.id_cliente} className="hover:bg-slate-700/30 transition-colors">
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-200">{cli.nombre_completo}</p>
+                        <p className="font-semibold text-slate-200">{formatNombre(cli)}</p>
                         <p className="text-slate-500 text-xs">{cli.email}</p>
                       </td>
                       <td className="px-5 py-4 text-slate-400 font-mono text-xs">{cli.dni}</td>

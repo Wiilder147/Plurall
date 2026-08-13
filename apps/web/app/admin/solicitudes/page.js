@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { ArrowRight, Clock, CheckCircle2, XCircle, Hourglass, TrendingUp, Search } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +35,7 @@ export default async function AdminSolicitudesPage({ searchParams }) {
     .select(`
       id_solicitud, monto_solicitado, plazo_meses, proposito, fecha_solicitud,
       estado_solicitud ( nombre ),
-      cliente ( nombre_completo, dni, telefono )
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono )
     `)
     .order('fecha_solicitud', { ascending: false })
 
@@ -133,11 +134,11 @@ export default async function AdminSolicitudesPage({ searchParams }) {
                       TAMAÑO: w-10 h-10 (40x40px), BORDES: rounded-xl (12px)
                       FUENTE: font-bold, text-sm (14px) */}
                   <div className="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center text-slate-400 font-bold text-sm shrink-0">
-                    {sol.cliente?.nombre_completo?.charAt(0)?.toUpperCase() || 'C'}
+                    {formatNombre(sol.cliente)?.charAt(0)?.toUpperCase() || 'C'}
                   </div>
                   <div>
                     {/* NOMBRE DEL CLIENTE — text-slate-200 (gris muy claro), font-semibold */}
-                    <p className="font-semibold text-slate-200">{sol.cliente?.nombre_completo || 'Cliente'}</p>
+                    <p className="font-semibold text-slate-200">{formatNombre(sol.cliente) || 'Cliente'}</p>
                     {/* CC Y TELÉFONO — text-slate-500 (gris), text-xs (12px) */}
                     <p className="text-slate-500 text-xs">CC {sol.cliente?.dni} — {sol.cliente?.telefono}</p>
                     {/* MONTO Y PLAZO — text-slate-400, text-sm (14px) */}

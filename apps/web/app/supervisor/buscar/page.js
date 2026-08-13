@@ -11,6 +11,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Search, Loader2, User, CreditCard, AlertTriangle, CheckCircle2, ArrowRight } from 'lucide-react'
 import { formatCOP } from '@/lib/calculadora'
+import { formatNombre } from '@/lib/nombre'
 
 export default function SupervisorBuscarPage() {
   const [query,      setQuery]      = useState('')
@@ -112,10 +113,10 @@ export default function SupervisorBuscarPage() {
                       <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-base shrink-0 ${
                         enMora ? 'bg-red-500/20 text-red-400' : 'bg-indigo-500/20 text-indigo-400'
                       }`}>
-                        {r.nombre_completo?.charAt(0)?.toUpperCase()}
+                        {formatNombre(r)?.charAt(0)?.toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-semibold text-slate-200">{r.nombre_completo}</p>
+                        <p className="font-semibold text-slate-200">{formatNombre(r)}</p>
                         <p className="text-slate-500 text-xs">CC {r.dni} · {r.telefono}</p>
                         <p className="text-slate-500 text-xs">{r.email}</p>
                         {creditoActivo && (

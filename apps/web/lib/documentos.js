@@ -26,7 +26,7 @@ export function urlPublicaDocumento(pathOrUrl) {
 /**
  * Autoriza el acceso a los documentos de un crédito y devuelve el titular.
  * @returns { error?, status?, idCliente?, titular? }
- *   titular: { id_cliente, nombre_completo, dni, email }
+ *   titular: { id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, email }
  */
 export async function resolverAccesoCredito(supabase, creditoId) {
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
@@ -52,7 +52,7 @@ export async function resolverAccesoCredito(supabase, creditoId) {
 
   const { data: titular } = await supabase
     .from('cliente')
-    .select('id_cliente, nombre_completo, dni, email')
+    .select('id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, email')
     .eq('id_cliente', credito.id_cliente)
     .single()
 

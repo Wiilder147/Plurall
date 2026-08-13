@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { formatNombre } from '@/lib/nombre'
 
 function getServiceClient() {
   return createServiceClient(
@@ -57,7 +58,7 @@ export async function GET(request) {
     db.from('solicitud_credito').select('id_solicitud, fecha_solicitud, monto_solicitado, estado_solicitud ( nombre )'),
     db.from('cliente').select('id_cliente, ciudad, departamento'),
     db.from('asignacion_asesor').select('id_asesor, id_cliente, activa').eq('activa', true),
-    db.from('perfil_usuario').select('id, nombre_completo, rol ( nombre_rol )'),
+    db.from('perfil_usuario').select('id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, rol ( nombre_rol )'),
     db.from('pqr').select('estado, tipo, created_at'),
   ])
 
@@ -80,7 +81,7 @@ export async function GET(request) {
   const asesorPorCliente = {}
   ;(asignaciones ?? []).forEach(a => { asesorPorCliente[a.id_cliente] = a.id_asesor })
   const nombreAsesor = {}
-  ;(asesores ?? []).forEach(a => { nombreAsesor[a.id] = a.nombre_completo })
+  ;(asesores ?? []).forEach(a => { nombreAsesor[a.id] = formatNombre(a) })
   const asesorMap = {}
   credsF.forEach(c => {
     const idA = asesorPorCliente[c.id_cliente]

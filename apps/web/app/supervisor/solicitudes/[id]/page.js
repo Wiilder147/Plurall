@@ -17,6 +17,7 @@ import {
   Send, Eye, TrendingUp,
 } from 'lucide-react'
 import Link from 'next/link'
+import { formatNombre } from '@/lib/nombre'
 
 const MOTIVOS_RECHAZO = [
   'Capacidad de pago insuficiente',
@@ -58,7 +59,7 @@ export default function SupervisorDetalleSolicitudPage() {
           *,
           estado_solicitud ( nombre ),
           cliente (
-            id_cliente, nombre_completo, dni, email, telefono,
+            id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, email, telefono,
             nombre_negocio, descripcion_negocio, score_credito, ciudad,
             detalle_cliente ( ingresos_mensuales, egresos_mensuales, otras_obligaciones, patrimonio_estimado ),
             documento_cliente ( tipo_documento, estado_verificacion, url_archivo, created_at )
@@ -198,7 +199,7 @@ export default function SupervisorDetalleSolicitudPage() {
             <User className="w-4 h-4 text-indigo-400" /> Cliente
           </h2>
           <div className="flex flex-col gap-2.5 text-sm">
-            <p className="text-white font-bold text-base">{cliente?.nombre_completo}</p>
+            <p className="text-white font-bold text-base">{formatNombre(cliente)}</p>
             <p className="text-slate-400">CC: {cliente?.dni}</p>
             <p className="text-slate-400">{cliente?.telefono}</p>
             <p className="text-slate-400 text-xs">{cliente?.email}</p>

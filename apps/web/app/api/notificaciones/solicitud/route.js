@@ -6,6 +6,7 @@
  * ========================================================================== */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { primerNombre } from '@/lib/nombre'
 
 export async function POST(request) {
   const supabase = await createClient()
@@ -31,11 +32,11 @@ export async function POST(request) {
 
   const { data: clienteRow } = await supabase
     .from('cliente')
-    .select('nombre_completo, email')
+    .select('primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email')
     .eq('id_usuario_cuenta', user.id)
     .single()
 
-  const nombre     = clienteRow?.nombre_completo?.split(' ')[0] || 'Cliente'
+  const nombre     = primerNombre(clienteRow) || 'Cliente'
   const emailDest  = clienteRow?.email || user.email
 
   const montoFmt = new Intl.NumberFormat('es-CO', {

@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { calcularAmortizacion } from '@/lib/calculadora'
+import { formatNombre } from '@/lib/nombre'
 import {
   notificarSolicitudAprobada,
   notificarSolicitudRechazada,
@@ -58,7 +59,7 @@ export async function PATCH(request, { params }) {
     .select(`
       id_solicitud, id_cliente, id_estado_solicitud, estado_solicitud(nombre),
       monto_solicitado, plazo_meses,
-      cliente ( nombre_completo, email )
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email )
     `)
     .eq('id_solicitud', id)
     .single()
@@ -112,7 +113,7 @@ export async function PATCH(request, { params }) {
 
   // ── Notificación por email al cliente ────────────────────────
   const clienteEmail = sol.cliente?.email
-  const clienteNombre = sol.cliente?.nombre_completo
+  const clienteNombre = formatNombre(sol.cliente)
 
   if (clienteEmail) {
     if (accion === 'APROBAR') {

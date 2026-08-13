@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { orBusquedaNombre } from '@/lib/nombre'
 
 function getServiceClient() {
   return createServiceClient(
@@ -51,10 +52,10 @@ export async function GET(request) {
   const { data: porDatos } = await service
     .from('cliente')
     .select(`
-      id_cliente, nombre_completo, dni, telefono, email, score_credito,
+      id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email, score_credito,
       credito ( id_credito, estado_credito, saldo_pendiente, dias_mora_maximo )
     `)
-    .or(`nombre_completo.ilike.%${q}%,dni.ilike.%${q}%,telefono.ilike.%${q}%,email.ilike.%${q}%`)
+    .or(orBusquedaNombre(q))
     .limit(10)
 
   // Buscar también por ID de crédito (si el query parece un UUID)
@@ -64,7 +65,7 @@ export async function GET(request) {
       .from('credito')
       .select(`
         id_credito, estado_credito, saldo_pendiente, dias_mora_maximo,
-        cliente ( id_cliente, nombre_completo, dni, telefono, email, score_credito )
+        cliente ( id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email, score_credito )
       `)
       .ilike('id_credito', `${q}%`)
       .limit(5)

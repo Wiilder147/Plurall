@@ -13,6 +13,7 @@ import {
   AlertTriangle, CheckCircle2, Calendar, DollarSign,
 } from 'lucide-react'
 import RegistrarGestionForm from '@/components/RegistrarGestionForm'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -93,10 +94,10 @@ export default async function AsesorFichaClientePage({ params }) {
           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-black shrink-0 ${
             enMora ? 'bg-red-500/20 text-red-400' : 'bg-teal-500/20 text-teal-400'
           }`}>
-            {cliente.nombre_completo?.charAt(0)?.toUpperCase()}
+            {formatNombre(cliente)?.charAt(0)?.toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">{cliente.nombre_completo}</h1>
+            <h1 className="text-2xl font-bold text-white">{formatNombre(cliente)}</h1>
             <p className="text-slate-400 text-sm">CC {cliente.dni} · {cliente.telefono}</p>
           </div>
         </div>
@@ -223,7 +224,7 @@ export default async function AsesorFichaClientePage({ params }) {
         <RegistrarGestionForm
           clienteId={clienteId}
           creditoId={credito.id_credito}
-          clienteNombre={cliente.nombre_completo}
+          clienteNombre={formatNombre(cliente)}
         />
       )}
 

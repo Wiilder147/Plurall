@@ -9,6 +9,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { calcularAmortizacion } from '@/lib/calculadora'
 import { notificarDesembolso } from '@/lib/notificaciones'
+import { formatNombre } from '@/lib/nombre'
 
 function getServiceClient() {
   return createServiceClient(
@@ -31,7 +32,7 @@ export async function desembolsarSolicitud(solicitudId, service) {
       id_solicitud, id_cliente,
       estado_solicitud ( nombre ),
       decision_solicitud ( monto_aprobado, plazo_aprobado, tasa_interes_aprobada ),
-      cliente ( nombre_completo, email )
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email )
     `)
     .eq('id_solicitud', solicitudId)
     .single()
@@ -146,7 +147,7 @@ export async function desembolsarSolicitud(solicitudId, service) {
   if (sol.cliente?.email) {
     notificarDesembolso({
       email:            sol.cliente.email,
-      nombre:           sol.cliente.nombre_completo,
+      nombre:           formatNombre(sol.cliente),
       creditoId:        credito.id_credito,
       monto,
       cuotaFija:        sim.cuotaMensual,

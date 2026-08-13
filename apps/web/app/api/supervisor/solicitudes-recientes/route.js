@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
+import { formatNombre } from '@/lib/nombre'
 
 export async function GET() {
   const supabase = await createClient()
@@ -16,13 +17,13 @@ export async function GET() {
   const db = createServiceClient()
   const { data } = await db
     .from('solicitud_credito')
-    .select('id_solicitud, monto_solicitado, plazo_meses, estado_solicitud(nombre), cliente(nombre_completo)')
+    .select('id_solicitud, monto_solicitado, plazo_meses, estado_solicitud(nombre), cliente(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido)')
     .order('fecha_solicitud', { ascending: false })
     .limit(6)
 
   const items = (data ?? []).map(s => ({
     id:     s.id_solicitud,
-    nombre: s.cliente?.nombre_completo,
+    nombre: formatNombre(s.cliente),
     monto:  s.monto_solicitado,
     plazo:  s.plazo_meses,
     estado: s.estado_solicitud?.nombre,

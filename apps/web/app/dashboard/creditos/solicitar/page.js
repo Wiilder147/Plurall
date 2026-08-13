@@ -63,6 +63,17 @@ const TIPOS_DOC_ADICIONAL = [
   { codigo: 'OTRO_COMPROBANTE',  label: 'Otro comprobante' },
 ]
 const MAX_DOCS_ADICIONALES = 8
+// Tope para "¿Cuántas personas dependen económicamente de usted?"
+const MAX_DEPENDIENTES = 30
+
+function esPreguntaDependientes(p) {
+  return /dependen económicamente/i.test(p?.enunciado ?? '')
+}
+
+function maxNumericoPregunta(p) {
+  if (esPreguntaDependientes(p)) return MAX_DEPENDIENTES
+  return null
+}
 
 // CONFIGURACIÓN DE LOS PASOS DEL FORMULARIO
 // Para cambiar el nombre o ícono de un paso: modifica este array
@@ -213,10 +224,13 @@ export default function SolicitarCredito() {
     return p.tipo_input === 'MONEDA' || p.tipo_input === 'NUMERO'
   }
 
-  function respuestaNumericaValida(r) {
+  function respuestaNumericaValida(r, p) {
     if (r?.respuesta_texto == null || r.respuesta_texto === '') return false
     const n = Number(r.respuesta_texto)
-    return Number.isFinite(n) && n >= 0
+    if (!Number.isFinite(n) || n < 0) return false
+    const max = maxNumericoPregunta(p)
+    if (max != null && n > max) return false
+    return true
   }
 
   function cuestionarioCompleto() {
@@ -228,7 +242,7 @@ export default function SolicitarCredito() {
           return !!(ub?.departamento && ub?.ciudad && ub?.direccion)
         } catch { return false }
       }
-      if (esPreguntaNumerica(p)) return respuestaNumericaValida(r)
+      if (esPreguntaNumerica(p)) return respuestaNumericaValida(r, p)
       return !!(r?.id_opcion || r?.respuesta_texto)
     })
   }
@@ -281,13 +295,19 @@ export default function SolicitarCredito() {
       const respuestasArray = Object.entries(respuestas).map(([id_pregunta, r]) => {
         const preg  = preguntas.find(p => p.id_pregunta === id_pregunta)
         const esNum = preg ? esPreguntaNumerica(preg) : false
-        const num   = Number(r.respuesta_texto)
+        const max   = preg ? maxNumericoPregunta(preg) : null
+        let texto   = r.respuesta_texto || null
+        let num     = Number(texto)
+        if (esNum && Number.isFinite(num) && max != null && num > max) {
+          num = max
+          texto = String(max)
+        }
         return {
           id_pregunta,
           id_opcion:          r.id_opcion || null,
-          respuesta_texto:    r.respuesta_texto || null,
+          respuesta_texto:    texto,
           // respuesta_numerica permite usar el valor en cálculos de score y métricas
-          respuesta_numerica: esNum && r.respuesta_texto !== '' && Number.isFinite(num) ? num : null,
+          respuesta_numerica: esNum && texto !== '' && Number.isFinite(num) ? num : null,
         }
       })
 
@@ -615,10 +635,11 @@ export default function SolicitarCredito() {
                 {preguntas.map((p, idx) => {
                   const tieneOpciones = p.opcion_pregunta?.length > 0
                   const respActual    = respuestas[p.id_pregunta]
+                  const maxNum        = maxNumericoPregunta(p)
                   const respondida    = p.tipo_input === 'UBICACION'
                     ? (() => { try { const u = JSON.parse(respActual?.respuesta_texto ?? 'null'); return !!(u?.departamento && u?.ciudad && u?.direccion) } catch { return false } })()
                     : esPreguntaNumerica(p)
-                    ? respuestaNumericaValida(respActual)
+                    ? respuestaNumericaValida(respActual, p)
                     : !!(respActual?.id_opcion || respActual?.respuesta_texto)
 
                   return (
@@ -694,13 +715,22 @@ export default function SolicitarCredito() {
                             className="w-full border border-slate-200 rounded-xl pl-8 pr-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400" />
                         </div>
                       ) : p.tipo_input === 'NUMERO' ? (
-                        // INPUT NUMÉRICO (solo dígitos, ej: número de cuenta, celular de billetera)
-                        <input
-                          type="text" inputMode="numeric"
-                          value={respActual?.respuesta_texto ?? ''}
-                          onChange={e => handleRespuesta(p.id_pregunta, 'respuesta_texto', e.target.value.replace(/\D/g, ''))}
-                          placeholder="Solo números…"
-                          className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                        // INPUT NUMÉRICO (solo dígitos; dependientes limitado a MAX_DEPENDIENTES)
+                        <div>
+                          <input
+                            type="text" inputMode="numeric"
+                            value={respActual?.respuesta_texto ?? ''}
+                            onChange={e => {
+                              let v = e.target.value.replace(/\D/g, '')
+                              if (maxNum != null && v !== '' && Number(v) > maxNum) v = String(maxNum)
+                              handleRespuesta(p.id_pregunta, 'respuesta_texto', v)
+                            }}
+                            placeholder={maxNum != null ? `0 a ${maxNum}` : 'Solo números…'}
+                            className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                          {maxNum != null && (
+                            <p className="mt-1.5 text-xs text-slate-400">Máximo {maxNum} personas</p>
+                          )}
+                        </div>
                       ) : (
                         // INPUT DE TEXTO LIBRE
                         <input type="text" value={respActual?.respuesta_texto ?? ''}

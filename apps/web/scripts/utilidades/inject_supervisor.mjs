@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { parseNombre } from '../../lib/nombre.js';
 
 const supabaseUrl = 'https://bnemrismjmvmemypokaz.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -29,7 +30,7 @@ async function inject() {
     email,
     password: 'Password123!',
     email_confirm: true,
-    user_metadata: { nombre_completo: 'Supervisor QA' }
+    user_metadata: { ...parseNombre('Supervisor QA') }
   });
 
   if (authErr && authErr.code !== 'email_exists' && authErr.message !== 'User already registered') {
@@ -48,7 +49,7 @@ async function inject() {
   const { error: profileErr } = await supabase.from('perfil_usuario').upsert({
     id: targetUserId,
     id_rol: idRolAdmin,
-    nombre_completo: 'Supervisor QA',
+    ...parseNombre('Supervisor QA'),
     activo: true,
     intentos_fallidos: 0
   });
@@ -58,7 +59,7 @@ async function inject() {
   const { data: newClient, error: clientErr } = await supabase.from('cliente').insert({
     id_usuario_cuenta: targetUserId,
     id_estado_cliente: idEstadoCliActivo,
-    nombre_completo: 'Supervisor QA',
+    ...parseNombre('Supervisor QA'),
     dni: '1234567890',
     email: email,
     telefono: '3001234567'

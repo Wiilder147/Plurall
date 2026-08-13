@@ -11,6 +11,7 @@ import { redirect } from 'next/navigation'
 import { formatCOP } from '@/lib/calculadora'
 import EditarPerfilForm from '@/components/EditarPerfilForm'
 import EliminarCuentaBtn from '@/components/EliminarCuentaBtn'
+import { formatNombre } from '@/lib/nombre'
 import {
   User, Phone, Mail, Hash, CheckCircle2, MapPin, Building2, Store,
   Calendar, Shield, CreditCard, TrendingUp, Wallet, Landmark, Users,
@@ -25,7 +26,7 @@ export default async function DashboardPerfil() {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) redirect('/login')
 
-  const { nombre_completo: authNombre, email_real } = user.user_metadata || {}
+  const { email_real } = user.user_metadata || {}
 
   const { data: cliente } = await supabase
     .from('cliente').select('*').eq('id_usuario_cuenta', user.id).single()
@@ -46,7 +47,7 @@ export default async function DashboardPerfil() {
     }
   }
 
-  const nombre = cliente?.nombre_completo || authNombre || 'Usuario'
+  const nombre = formatNombre(cliente) || 'Usuario'
   const miembroDesde = cliente?.created_at
     ? new Date(cliente.created_at).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })
     : new Date(user.created_at).toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })

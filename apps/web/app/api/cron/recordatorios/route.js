@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import { notificarRecordatorioCuota } from '@/lib/notificaciones'
 import { registrarNotificacionCliente } from '@/lib/notificacionesInApp'
+import { formatNombre } from '@/lib/nombre'
 
 function getServiceClient() {
   return createServiceClient()
@@ -26,7 +27,7 @@ export async function GET(request) {
     .from('cuota')
     .select(`
       id_cuota, numero_cuota, monto_total_cuota, fecha_vencimiento,
-      plan_pago ( credito ( id_credito, id_cliente, numero_cuotas, cliente ( nombre_completo, email, id_usuario_cuenta ) ) )
+      plan_pago ( credito ( id_credito, id_cliente, numero_cuotas, cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email, id_usuario_cuenta ) ) )
     `)
     .eq('fecha_vencimiento', fechaObjetivo)
     .eq('estado_cuota', 'PENDIENTE')
@@ -39,7 +40,7 @@ export async function GET(request) {
     try {
       await notificarRecordatorioCuota({
         email: cliente.email,
-        nombre: cliente.nombre_completo,
+        nombre: formatNombre(cliente),
         numeroCuota: cuota.numero_cuota,
         totalCuotas: credito.numero_cuotas,
         monto: cuota.monto_total_cuota,

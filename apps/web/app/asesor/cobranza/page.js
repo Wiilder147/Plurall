@@ -5,6 +5,7 @@ import { calcularScoreRiesgo, prioridadLabel } from '@/lib/cobranza'
 import StaffPageShell from '@/components/dashboard/StaffPageShell'
 import KpiCard, { KpiGrid } from '@/components/dashboard/KpiCard'
 import { AlertTriangle, Phone, ArrowRight, DollarSign, Target } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,7 @@ export default async function AsesorCobranzaPage() {
     .from('asignacion_asesor')
     .select(`
       cliente (
-        id_cliente, nombre_completo, dni, telefono, email,
+        id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email,
         credito (
           id_credito, saldo_pendiente, cuotas_en_mora, dias_mora_maximo,
           cuota_fija, estado_credito, plan_pago ( id_plan_pago )
@@ -120,7 +121,7 @@ export default async function AsesorCobranzaPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-slate-200">{c.nombre_completo}</p>
+                      <p className="font-semibold text-slate-200">{formatNombre(c)}</p>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ring-1 ring-inset ${c.prioridad.cls}`}>{c.prioridad.label}</span>
                       <span className="text-xs text-slate-500">Score {c.score}</span>
                     </div>

@@ -151,7 +151,7 @@ export default function PagarCuotaPage({ params }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-5">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-slate-400 flex items-center gap-1"><DollarSign className="w-3 h-3" />Total a pagar</span>
-            <span className="text-2xl font-extrabold text-slate-900">{formatCOP(cuota.monto_total_cuota)}</span>
+            <span className="text-2xl font-extrabold text-slate-900">{formatCOP(wompiData?.montoTotal ?? cuota.monto_total_cuota)}</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs text-slate-400 flex items-center gap-1"><CalendarDays className="w-3 h-3" />Vencimiento</span>
@@ -172,10 +172,10 @@ export default function PagarCuotaPage({ params }) {
             <span className="text-slate-500">Interés</span>
             <span className="font-semibold">{formatCOP(cuota.monto_interes)}</span>
           </div>
-          {cuota.estado_cuota === 'VENCIDA' && (
-            <div className="flex justify-between col-span-2 text-red-600 font-semibold">
-              <span>⚠️ Mora acumulada</span>
-              <span>Se calculará al pagar</span>
+          {wompiData?.montoMora > 0 && (
+            <div className="flex justify-between col-span-2 text-red-600 font-semibold border-t border-red-100 pt-2 mt-1">
+              <span>⚠️ Mora ({wompiData.diasMora} día{wompiData.diasMora === 1 ? '' : 's'} de atraso)</span>
+              <span>{formatCOP(wompiData.montoMora)}</span>
             </div>
           )}
         </div>

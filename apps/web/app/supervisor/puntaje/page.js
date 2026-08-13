@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { Gauge, User, Calendar } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ export default async function PuntajePage() {
     .select(`
       id_score, puntaje_total, puntaje_maximo_posible, porcentaje, recomendacion, fecha_evaluacion,
       modelo_score ( nombre_modelo ),
-      solicitud_credito ( monto_solicitado, cliente ( nombre_completo, dni ) )
+      solicitud_credito ( monto_solicitado, cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni ) )
     `)
     .order('fecha_evaluacion', { ascending: false })
 
@@ -63,7 +64,7 @@ export default async function PuntajePage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-slate-200 text-sm">{cliente?.nombre_completo ?? 'Sin cliente'}</p>
+                        <p className="font-semibold text-slate-200 text-sm">{formatNombre(cliente) || 'Sin cliente'}</p>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${reco.cls}`}>{reco.label}</span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">

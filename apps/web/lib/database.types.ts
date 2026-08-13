@@ -221,10 +221,9 @@ export type Database = {
           lat_negocio: number | null
           lon_casa: number | null
           lon_negocio: number | null
-          nombre_completo: string
           nombre_negocio: string | null
-          primer_apellido: string | null
-          primer_nombre: string | null
+          primer_apellido: string
+          primer_nombre: string
           score_credito: number | null
           segundo_apellido: string | null
           segundo_nombre: string | null
@@ -255,10 +254,9 @@ export type Database = {
           lat_negocio?: number | null
           lon_casa?: number | null
           lon_negocio?: number | null
-          nombre_completo: string
           nombre_negocio?: string | null
-          primer_apellido?: string | null
-          primer_nombre?: string | null
+          primer_apellido: string
+          primer_nombre: string
           score_credito?: number | null
           segundo_apellido?: string | null
           segundo_nombre?: string | null
@@ -289,10 +287,9 @@ export type Database = {
           lat_negocio?: number | null
           lon_casa?: number | null
           lon_negocio?: number | null
-          nombre_completo?: string
           nombre_negocio?: string | null
-          primer_apellido?: string | null
-          primer_nombre?: string | null
+          primer_apellido?: string
+          primer_nombre?: string
           score_credito?: number | null
           segundo_apellido?: string | null
           segundo_nombre?: string | null
@@ -1276,7 +1273,6 @@ export type Database = {
           id: string
           id_rol: string
           intentos_fallidos: number
-          nombre_completo: string | null
           primer_apellido: string | null
           primer_nombre: string | null
           segundo_apellido: string | null
@@ -1291,7 +1287,6 @@ export type Database = {
           id: string
           id_rol: string
           intentos_fallidos?: number
-          nombre_completo?: string | null
           primer_apellido?: string | null
           primer_nombre?: string | null
           segundo_apellido?: string | null
@@ -1306,7 +1301,6 @@ export type Database = {
           id?: string
           id_rol?: string
           intentos_fallidos?: number
-          nombre_completo?: string | null
           primer_apellido?: string | null
           primer_nombre?: string | null
           segundo_apellido?: string | null

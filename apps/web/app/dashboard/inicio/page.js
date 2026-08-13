@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
+import { primerNombre } from '@/lib/nombre'
 import { getSolicitudAprobadaPendiente, getUltimaSolicitudCliente } from '@/lib/solicitudCliente'
 import SolicitudDesembolsoPendiente from '@/components/cliente/SolicitudDesembolsoPendiente'
 import {
@@ -27,11 +28,13 @@ export default async function DashboardInicio() {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) redirect('/login')
 
-  const { nombre_completo } = user.user_metadata || {}
-  const primerNombre = nombre_completo ? nombre_completo.split(' ')[0] : 'Emprendedor'
-
   const { data: clienteRow } = await supabase
-    .from('cliente').select('id_cliente').eq('id_usuario_cuenta', user.id).single()
+    .from('cliente')
+    .select('id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido')
+    .eq('id_usuario_cuenta', user.id)
+    .single()
+
+  const saludo = primerNombre(clienteRow) || 'Emprendedor'
 
   let credito = null
   let cuotasPagadas = 0
@@ -100,7 +103,7 @@ export default async function DashboardInicio() {
           MARGEN SUPERIOR DEL SUBTÍTULO: mt-2 (8px) */}
       <header>
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-          Hola, {primerNombre} 👋
+          Hola, {saludo} 👋
         </h1>
         <p className="text-slate-500 mt-2">
           Bienvenido a tu panel de control financiero Plurall.
@@ -370,7 +373,7 @@ export default async function DashboardInicio() {
               </div>
               <span className="text-white/70 font-medium tracking-wide text-xs uppercase">Solicitud recibida</span>
               <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-                ¡Felicitaciones, {primerNombre}! Tu solicitud avanza
+                ¡Felicitaciones, {saludo}! Tu solicitud avanza
               </h2>
               <p className="text-white/80 max-w-xl">
                 Tu solicitud por <strong className="text-white">{formatCOP(ultimaSolicitud.monto)}</strong> a {ultimaSolicitud.plazo} meses
@@ -421,7 +424,7 @@ export default async function DashboardInicio() {
               </div>
               <span className="text-white/70 font-medium tracking-wide text-xs uppercase">Gracias por confiar en Plurall</span>
               <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-                Gracias por tu solicitud, {primerNombre}
+                Gracias por tu solicitud, {saludo}
               </h2>
               <p className="text-white/80 max-w-xl">
                 Revisamos tu solicitud con mucho cuidado. Por ahora no pudimos aprobarla

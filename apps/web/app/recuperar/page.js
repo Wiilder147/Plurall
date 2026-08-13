@@ -89,7 +89,7 @@ export default function RecuperarPage() {
     // COLOR DE FONDO: bg-white (blanco — para cambiar: bg-slate-50, bg-gray-50)
     // CENTRADO: flex flex-col items-center justify-center
     // overflow-hidden: oculta los triángulos decorativos que sobresalen
-    <main className="min-h-screen bg-white flex flex-col items-center justify-center px-4 relative overflow-hidden">
+    <main className="auth-shell">
 
       {/* TRIÁNGULOS DECORATIVOS DE FONDO (definidos en globals.css) */}
       <div className="bg-triangle-orange"></div>
@@ -116,23 +116,23 @@ export default function RecuperarPage() {
       </Link>
 
       {/* TARJETA CENTRAL
-          ANCHO MÁXIMO: max-w-sm (384px)
+          ANCHO MÁXIMO: lo define .auth-card en globals.css (480px)
           ANIMACIÓN: animate-fade-in (aparece suavemente) */}
-      <div className="w-full max-w-sm animate-fade-in relative z-10 flex flex-col items-center">
+      <div className="auth-card animate-fade-in">
 
         {/* LOGO CUADRADO "P"
             COLOR FONDO: bg-navy-900 (azul muy oscuro)
             TAMAÑO: w-14 h-14 (56x56px), BORDES: rounded-xl (12px)
             SOMBRA: shadow-md, MARGEN INFERIOR: mb-6 (24px) */}
-        <div className="w-14 h-14 bg-navy-900 rounded-xl flex items-center justify-center mb-6 shadow-md">
+        <div className="w-20 h-20 bg-navy-900 rounded-2xl flex items-center justify-center mb-7 shadow-lg">
           {/* LETRA "P" — text-white, font-extrabold (extra negrita), text-2xl (24px) */}
-          <span className="text-white font-extrabold text-2xl">P</span>
+          <span className="text-[#ffffff] font-extrabold text-4xl">P</span>
         </div>
 
         {/* TÍTULO "RECUPERAR CONTRASEÑA"
             COLOR: text-navy-900 (azul muy oscuro)
             TAMAÑO: text-2xl (24px), font-bold, uppercase, tracking-wide */}
-        <h1 className="text-2xl font-bold text-navy-900 text-center uppercase tracking-wide mb-1">
+        <h1 className="text-3xl md:text-4xl font-bold text-navy-900 text-center uppercase tracking-wide leading-tight mb-2">
           RECUPERAR<br/>CONTRASEÑA
         </h1>
 
@@ -161,8 +161,8 @@ export default function RecuperarPage() {
             {/* ── SUBTÍTULO DINÁMICO según el paso ── */}
             {step === 1 ? (
               // TEXTO DEL PASO 1
-              // COLOR: text-navy-400 (gris azulado), TAMAÑO: text-sm (14px)
-              <p className="text-navy-400 text-sm mb-8 text-center lowercase">
+              // COLOR: text-navy-500 (gris azulado), TAMAÑO: text-lg (18px)
+              <p className="text-navy-500 text-lg mb-9 text-center lowercase">
                 ingresa tu celular para recibir un código al correo
               </p>
             ) : (
@@ -181,7 +181,7 @@ export default function RecuperarPage() {
             )}
 
             {/* FORMULARIO — onSubmit cambia según el paso */}
-            <form onSubmit={step === 1 ? handleSendOTP : handleVerifyOTP} className="w-full space-y-4 flex flex-col items-center">
+            <form onSubmit={step === 1 ? handleSendOTP : handleVerifyOTP} className="w-full space-y-5 flex flex-col items-center">
 
               {/* MENSAJE DE ERROR
                   COLOR FONDO: bg-danger/10 (rojo muy suave)
@@ -193,9 +193,9 @@ export default function RecuperarPage() {
               {step === 1 && (
                 <div className="w-full relative">
                   {/* ÍCONO TELÉFONO — absolute left-4, centrado vertical
-                      COLOR: text-navy-400, TAMAÑO: size={18} (18px) */}
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400">
-                    <Phone size={18} />
+                      COLOR: text-navy-400, TAMAÑO: size={20} (20px) */}
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-navy-400">
+                    <Phone size={20} />
                   </div>
                   {/* INPUT CELULAR — clase input-field (definida en globals.css)
                       maxLength={10} — máximo 10 dígitos */}
@@ -229,8 +229,8 @@ export default function RecuperarPage() {
                       text-center text-lg font-bold — centrado y grande para claridad
                       maxLength implícito por el .slice(0, 6) en el onChange */}
                   <div className="w-full relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400">
-                      <KeyRound size={18} />
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-navy-400">
+                      <KeyRound size={20} />
                     </div>
                     <input
                       id="otp"
@@ -246,8 +246,8 @@ export default function RecuperarPage() {
                   {/* CAMPO NUEVA CONTRASEÑA
                       ÍCONO: Lock (candado), color text-navy-400 */}
                   <div className="w-full relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400">
-                      <Lock size={18} />
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-navy-400">
+                      <Lock size={20} />
                     </div>
                     <input
                       id="newPassword"
@@ -263,8 +263,8 @@ export default function RecuperarPage() {
 
                   {/* CAMPO CONFIRMAR CONTRASEÑA */}
                   <div className="w-full relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400">
-                      <Lock size={18} />
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-navy-400">
+                      <Lock size={20} />
                     </div>
                     <input
                       id="confirmPassword"
@@ -291,7 +291,7 @@ export default function RecuperarPage() {
                   ANCHO: w-full (100%), PADDING: py-3 (12px vertical)
                   MARGEN: mt-4 (16px arriba)
                   ANIMACIÓN HOVER: hover:scale-105 */}
-              <button disabled={loading} type="submit" className="btn-primary w-full mt-4 py-3 flex items-center justify-center font-bold tracking-wide transition-transform hover:scale-105 lowercase">
+              <button disabled={loading} type="submit" className="btn-primary w-full mt-5 flex items-center justify-center font-bold tracking-wide transition-transform hover:scale-105 lowercase">
                 {/* SPINNER — visible mientras loading=true */}
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -322,8 +322,8 @@ export default function RecuperarPage() {
             TAMAÑO: text-sm (14px)
             MARGEN SUPERIOR: mt-8 (32px) */}
         {!success && (
-          <div className="mt-8 flex flex-col items-center gap-2">
-            <Link href="/login" className="text-navy-400 hover:text-navy-600 text-sm lowercase transition">
+          <div className="mt-9 pt-7 w-full border-t border-navy-100 flex flex-col items-center gap-3">
+            <Link href="/login" className="text-navy-500 hover:text-navy-700 text-base lowercase transition">
               ya recordé mi contraseña
             </Link>
           </div>

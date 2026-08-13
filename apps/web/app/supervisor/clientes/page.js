@@ -9,6 +9,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { Users, Search, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { orBusquedaNombre, formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,7 @@ export default async function SupervisorClientesPage({ searchParams }) {
   const filtro = params?.estado?.toUpperCase() || 'TODOS'
 
   const SELECT_CLIENTE = `
-    id_cliente, nombre_completo, dni, telefono, email,
+    id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email,
     score_credito, created_at,
     estado_cliente ( nombre ),
     credito ( id_credito, estado_credito, saldo_pendiente, dias_mora_maximo )
@@ -34,7 +35,7 @@ export default async function SupervisorClientesPage({ searchParams }) {
     const { data: byDatos } = await db
       .from('cliente')
       .select(SELECT_CLIENTE)
-      .or(`nombre_completo.ilike.%${buscar}%,dni.ilike.%${buscar}%,telefono.ilike.%${buscar}%,email.ilike.%${buscar}%`)
+      .or(orBusquedaNombre(buscar))
       .order('created_at', { ascending: false })
 
     // Also search by credit UUID prefix
@@ -129,7 +130,7 @@ export default async function SupervisorClientesPage({ searchParams }) {
                   return (
                     <tr key={cli.id_cliente} className="hover:bg-slate-700/20 transition-colors">
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-200">{cli.nombre_completo}</p>
+                        <p className="font-semibold text-slate-200">{formatNombre(cli)}</p>
                         {cli.email && !cli.email.endsWith('@plurall.app') && (
                           <p className="text-slate-500 text-xs">{cli.email}</p>
                         )}

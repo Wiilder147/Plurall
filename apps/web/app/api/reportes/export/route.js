@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { formatNombre } from '@/lib/nombre'
 
 /**
  * GET /api/reportes/export?tipo=clientes|creditos|pagos|solicitudes|mora
@@ -63,7 +64,7 @@ async function exportarClientes(service) {
   const { data } = await service
     .from('cliente')
     .select(`
-      nombre_completo, dni, email, telefono, ciudad, departamento,
+      primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, email, telefono, ciudad, departamento,
       score_credito, created_at,
       estado_cliente ( nombre ),
       tipo_negocio ( nombre )
@@ -71,7 +72,7 @@ async function exportarClientes(service) {
     .order('created_at', { ascending: false })
 
   const columnas = [
-    { label: 'Nombre completo',    valor: r => r.nombre_completo },
+    { label: 'Nombre completo',    valor: r => formatNombre(r) },
     { label: 'Cédula',             valor: r => r.dni },
     { label: 'Email',              valor: r => r.email },
     { label: 'Teléfono',           valor: r => r.telefono },
@@ -94,13 +95,13 @@ async function exportarCreditos(service) {
       monto_desembolsado, tasa_interes_anual, numero_cuotas,
       cuota_fija, saldo_pendiente, cuotas_pagadas, cuotas_en_mora,
       dias_mora_maximo, fecha_desembolso, fecha_primera_cuota, fecha_ultima_cuota,
-      cliente ( nombre_completo, dni, telefono )
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono )
     `)
     .order('fecha_desembolso', { ascending: false })
 
   const columnas = [
     { label: 'ID crédito',         valor: r => r.id_credito },
-    { label: 'Cliente',            valor: r => r.cliente?.nombre_completo },
+    { label: 'Cliente',            valor: r => formatNombre(r.cliente) },
     { label: 'Cédula',             valor: r => r.cliente?.dni },
     { label: 'Teléfono',           valor: r => r.cliente?.telefono },
     { label: 'Estado',             valor: r => r.estado_credito },
@@ -127,14 +128,14 @@ async function exportarPagos(service) {
       id_recibo, estado, metodo_pago, referencia_externa,
       monto_pagado, monto_capital, monto_interes, monto_mora,
       fecha_pago, created_at,
-      credito ( id_credito, cliente ( nombre_completo, dni ) )
+      credito ( id_credito, cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni ) )
     `)
     .eq('estado', 'CONFIRMADO')
     .order('fecha_pago', { ascending: false })
 
   const columnas = [
     { label: 'ID recibo',          valor: r => r.id_recibo },
-    { label: 'Cliente',            valor: r => r.credito?.cliente?.nombre_completo },
+    { label: 'Cliente',            valor: r => formatNombre(r.credito?.cliente) },
     { label: 'Cédula',             valor: r => r.credito?.cliente?.dni },
     { label: 'ID crédito',         valor: r => r.credito?.id_credito },
     { label: 'Estado',             valor: r => r.estado },
@@ -157,14 +158,14 @@ async function exportarSolicitudes(service) {
       id_solicitud, monto_solicitado, plazo_meses, canal_solicitud,
       fecha_solicitud, fecha_decision,
       estado_solicitud ( nombre ),
-      cliente ( nombre_completo, dni, telefono ),
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono ),
       decision_solicitud ( resultado, monto_aprobado, plazo_aprobado, tasa_interes_aprobada )
     `)
     .order('fecha_solicitud', { ascending: false })
 
   const columnas = [
     { label: 'ID solicitud',       valor: r => r.id_solicitud },
-    { label: 'Cliente',            valor: r => r.cliente?.nombre_completo },
+    { label: 'Cliente',            valor: r => formatNombre(r.cliente) },
     { label: 'Cédula',             valor: r => r.cliente?.dni },
     { label: 'Teléfono',           valor: r => r.cliente?.telefono },
     { label: 'Monto solicitado',   valor: r => fmtCOP(r.monto_solicitado) },
@@ -191,14 +192,14 @@ async function exportarMora(service) {
     .select(`
       id_credito, estado_credito, saldo_pendiente,
       cuotas_en_mora, dias_mora_maximo, fecha_desembolso,
-      cliente ( nombre_completo, dni, telefono, email )
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email )
     `)
     .in('estado_credito', ['EN_MORA'])
     .order('dias_mora_maximo', { ascending: false })
 
   const columnas = [
     { label: 'ID crédito',         valor: r => r.id_credito },
-    { label: 'Cliente',            valor: r => r.cliente?.nombre_completo },
+    { label: 'Cliente',            valor: r => formatNombre(r.cliente) },
     { label: 'Cédula',             valor: r => r.cliente?.dni },
     { label: 'Teléfono',           valor: r => r.cliente?.telefono },
     { label: 'Email',              valor: r => r.cliente?.email },

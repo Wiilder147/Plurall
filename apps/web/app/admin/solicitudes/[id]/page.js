@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import MoverPaso from '@/components/MoverPaso'
+import { formatNombre } from '@/lib/nombre'
 
 const MOTIVOS_RECHAZO = [
   'Capacidad de pago insuficiente',
@@ -66,7 +67,7 @@ export default function AdminDetalleSolicitudPage() {
           *,
           estado_solicitud ( nombre ),
           cliente (
-            id_cliente, nombre_completo, dni, email, telefono,
+            id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, email, telefono,
             nombre_negocio, descripcion_negocio, score_credito,
             detalle_cliente ( ingresos_mensuales, egresos_mensuales, otras_obligaciones ),
             documento_cliente ( tipo_documento, estado_verificacion )
@@ -197,7 +198,7 @@ export default function AdminDetalleSolicitudPage() {
             <User className="w-4 h-4 text-orange-400" /> Cliente
           </h2>
           <div className="flex flex-col gap-2 text-sm">
-            <p className="text-white font-bold text-lg">{cliente?.nombre_completo}</p>
+            <p className="text-white font-bold text-lg">{formatNombre(cliente)}</p>
             <p className="text-slate-400">CC: {cliente?.dni}</p>
             <p className="text-slate-400">{cliente?.telefono}</p>
             <p className="text-slate-400 text-xs">{cliente?.email}</p>

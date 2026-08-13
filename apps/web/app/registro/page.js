@@ -12,12 +12,16 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { esEmailValido } from '@/lib/validacion'
+import { parseNombre } from '@/lib/nombre'
 import { POLITICA_TRATAMIENTO_DATOS } from '@/lib/legal'
 import { Lock, Phone, User, IdCard, CheckCircle, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
+const CAMPOS_NOMBRE = ['primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido']
+
 function RegistroContent() {
   const [form, setForm] = useState({
-    nombre: '', dni: '', telefono: '', email: '',
+    primer_nombre: '', segundo_nombre: '', primer_apellido: '', segundo_apellido: '',
+    dni: '', telefono: '', email: '',
     password: '', confirmPassword: '', aceptaTerminos: false,
     website: '', // honeypot anti-bot
   })
@@ -46,9 +50,10 @@ function RegistroContent() {
       const { data: { session } } = await supabase.auth.getSession()
       if (session && session.user) {
         const meta = session.user.user_metadata
+        const partes = parseNombre(meta?.full_name || meta?.name || '')
         setForm(prev => ({
           ...prev,
-          nombre: meta?.full_name || prev.nombre,
+          ...partes,
           email: session.user.email || prev.email,
         }))
         await supabase.auth.signOut()
@@ -62,9 +67,9 @@ function RegistroContent() {
     const { name, value, type, checked } = e.target
     if (type === 'checkbox') { setForm(prev => ({ ...prev, [name]: checked })); return }
     let sanitized = value
-    if (name === 'nombre') {
+    if (CAMPOS_NOMBRE.includes(name)) {
       sanitized = value.replace(/[0-9]/g, '')
-      if (sanitized !== value) showHint('nombre', 'El nombre no debe contener números')
+      if (sanitized !== value) showHint(name, 'No debe contener números')
     }
     if (name === 'dni' || name === 'telefono') {
       sanitized = value.replace(/\D/g, '')
@@ -102,6 +107,8 @@ function RegistroContent() {
     }
 
     const telLimpio = form.telefono.replace(/\D/g, '')
+    if (!form.primer_nombre.trim()) { setError('El primer nombre es obligatorio.'); return }
+    if (!form.primer_apellido.trim()) { setError('El primer apellido es obligatorio.'); return }
     if (telLimpio.length !== 10) { setError('El celular debe tener 10 dígitos.'); return }
     if (!esEmailValido(form.email)) {
       setError('Ingresa un correo completo y válido, por ejemplo: tucorreo@gmail.com')
@@ -159,7 +166,10 @@ function RegistroContent() {
       password: form.password,
       options: {
         data: {
-          nombre_completo: form.nombre,
+          primer_nombre:    form.primer_nombre.trim(),
+          segundo_nombre:   form.segundo_nombre.trim() || null,
+          primer_apellido:  form.primer_apellido.trim(),
+          segundo_apellido: form.segundo_apellido.trim() || null,
           telefono: telLimpio,
           dni: dniLimpio,
           email_real: emailReal
@@ -264,13 +274,30 @@ function RegistroContent() {
 
             {error && <div className="w-full bg-danger/10 text-danger rounded-lg p-3 text-sm animate-fade-in text-center">{error}</div>}
 
-            <div className="w-full">
-              <label htmlFor="nombre" className="block text-sm font-bold text-navy-500 mb-1.5 ml-1 uppercase tracking-wide">Nombre Completo</label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400"><User size={18} /></div>
-                <input id="nombre" name="nombre" type="text" value={form.nombre} onChange={handleChange} placeholder="Ej. Juan Pérez" required className="input-field" />
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="w-full">
+                <label htmlFor="primer_nombre" className="block text-sm font-bold text-navy-500 mb-1.5 ml-1 uppercase tracking-wide">Primer nombre *</label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400"><User size={18} /></div>
+                  <input id="primer_nombre" name="primer_nombre" type="text" value={form.primer_nombre} onChange={handleChange} placeholder="Ej. Juan" required className="input-field" />
+                </div>
+                {hints.primer_nombre && <p className="text-sm text-amber-600 mt-1 ml-1 animate-fade-in">⚠ {hints.primer_nombre}</p>}
               </div>
-              {hints.nombre && <p className="text-sm text-amber-600 mt-1 ml-1 animate-fade-in">⚠ {hints.nombre}</p>}
+              <div className="w-full">
+                <label htmlFor="segundo_nombre" className="block text-sm font-bold text-navy-500 mb-1.5 ml-1 uppercase tracking-wide">Segundo nombre</label>
+                <input id="segundo_nombre" name="segundo_nombre" type="text" value={form.segundo_nombre} onChange={handleChange} placeholder="Opcional" className="input-field" />
+                {hints.segundo_nombre && <p className="text-sm text-amber-600 mt-1 ml-1 animate-fade-in">⚠ {hints.segundo_nombre}</p>}
+              </div>
+              <div className="w-full">
+                <label htmlFor="primer_apellido" className="block text-sm font-bold text-navy-500 mb-1.5 ml-1 uppercase tracking-wide">Primer apellido *</label>
+                <input id="primer_apellido" name="primer_apellido" type="text" value={form.primer_apellido} onChange={handleChange} placeholder="Ej. Pérez" required className="input-field" />
+                {hints.primer_apellido && <p className="text-sm text-amber-600 mt-1 ml-1 animate-fade-in">⚠ {hints.primer_apellido}</p>}
+              </div>
+              <div className="w-full">
+                <label htmlFor="segundo_apellido" className="block text-sm font-bold text-navy-500 mb-1.5 ml-1 uppercase tracking-wide">Segundo apellido</label>
+                <input id="segundo_apellido" name="segundo_apellido" type="text" value={form.segundo_apellido} onChange={handleChange} placeholder="Opcional" className="input-field" />
+                {hints.segundo_apellido && <p className="text-sm text-amber-600 mt-1 ml-1 animate-fade-in">⚠ {hints.segundo_apellido}</p>}
+              </div>
             </div>
 
             <div className="w-full">

@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { Banknote, User, Calendar } from 'lucide-react'
 import BotonDesembolsar from './BotonDesembolsar'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +21,7 @@ export default async function DesembolsosPage() {
     .select(`
       id_solicitud, monto_solicitado, plazo_meses, fecha_solicitud,
       estado_solicitud ( nombre ),
-      cliente ( nombre_completo, dni )
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni )
     `)
     .order('fecha_solicitud', { ascending: false })
 
@@ -54,7 +55,7 @@ export default async function DesembolsosPage() {
                       <User className="w-5 h-5 text-emerald-400" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-slate-200 text-sm">{s.cliente?.nombre_completo ?? '—'}</p>
+                      <p className="font-semibold text-slate-200 text-sm">{formatNombre(s.cliente) || '—'}</p>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
                         <span>CC {s.cliente?.dni ?? '—'}</span>
                         <span>{formatCOP(s.monto_solicitado)} — {s.plazo_meses} meses</span>
@@ -63,7 +64,7 @@ export default async function DesembolsosPage() {
                     </div>
                   </div>
                   <div className="shrink-0 pl-14 sm:pl-0">
-                    <BotonDesembolsar solicitudId={s.id_solicitud} nombreCliente={s.cliente?.nombre_completo ?? 'el cliente'} />
+                    <BotonDesembolsar solicitudId={s.id_solicitud} nombreCliente={formatNombre(s.cliente) || 'el cliente'} />
                   </div>
                 </div>
               </div>

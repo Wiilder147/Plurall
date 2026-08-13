@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { notificarPagoConfirmado } from '@/lib/notificaciones'
+import { formatNombre } from '@/lib/nombre'
 
 // Usamos el cliente SERVICE_ROLE para escribir desde el webhook (sin cookies de sesión)
 function getServiceClient() {
@@ -56,84 +57,64 @@ export async function POST(request) {
 
   const supabase = getServiceClient()
 
+  // ── Localizar el pago pre-registrado por /api/pagos/iniciar ──────────────
+  // El pre-registro (estado PENDIENTE) contiene el mapeo fiable
+  // referencia → cuota/crédito y el desglose (capital, interés, mora).
+  const { data: pago } = await supabase
+    .from('pago')
+    .select('id_recibo, id_cuota, id_credito, monto_pagado, monto_capital, monto_interes, monto_mora, estado')
+    .eq('referencia_externa', referencia)
+    .single()
+
+  if (!pago) {
+    // Sin pre-registro no podemos mapear la transacción de forma segura.
+    console.error('[Wompi Webhook] No hay pre-registro para referencia:', referencia)
+    return NextResponse.json({ ok: true, msg: 'Pago no encontrado — revisar manualmente' })
+  }
+
+  // Idempotencia: si ya quedó en estado final, no reprocesar.
+  if (['CONFIRMADO', 'FALLIDO', 'RECHAZADO', 'REVERSADO'].includes(pago.estado)) {
+    return NextResponse.json({ ok: true, msg: 'Pago ya procesado' })
+  }
+
   if (estado === 'APPROVED') {
-    // 1. Obtener la cuota desde la referencia
-    //    referencia = PLR-{cuotaId[:8].upper}-{timestamp}
-    //    Para mapear de vuelta, buscaremos en tabla 'pago' por referencia_externa
-    //    Si no existe un pago previo, buscamos la cuota directamente
+    // Sanity check: el monto cobrado por Wompi debe coincidir con el pre-registro.
+    const esperadoCentavos = Math.round(Number(pago.monto_pagado) * 100)
+    if (monto !== esperadoCentavos) {
+      console.warn(`[Wompi Webhook] Monto no coincide (esperado ${esperadoCentavos}, recibido ${monto}) — ref ${referencia}`)
+    }
 
-    // Buscar cuota pendiente con referencia_externa = referencia (idempotencia)
-    const { data: pagoExistente } = await supabase
+    const hoy      = new Date().toISOString().split('T')[0]
+    const tieneMora = Number(pago.monto_mora) > 0
+
+    // 1. Confirmar el pago pre-registrado
+    await supabase
       .from('pago')
-      .select('id_recibo')
-      .eq('referencia_externa', referencia)
-      .single()
+      .update({ estado: 'CONFIRMADO', fecha_pago: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id_recibo', pago.id_recibo)
 
-    if (pagoExistente) {
-      // Pago duplicado — idempotencia
-      return NextResponse.json({ ok: true, msg: 'Pago ya procesado' })
-    }
-
-    // Buscar cuota por referencia (la guardamos al iniciar el pago)
-    // Para ello buscamos en pago con estado PROCESANDO (si implementamos pre-registro)
-    // Fallback: buscar cuota en estado PENDIENTE/VENCIDA que coincida con el monto
-    // NOTA: en producción se debe pre-registrar el pago al iniciar para hacer el mapping
-
-    // Por ahora, extraemos el prefix del cuotaId desde la referencia
-    // referencia = PLR-{cuotaId[:8].upper}-{timestamp}
-    const partes  = referencia.split('-')
-    const prefijo = partes[1]?.toLowerCase() // primeros 8 chars del cuotaId en lowercase
-
-    const { data: cuota } = await supabase
-      .from('cuota')
-      .select('id_cuota, id_plan_pago, monto_total_cuota, monto_capital, monto_interes, numero_cuota')
-      .ilike('id_cuota', `${prefijo}%`)
-      .single()
-
-    if (!cuota) {
-      console.error('[Wompi Webhook] No se encontró cuota para referencia:', referencia)
-      return NextResponse.json({ ok: true, msg: 'Cuota no encontrada — revisar manualmente' })
-    }
-
-    const { data: planPago } = await supabase
-      .from('plan_pago')
-      .select('id_credito')
-      .eq('id_plan_pago', cuota.id_plan_pago)
-      .single()
-
-    // 2. Registrar el pago
-    await supabase.from('pago').insert({
-      id_cuota:           cuota.id_cuota,
-      id_credito:         planPago.id_credito,
-      monto_pagado:       monto / 100,
-      monto_capital:      cuota.monto_capital,
-      monto_interes:      cuota.monto_interes,
-      monto_mora:         0,
-      metodo_pago:        'WOMPI',
-      referencia_externa: referencia,
-      estado:             'CONFIRMADO',
-    })
-
-    // 3. Actualizar estado de la cuota
+    // 2. Actualizar estado de la cuota (PAGADA_MORA si hubo mora)
     await supabase
       .from('cuota')
       .update({
-        estado_cuota:     'PAGADA',
-        monto_pagado_real: monto / 100,
-        fecha_pago_real:  new Date().toISOString().split('T')[0],
-        updated_at:       new Date().toISOString(),
+        estado_cuota:      tieneMora ? 'PAGADA_MORA' : 'PAGADA',
+        monto_pagado_real: Number(pago.monto_pagado),
+        monto_mora_cobrada: Number(pago.monto_mora),
+        fecha_pago_real:   hoy,
+        updated_at:        new Date().toISOString(),
       })
-      .eq('id_cuota', cuota.id_cuota)
+      .eq('id_cuota', pago.id_cuota)
 
-    // 4. Actualizar saldo y cuotas_pagadas del crédito
+    // 3. Actualizar saldo y cuotas_pagadas del crédito (solo abona capital)
     const { data: creditoActual } = await supabase
       .from('credito')
       .select('saldo_pendiente, cuotas_pagadas')
-      .eq('id_credito', planPago.id_credito)
+      .eq('id_credito', pago.id_credito)
       .single()
 
+    let nuevoSaldo = creditoActual?.saldo_pendiente ?? 0
     if (creditoActual) {
-      const nuevoSaldo = Math.max(0, creditoActual.saldo_pendiente - cuota.monto_capital)
+      nuevoSaldo = Math.max(0, Number(creditoActual.saldo_pendiente) - Number(pago.monto_capital))
       await supabase
         .from('credito')
         .update({
@@ -141,46 +122,44 @@ export async function POST(request) {
           cuotas_pagadas:   creditoActual.cuotas_pagadas + 1,
           updated_at:       new Date().toISOString(),
         })
-        .eq('id_credito', planPago.id_credito)
+        .eq('id_credito', pago.id_credito)
     }
 
-    // 5. Notificar al cliente por email (fire-and-forget)
+    // 4. Notificar al cliente por email (fire-and-forget)
     try {
+      const { data: cuotaInfo } = await supabase
+        .from('cuota')
+        .select('numero_cuota')
+        .eq('id_cuota', pago.id_cuota)
+        .single()
+
       const { data: creditoCliente } = await supabase
         .from('credito')
-        .select('saldo_pendiente, cliente ( nombre_completo, email )')
-        .eq('id_credito', planPago.id_credito)
+        .select('cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email )')
+        .eq('id_credito', pago.id_credito)
         .single()
 
       if (creditoCliente?.cliente?.email) {
-        const nuevoSaldo = Math.max(0, (creditoActual?.saldo_pendiente ?? 0) - cuota.monto_capital)
         notificarPagoConfirmado({
           email:          creditoCliente.cliente.email,
-          nombre:         creditoCliente.cliente.nombre_completo,
-          numeroCuota:    cuota.numero_cuota,
-          montoPagado:    monto / 100,
+          nombre:         formatNombre(creditoCliente.cliente),
+          numeroCuota:    cuotaInfo?.numero_cuota,
+          montoPagado:    Number(pago.monto_pagado),
           saldoPendiente: nuevoSaldo,
           referencia,
         }).catch(() => null)
       }
     } catch { /* No bloquear el webhook si el email falla */ }
 
-    console.log(`[Wompi Webhook] Pago CONFIRMADO — cuota ${cuota.id_cuota}`)
+    console.log(`[Wompi Webhook] Pago CONFIRMADO — cuota ${pago.id_cuota}`)
 
   } else if (['DECLINED', 'ERROR', 'VOIDED'].includes(estado)) {
     console.log(`[Wompi Webhook] Pago ${estado} — referencia: ${referencia}`)
-    // Registrar el intento fallido para auditoría
-    await supabase.from('pago').insert({
-      id_cuota:           null, // sin cuota asignada (pago fallido)
-      id_credito:         null,
-      monto_pagado:       monto / 100,
-      monto_capital:      0,
-      monto_interes:      0,
-      monto_mora:         0,
-      metodo_pago:        'WOMPI',
-      referencia_externa: referencia,
-      estado:             'FALLIDO',
-    }).catch(() => null) // silenciamos errores de constraint
+    // Marcar el pre-registro como fallido (auditoría, sin filas con NULL).
+    await supabase
+      .from('pago')
+      .update({ estado: 'FALLIDO', updated_at: new Date().toISOString() })
+      .eq('id_recibo', pago.id_recibo)
   }
 
   return NextResponse.json({ ok: true })

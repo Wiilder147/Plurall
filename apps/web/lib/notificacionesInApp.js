@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service'
+import { formatNombre } from '@/lib/nombre'
 
 export async function crearNotificacionStaff({
   idUsuario,
@@ -69,13 +70,13 @@ export async function notificarAsesorCliente(clienteId, payload) {
   const supabase = createServiceClient()
   const { data: asig } = await supabase
     .from('asignacion_asesor')
-    .select('id_asesor, cliente(nombre_completo)')
+    .select('id_asesor, cliente(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido)')
     .eq('id_cliente', clienteId)
     .eq('activa', true)
     .maybeSingle()
   if (!asig?.id_asesor) return
 
-  const nombre = asig.cliente?.nombre_completo || 'Cliente'
+  const nombre = formatNombre(asig.cliente) || 'Cliente'
   return crearNotificacionStaff({
     idUsuario: asig.id_asesor,
     codigoTipo: payload.codigoTipo || 'MORA_ASESOR',

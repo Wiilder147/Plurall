@@ -8,6 +8,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
+import { parseNombre } from '../../lib/nombre.js'
 
 dotenv.config({ path: '.env.local' })
 
@@ -42,7 +43,7 @@ async function crearUsuario({ celular, password, nombre, dni, email }) {
     email: fakeEmail,
     password,
     email_confirm: true,
-    user_metadata: { nombre_completo: nombre, dni, telefono: celular, email_real: email },
+    user_metadata: { ...parseNombre(nombre), dni, telefono: celular, email_real: email },
   })
 
   if (error && !error.message.includes('already')) {
@@ -58,11 +59,11 @@ async function crearUsuario({ celular, password, nombre, dni, email }) {
   return existing.id
 }
 
-async function asegurarPerfil(userId, rolId, nombre) {
-  await supabase.from('perfil_usuario').upsert(
-    { id: userId, id_rol: rolId, nombre_completo: nombre, activo: true, intentos_fallidos: 0 },
-    { onConflict: 'id' }
-  )
+async function asegurarPerfil(userId, rolId, nombre = null) {
+  // Nombre en perfil solo para roles internos; clientes: canónico en tabla cliente
+  const row = { id: userId, id_rol: rolId, activo: true, intentos_fallidos: 0 }
+  if (nombre) Object.assign(row, parseNombre(nombre))
+  await supabase.from('perfil_usuario').upsert(row, { onConflict: 'id' })
 }
 
 async function asegurarCliente(userId, estadoId, datos) {
@@ -119,7 +120,7 @@ async function seed() {
   await asegurarPerfil(asesorId, rolAsesor, 'Carlos Asesor')
   // El asesor también necesita registro en cliente para que el trigger no falle
   await asegurarCliente(asesorId, estadoActivo, {
-    nombre_completo: 'Carlos Asesor',
+    ...parseNombre('Carlos Asesor'),
     dni:      '52100002',
     email:    'carlos.asesor@plurall.app',
     telefono: '3100000002',
@@ -146,9 +147,9 @@ async function seed() {
       dni:      c.dni,
       email:    `${c.celular}@plurall.app`,
     })
-    await asegurarPerfil(uid, rolCliente, c.nombre)
+    await asegurarPerfil(uid, rolCliente)
     const clienteId = await asegurarCliente(uid, estadoActivo, {
-      nombre_completo:    c.nombre,
+      ...parseNombre(c.nombre),
       dni:                c.dni,
       email:              `${c.celular}@plurall.app`,
       telefono:           c.celular,
@@ -251,9 +252,9 @@ async function seed() {
       dni:      c.dni,
       email:    `${c.celular}@plurall.app`,
     })
-    await asegurarPerfil(uid, rolCliente, c.nombre)
+    await asegurarPerfil(uid, rolCliente)
     const clienteId = await asegurarCliente(uid, estadoActivo, {
-      nombre_completo: c.nombre,
+      ...parseNombre(c.nombre),
       dni:             c.dni,
       email:           `${c.celular}@plurall.app`,
       telefono:        c.celular,
@@ -346,9 +347,9 @@ async function seed() {
       dni:      c.dni,
       email:    `${c.celular}@plurall.app`,
     })
-    await asegurarPerfil(uid, rolCliente, c.nombre)
+    await asegurarPerfil(uid, rolCliente)
     const clienteId = await asegurarCliente(uid, estadoActivo, {
-      nombre_completo: c.nombre,
+      ...parseNombre(c.nombre),
       dni:             c.dni,
       email:           `${c.celular}@plurall.app`,
       telefono:        c.celular,

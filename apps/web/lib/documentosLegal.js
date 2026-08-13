@@ -1,3 +1,4 @@
+import { formatNombre } from '@/lib/nombre'
 /**
  * Plantillas legales compartidas — contrato, plan pagos, estado cuenta, paz y salvo.
  */
@@ -110,7 +111,7 @@ export function wrapDocumentHtml({ titulo, tipoDoc, ref, creditoId, cuerpo }) {
 export function boxDeudor(titular) {
   return `<div class="box">
     <h3>Deudor</h3>
-    <div class="row"><span class="lbl">Nombre</span><span class="val">${titular.nombre_completo || '—'}</span></div>
+    <div class="row"><span class="lbl">Nombre</span><span class="val">${formatNombre(titular) || '—'}</span></div>
     <div class="row"><span class="lbl">C.C.</span><span class="val">${titular.dni || '—'}</span></div>
     <div class="row"><span class="lbl">Email</span><span class="val">${titular.email || '—'}</span></div>
   </div>`
@@ -127,7 +128,7 @@ export function boxAcreedor() {
 
 export function firmasDoc(titular) {
   return `<div class="sigs">
-    <div><div class="sig-line">Firma del Deudor<br/>${titular.nombre_completo || '—'}<br/>C.C. ${titular.dni || '—'}</div></div>
+    <div><div class="sig-line">Firma del Deudor<br/>${formatNombre(titular) || '—'}<br/>C.C. ${titular.dni || '—'}</div></div>
     <div><div class="sig-line">Representante Legal<br/>${EMPRESA.razonSocial}<br/>NIT: ${EMPRESA.nit}</div></div>
   </div>`
 }

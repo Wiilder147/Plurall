@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { ShieldCheck, Filter } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,7 +38,7 @@ export default async function SupervisorAuditoriaPage({ searchParams }) {
     .select(`
       id_auditoria, tabla_afectada, accion_realizada, id_registro_afectado,
       fecha_evento, ip_origen, valor_anterior, valor_nuevo,
-      perfil_usuario:id_usuario_responsable ( nombre_completo )
+      perfil_usuario:id_usuario_responsable ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido )
     `, { count: 'exact' })
     .order('fecha_evento', { ascending: false })
     .range((pagina - 1) * POR_PAG, pagina * POR_PAG - 1)
@@ -119,7 +120,7 @@ export default async function SupervisorAuditoriaPage({ searchParams }) {
                         {r.id_registro_afectado?.slice(0, 8).toUpperCase()}…
                       </td>
                       <td className="px-5 py-3 text-slate-400">
-                        {r.perfil_usuario?.nombre_completo ?? 'Sistema'}
+                        {formatNombre(r.perfil_usuario) || 'Sistema'}
                       </td>
                       <td className="px-5 py-3 text-slate-400 max-w-xs truncate" title={JSON.stringify(r.valor_nuevo)}>
                         {r.valor_anterior || r.valor_nuevo ? (

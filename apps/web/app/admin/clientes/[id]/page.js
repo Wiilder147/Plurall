@@ -9,6 +9,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import CambiarCelular from '@/components/CambiarCelular'
+import { formatNombre } from '@/lib/nombre'
 import {
   ArrowLeft, User, Phone, Mail, Hash, MapPin, Store,
   CreditCard, CheckCircle2, XCircle, Clock, AlertTriangle,
@@ -97,7 +98,7 @@ export default async function AdminDetalleClientePage({ params }) {
     )
   }
 
-  const nombre        = cliente.nombre_completo
+  const nombre        = formatNombre(cliente)
   const estadoCliente = cliente.estado_cliente?.nombre?.toUpperCase()
   const creditoActivo = creditos?.find(c => ['ACTIVO', 'EN_MORA'].includes(c.estado_credito))
   const totalDesemb   = creditos?.reduce((s, c) => s + (c.monto_desembolsado || 0), 0) ?? 0

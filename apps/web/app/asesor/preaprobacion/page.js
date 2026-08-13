@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { CheckCircle2, User, Phone, TrendingUp, Calendar } from 'lucide-react'
 import AccionesSolicitud from '../solicitudes/AccionesSolicitud'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,7 @@ export default async function PreaprobacionPage() {
     .select(`
       id_solicitud, monto_solicitado, plazo_meses, proposito, fecha_solicitud,
       estado_solicitud ( nombre ),
-      cliente ( nombre_completo, dni, telefono ),
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono ),
       score ( recomendacion )
     `)
     .order('fecha_solicitud', { ascending: false })
@@ -58,7 +59,7 @@ export default async function PreaprobacionPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-slate-200 text-sm">{sol.cliente?.nombre_completo}</p>
+                        <p className="font-semibold text-slate-200 text-sm">{formatNombre(sol.cliente)}</p>
                         {score?.recomendacion && (
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                             score.recomendacion === 'APROBAR' ? 'bg-emerald-500/10 text-emerald-400' :
@@ -78,7 +79,7 @@ export default async function PreaprobacionPage() {
                     </div>
                   </div>
                   <div className="shrink-0 pl-14 sm:pl-0">
-                    <AccionesSolicitud solicitudId={sol.id_solicitud} nombreCliente={sol.cliente?.nombre_completo ?? 'el cliente'} />
+                    <AccionesSolicitud solicitudId={sol.id_solicitud} nombreCliente={formatNombre(sol.cliente) || 'el cliente'} />
                   </div>
                 </div>
               </div>

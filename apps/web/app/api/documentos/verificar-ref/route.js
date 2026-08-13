@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { docRef } from '@/lib/documentosLegal'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,7 @@ export async function GET(request) {
   const supabase = createServiceClient()
   const { data: credito } = await supabase
     .from('credito')
-    .select('id_credito, estado_credito, cliente(nombre_completo, dni)')
+    .select('id_credito, estado_credito, cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni)')
     .eq('id_credito', creditoId)
     .single()
 
@@ -34,7 +35,7 @@ export async function GET(request) {
     ref,
     tipo: tipo || 'documento',
     credito: credito.id_credito,
-    titular: credito.cliente?.nombre_completo,
+    titular: formatNombre(credito.cliente),
     dni: credito.cliente?.dni,
     estado: credito.estado_credito,
     verificado_at: new Date().toISOString(),

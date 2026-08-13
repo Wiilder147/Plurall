@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { FileText, CheckCircle2, XCircle, Clock, ExternalLink } from 'lucide-react'
 import VerificarDoc from '@/components/VerificarDoc'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ export default async function DocumentosAsesorPage() {
     .from('documento_cliente')
     .select(`
       id_documento, tipo_documento, url_archivo, estado_verificacion, created_at,
-      cliente ( nombre_completo, dni )
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni )
     `)
     .eq('activo', true)
     .order('created_at', { ascending: false })
@@ -66,7 +67,7 @@ export default async function DocumentosAsesorPage() {
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-500">
-                      <span>{d.cliente?.nombre_completo ?? '—'}</span>
+                      <span>{formatNombre(d.cliente) || '—'}</span>
                       <span>CC {d.cliente?.dni ?? '—'}</span>
                       <span>{fecha}</span>
                     </div>

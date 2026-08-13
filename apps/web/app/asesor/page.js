@@ -11,6 +11,7 @@ import DashboardPanel, { PanelList, PanelRow } from '@/components/dashboard/Dash
 import QuickActions from '@/components/dashboard/QuickActions'
 import HeroMetric from '@/components/dashboard/HeroMetric'
 import ProgressRing from '@/components/dashboard/ProgressRing'
+import { formatNombre, primerNombre } from '@/lib/nombre'
 import {
   Users, AlertTriangle, CheckCircle2, PhoneCall,
   Clock, DollarSign, FileCheck, Wallet, UserPlus,
@@ -30,22 +31,22 @@ export default async function AsesorDashboard() {
     { data: promesas },
     { data: solsPendientes },
   ] = await Promise.all([
-    supabase.from('perfil_usuario').select('nombre_completo').eq('id', user.id).single(),
+    supabase.from('perfil_usuario').select('primer_nombre, segundo_nombre, primer_apellido, segundo_apellido').eq('id', user.id).single(),
     supabase.from('asignacion_asesor')
-      .select(`id_asignacion, cliente ( id_cliente, nombre_completo, dni, telefono,
+      .select(`id_asignacion, cliente ( id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono,
         credito ( id_credito, estado_credito, saldo_pendiente, cuotas_en_mora, dias_mora_maximo ) )`)
       .eq('id_asesor', user.id).eq('activa', true),
     supabase.from('gestion_cobranza').select('*', { count: 'exact', head: true })
       .eq('id_asesor', user.id).gte('fecha_gestion', `${hoy}T00:00:00`),
     supabase.from('gestion_cobranza')
-      .select('id_gestion, monto_prometido, fecha_promesa, cliente(nombre_completo, telefono)')
+      .select('id_gestion, monto_prometido, fecha_promesa, cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, telefono)')
       .eq('id_asesor', user.id).eq('resultado', 'PROMESA')
       .gte('fecha_promesa', hoy).order('fecha_promesa', { ascending: true }).limit(5),
     supabase.from('solicitud_credito')
       .select('id_solicitud, estado_solicitud!inner ( nombre )').eq('estado_solicitud.nombre', 'PENDIENTE'),
   ])
 
-  const primerNombre = perfil?.nombre_completo?.split(' ')[0] ?? 'Asesor'
+  const saludo = primerNombre(perfil) ?? 'Asesor'
   const clientes = asignaciones?.map(a => a.cliente).filter(Boolean) ?? []
   const enMora = clientes.filter(c => c.credito?.some(cr => cr.estado_credito === 'EN_MORA'))
   const alDia = clientes.filter(c =>
@@ -83,7 +84,7 @@ export default async function AsesorDashboard() {
       <DashboardHeader
         accent="teal"
         badge="Portal Asesor"
-        title={`Hola, ${primerNombre}`}
+        title={`Hola, ${saludo}`}
         subtitle="Gestión de cobranza, seguimiento de clientes y promesas de pago."
         actions={
           <QuickActions accent="teal" actions={[
@@ -140,7 +141,7 @@ export default async function AsesorDashboard() {
             {moraCritica.map((c) => (
               <PanelRow key={c.id_cliente} href={`/asesor/cobranza/${c.id_cliente}`}>
                 <div>
-                  <p className="font-semibold text-slate-200 text-sm">{c.nombre_completo}</p>
+                  <p className="font-semibold text-slate-200 text-sm">{formatNombre(c)}</p>
                   <p className="text-slate-500 text-xs">{c.telefono}</p>
                 </div>
                 <div className="text-right">
@@ -166,7 +167,7 @@ export default async function AsesorDashboard() {
             {promesas?.map((p) => (
               <PanelRow key={p.id_gestion}>
                 <div>
-                  <p className="font-semibold text-slate-200 text-sm">{p.cliente?.nombre_completo}</p>
+                  <p className="font-semibold text-slate-200 text-sm">{formatNombre(p.cliente)}</p>
                   <p className="text-slate-500 text-xs">{p.cliente?.telefono}</p>
                 </div>
                 <div className="text-right">
