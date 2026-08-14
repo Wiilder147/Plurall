@@ -1,3 +1,10 @@
+/**
+ * database.types.ts — Tipos TS de la BD Plurall.
+ * Generado desde Supabase (proyecto Plurall-Fants) el 2026-08-13,
+ * estado consolidado tras migraciones db/01..23 (nombres atomicos 1B+2A).
+ * Fuente de verdad del esquema: db/plurall_database_completa.sql
+ * Regenerar con: mcp Supabase generate_typescript_types / supabase gen types.
+ */
 export type Json =
   | string
   | number
@@ -1038,6 +1045,35 @@ export type Database = {
         }
         Relationships: []
       }
+      municipio: {
+        Row: {
+          activo: boolean
+          id_departamento: string
+          id_municipio: string
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          id_departamento: string
+          id_municipio?: string
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          id_departamento?: string
+          id_municipio?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "municipio_id_departamento_fkey"
+            columns: ["id_departamento"]
+            isOneToOne: false
+            referencedRelation: "departamento"
+            referencedColumns: ["id_departamento"]
+          },
+        ]
+      }
       notificacion: {
         Row: {
           asunto: string | null
@@ -1810,8 +1846,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      asignar_asesor_a_cliente: {
+        Args: { p_id_asesor: string; p_id_cliente: string }
+        Returns: string
+      }
       es_admin: { Args: never; Returns: boolean }
       es_analista_o_admin: { Args: never; Returns: boolean }
+      es_asesor_de_cliente: { Args: { p_id_cliente: string }; Returns: boolean }
       es_staff: { Args: never; Returns: boolean }
       es_supervisor_o_admin: { Args: never; Returns: boolean }
       fn_crear_solicitud_completa: {
@@ -1825,6 +1866,15 @@ export type Database = {
         Returns: Json
       }
       fn_detectar_mora: { Args: never; Returns: undefined }
+      fn_format_nombre: {
+        Args: {
+          p_primer_apellido?: string
+          p_primer_nombre: string
+          p_segundo_apellido?: string
+          p_segundo_nombre?: string
+        }
+        Returns: string
+      }
       fn_parse_nombre: {
         Args: { p_nombre: string }
         Returns: Record<string, unknown>
@@ -1832,6 +1882,10 @@ export type Database = {
       fn_puede_descargar_documento: {
         Args: { p_id_cliente: string; p_id_documento_legal: string }
         Returns: boolean
+      }
+      fn_verificar_disponibilidad: {
+        Args: { p_dni?: string; p_email?: string }
+        Returns: Json
       }
       fn_verificar_elegibilidad: { Args: never; Returns: Json }
       mi_id_cliente: { Args: never; Returns: string }
