@@ -116,6 +116,9 @@ async function seed() {
     const { data: existeCli } = await db.from('cliente').select('id_cliente').eq('id_usuario_cuenta', userId).single()
     let clienteId = existeCli?.id_cliente
     if (!clienteId) {
+      const idCiudad = rnd(0, 4)
+      const ciudad = ['Bogotá','Medellín','Cali','Barranquilla','Bucaramanga'][idCiudad]
+      const departamento = ['Cundinamarca','Antioquia','Valle del Cauca','Atlántico','Santander'][idCiudad]
       const { data: newCli } = await db.from('cliente').insert({
         id_usuario_cuenta: userId,
         id_estado_cliente: idEstadoCli,
@@ -123,12 +126,20 @@ async function seed() {
         dni:               c.dni,
         email:             fakeEmail,
         telefono:          c.cel,
-        score_credito:     rnd(550, 900),
-        ciudad:            ['Bogotá','Medellín','Cali','Barranquilla','Bucaramanga'][rnd(0,4)],
-        departamento:      ['Cundinamarca','Antioquia','Valle del Cauca','Atlántico','Santander'][rnd(0,4)],
-        nombre_negocio:    `Negocio ${c.nombre.split(' ')[0]}`,
       }).select('id_cliente').single()
       clienteId = newCli?.id_cliente
+      if (clienteId) {
+        // Modelo normalizado: negocio y ubicación en sus tablas (no en cliente).
+        await db.from('negocio_cliente').insert({
+          id_cliente: clienteId, nombre_negocio: `Negocio ${c.nombre.split(' ')[0]}`,
+        })
+        const { data: muni } = await db.from('municipio')
+          .select('id_municipio, departamento!inner ( nombre )')
+          .ilike('nombre', ciudad).ilike('departamento.nombre', departamento).limit(1).maybeSingle()
+        await db.from('direccion').insert({
+          id_cliente: clienteId, tipo: 'NEGOCIO', id_municipio: muni?.id_municipio ?? null,
+        })
+      }
     }
     if (!clienteId) continue
 

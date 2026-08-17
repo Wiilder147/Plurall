@@ -66,17 +66,51 @@ async function asegurarPerfil(userId, rolId, nombre = null) {
   await supabase.from('perfil_usuario').upsert(row, { onConflict: 'id' })
 }
 
+async function muniId(ciudad, departamento) {
+  if (!ciudad) return null
+  const { data } = await supabase
+    .from('municipio')
+    .select('id_municipio, departamento!inner ( nombre )')
+    .ilike('nombre', ciudad)
+    .ilike('departamento.nombre', departamento ?? '')
+    .limit(1)
+    .maybeSingle()
+  return data?.id_municipio ?? null
+}
+
 async function asegurarCliente(userId, estadoId, datos) {
+  // Modelo normalizado (post mig. 27): `cliente` NO tiene negocio/ubicación/score.
+  // Se separan aquí y se escriben en negocio_cliente / direccion. El score de
+  // seed se descarta (opción A: el score real vive en la tabla `score`).
+  const {
+    nombre_negocio, descripcion_negocio, antiguedad_negocio_meses, id_tipo_negocio,
+    score_credito, ciudad, departamento, direccion,
+    ...ident
+  } = datos
+
   const { data: existing } = await supabase
     .from('cliente').select('id_cliente').eq('id_usuario_cuenta', userId).single()
-  if (existing) return existing.id_cliente
-
-  const { data } = await supabase.from('cliente').insert({
+  const clienteId = existing?.id_cliente ?? (await supabase.from('cliente').insert({
     id_usuario_cuenta: userId,
     id_estado_cliente: estadoId,
-    ...datos,
-  }).select('id_cliente').single()
-  return data.id_cliente
+    ...ident,
+  }).select('id_cliente').single()).data.id_cliente
+
+  if (nombre_negocio) {
+    const { data: neg } = await supabase.from('negocio_cliente')
+      .select('id_negocio').eq('id_cliente', clienteId).limit(1).maybeSingle()
+    if (!neg) await supabase.from('negocio_cliente').insert({
+      id_cliente: clienteId, nombre_negocio, descripcion: descripcion_negocio ?? null,
+      antiguedad_meses: antiguedad_negocio_meses ?? null, id_tipo_negocio: id_tipo_negocio ?? null,
+    })
+  }
+  if (ciudad || direccion) {
+    await supabase.from('direccion').upsert({
+      id_cliente: clienteId, tipo: 'NEGOCIO', linea: direccion ?? null,
+      id_municipio: await muniId(ciudad, departamento),
+    }, { onConflict: 'id_cliente,tipo' })
+  }
+  return clienteId
 }
 
 // ── Función principal ─────────────────────────────────────────────────────────
@@ -359,8 +393,8 @@ async function seed() {
       departamento:    'Valle del Cauca',
     })
 
-    // Insertar detalle financiero para que el supervisor vea datos
-    await supabase.from('detalle_cliente').upsert({
+    // Insertar perfil financiero para que el supervisor vea datos (modelo normalizado)
+    await supabase.from('perfil_financiero').upsert({
       id_cliente:          clienteId,
       ingresos_mensuales:  Math.floor(Math.random() * 3000000) + 1500000,
       egresos_mensuales:   Math.floor(Math.random() * 1000000) + 500000,

@@ -25,35 +25,33 @@ export async function PATCH(request) {
 
   const body = await request.json()
 
-  // ── Whitelist de campos editables ────────────────────────────
-  const CAMPOS_PERMITIDOS = [
-    'telefono',
-    'direccion',
-    'ciudad',
-    'departamento',
-    'nombre_negocio',
-    'descripcion_negocio',
-    'antiguedad_negocio_meses',
-  ]
+  // El form sigue enviando estos nombres de campo; ahora se escriben en el
+  // modelo normalizado (no existen ya como columnas de `cliente`).
+  const norm = (v) => (v === '' || v === undefined ? null : v)
+  const telefonoIn    = body.telefono
+  const direccionIn   = norm(body.direccion)
+  const ciudadIn      = norm(body.ciudad)
+  const departamentoIn = norm(body.departamento)
+  const nombreNegocioIn = norm(body.nombre_negocio)
+  const descNegocioIn = norm(body.descripcion_negocio)
+  const antiguedadIn  = norm(body.antiguedad_negocio_meses)
 
-  const actualizacion = {}
-  for (const campo of CAMPOS_PERMITIDOS) {
-    if (body[campo] !== undefined) {
-      actualizacion[campo] = body[campo] === '' ? null : body[campo]
-    }
-  }
+  const tocaTelefono  = 'telefono' in body
+  const tocaNegocio   = ['nombre_negocio', 'descripcion_negocio', 'antiguedad_negocio_meses'].some((c) => c in body)
+  const tocaUbicacion = ['direccion', 'ciudad', 'departamento'].some((c) => c in body)
 
-  if (Object.keys(actualizacion).length === 0) {
+  if (!tocaTelefono && !tocaNegocio && !tocaUbicacion) {
     return NextResponse.json({ error: 'No hay campos válidos para actualizar' }, { status: 400 })
   }
 
-  // ── Validar teléfono si viene en el body ─────────────────────
-  if (actualizacion.telefono) {
-    const telLimpio = String(actualizacion.telefono).replace(/\D/g, '')
+  // ── Validar teléfono ─────────────────────────────────────────
+  let telefono
+  if (tocaTelefono && telefonoIn) {
+    const telLimpio = String(telefonoIn).replace(/\D/g, '')
     if (telLimpio.length !== 10) {
       return NextResponse.json({ error: 'El teléfono debe tener exactamente 10 dígitos' }, { status: 422 })
     }
-    actualizacion.telefono = telLimpio
+    telefono = telLimpio
   }
 
   // ── Obtener id_cliente del usuario ───────────────────────────
@@ -66,38 +64,29 @@ export async function PATCH(request) {
   if (cliErr || !clienteRow) {
     return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
   }
+  const idCliente = clienteRow.id_cliente
 
-  // ── Actualizar cliente ───────────────────────────────────────
-  // Dual-write (fase EXPAND de la normalización): seguimos escribiendo las
-  // columnas legacy de `cliente` Y espejamos negocio/ubicación a las tablas
-  // normalizadas (`negocio_cliente`, `direccion`). El DROP de las columnas
-  // legacy llega en la migración 26 (CONTRACT), cuando ya nadie las lea.
-  const { data: clienteActualizado, error: updateErr } = await supabase
-    .from('cliente')
-    .update({ ...actualizacion, updated_at: new Date().toISOString() })
-    .eq('id_cliente', clienteRow.id_cliente)
-    .select('telefono, direccion, ciudad, departamento, nombre_negocio, descripcion_negocio, antiguedad_negocio_meses')
-    .single()
-
-  if (updateErr) {
-    console.error('[Perfil] Error al actualizar:', updateErr)
-    return NextResponse.json({ error: 'Error al guardar los cambios' }, { status: 500 })
+  // ── Identidad: en `cliente` solo vive el teléfono (columnas de negocio/
+  //    ubicación/score fueron migradas a las tablas normalizadas, mig. 27) ──
+  if (telefono) {
+    const { error: updateErr } = await supabase
+      .from('cliente')
+      .update({ telefono, updated_at: new Date().toISOString() })
+      .eq('id_cliente', idCliente)
+    if (updateErr) {
+      console.error('[Perfil] Error al actualizar teléfono:', updateErr)
+      return NextResponse.json({ error: 'Error al guardar los cambios' }, { status: 500 })
+    }
   }
 
-  // ── Espejo a tablas normalizadas (best-effort, no rompe el guardado) ──
-  const idCliente = clienteRow.id_cliente
-  const tocaNegocio = ['nombre_negocio', 'descripcion_negocio', 'antiguedad_negocio_meses']
-    .some((c) => c in actualizacion)
-  const tocaUbicacion = ['direccion', 'ciudad', 'departamento'].some((c) => c in actualizacion)
-
   try {
+    // ── Negocio → negocio_cliente (1:N: edita el primero o lo crea) ──
     if (tocaNegocio) {
       const negocioPatch = {
-        nombre_negocio: clienteActualizado.nombre_negocio,
-        descripcion: clienteActualizado.descripcion_negocio,
-        antiguedad_meses: clienteActualizado.antiguedad_negocio_meses,
+        nombre_negocio: nombreNegocioIn,
+        descripcion: descNegocioIn,
+        antiguedad_meses: antiguedadIn ? parseInt(antiguedadIn) : null,
       }
-      // negocio_cliente es 1:N (sin UNIQUE): actualiza el negocio existente o crea el primero.
       const { data: negocioExistente } = await supabase
         .from('negocio_cliente')
         .select('id_negocio')
@@ -107,31 +96,61 @@ export async function PATCH(request) {
         .maybeSingle()
 
       if (negocioExistente) {
-        await supabase.from('negocio_cliente')
-          .update(negocioPatch)
-          .eq('id_negocio', negocioExistente.id_negocio)
+        await supabase.from('negocio_cliente').update(negocioPatch).eq('id_negocio', negocioExistente.id_negocio)
       } else if (negocioPatch.nombre_negocio) {
-        await supabase.from('negocio_cliente')
-          .insert({ id_cliente: idCliente, ...negocioPatch })
+        await supabase.from('negocio_cliente').insert({ id_cliente: idCliente, ...negocioPatch })
       }
     }
 
+    // ── Ubicación → direccion (NEGOCIO). linea = dirección; id_municipio por
+    //    lookup de ciudad+departamento contra el catálogo municipio ──
     if (tocaUbicacion) {
-      // `direccion` guarda una línea de texto libre (dirección, ciudad, departamento)
-      // + FK municipio (pendiente de mapear). Una fila NEGOCIO por cliente (UNIQUE).
-      const linea = [clienteActualizado.direccion, clienteActualizado.ciudad, clienteActualizado.departamento]
-        .map((s) => (s ? String(s).trim() : ''))
-        .filter(Boolean)
-        .join(', ') || null
+      const idMunicipio = await buscarMunicipio(supabase, ciudadIn, departamentoIn)
       await supabase.from('direccion')
-        .upsert({ id_cliente: idCliente, tipo: 'NEGOCIO', linea }, { onConflict: 'id_cliente,tipo' })
+        .upsert(
+          { id_cliente: idCliente, tipo: 'NEGOCIO', linea: direccionIn, id_municipio: idMunicipio },
+          { onConflict: 'id_cliente,tipo' }
+        )
     }
   } catch (espejoErr) {
-    // No abortar el guardado del cliente si el espejo falla; queda log para reparar.
-    console.error('[Perfil] Error al espejar a tablas normalizadas:', espejoErr)
+    console.error('[Perfil] Error al guardar negocio/ubicación:', espejoErr)
+    return NextResponse.json({ error: 'Error al guardar los cambios' }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, data: clienteActualizado })
+  return NextResponse.json({ ok: true })
+}
+
+/**
+ * Resuelve id_municipio a partir de ciudad + departamento (texto del form).
+ * Aplica los mismos alias que la migración 26 para los nombres que no calzan
+ * 1:1 con el catálogo. Devuelve null si no hay match (id_municipio queda NULL).
+ */
+async function buscarMunicipio(supabase, ciudad, departamento) {
+  if (!ciudad) return null
+  const alias = {
+    'bogotá': 'Bogotá D.C.', 'bogota': 'Bogotá D.C.',
+    'cartagena': 'Cartagena de Indias',
+  }
+  const ciudadNorm = alias[String(ciudad).trim().toLowerCase()] || String(ciudad).trim()
+
+  // Preferir match por (ciudad, departamento); si falla, por ciudad sola.
+  if (departamento) {
+    const { data } = await supabase
+      .from('municipio')
+      .select('id_municipio, departamento!inner ( nombre )')
+      .ilike('nombre', ciudadNorm)
+      .ilike('departamento.nombre', String(departamento).trim())
+      .limit(1)
+      .maybeSingle()
+    if (data?.id_municipio) return data.id_municipio
+  }
+  const { data } = await supabase
+    .from('municipio')
+    .select('id_municipio')
+    .ilike('nombre', ciudadNorm)
+    .limit(1)
+    .maybeSingle()
+  return data?.id_municipio ?? null
 }
 
 /**

@@ -129,11 +129,21 @@ async function seed() {
       const { data: newCli } = await db.from('cliente').insert({
         id_usuario_cuenta: userId, id_estado_cliente: idEstadoCli,
         ...parseNombre(c.nombre), dni: c.dni, email: fakeEmail, telefono: c.cel,
-        score_credito: rnd(520, 920),
-        ciudad: ciudades[idx], departamento: deptos[idx],
-        nombre_negocio: `${negocios[rnd(0,7)]} ${c.nombre.split(' ')[0]}`,
       }).select('id_cliente').single()
       clienteId = newCli?.id_cliente
+      if (clienteId) {
+        // Modelo normalizado: negocio y ubicación en sus tablas (no en cliente).
+        await db.from('negocio_cliente').insert({
+          id_cliente: clienteId, nombre_negocio: `${negocios[rnd(0,7)]} ${c.nombre.split(' ')[0]}`,
+        })
+        const ciudadNom = ciudades[idx] === 'Cartagena' ? 'Cartagena de Indias' : ciudades[idx]
+        const { data: muni } = await db.from('municipio')
+          .select('id_municipio, departamento!inner ( nombre )')
+          .ilike('nombre', ciudadNom).ilike('departamento.nombre', deptos[idx]).limit(1).maybeSingle()
+        await db.from('direccion').insert({
+          id_cliente: clienteId, tipo: 'NEGOCIO', id_municipio: muni?.id_municipio ?? null,
+        })
+      }
     }
     if (!clienteId) continue
 
