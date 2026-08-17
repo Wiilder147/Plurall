@@ -28,6 +28,16 @@ export async function PATCH(request, { params }) {
   const { id } = await params
   const { respuesta, estado } = await request.json()
 
+  // Trazabilidad: una PQR CERRADA es inmutable (respaldado por trigger en BD).
+  const { data: actual } = await supabase
+    .from('pqr').select('estado').eq('id_pqr', id).single()
+  if (actual?.estado === 'CERRADO') {
+    return NextResponse.json(
+      { error: 'Esta PQR está cerrada. Su respuesta no puede modificarse (trazabilidad de auditoría).' },
+      { status: 409 }
+    )
+  }
+
   const patch = { updated_at: new Date().toISOString() }
   if (typeof respuesta === 'string' && respuesta.trim()) {
     patch.respuesta = respuesta.trim()
