@@ -15,7 +15,8 @@ export default async function AsesorPagosPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Pagos en efectivo registrados por este asesor
+  // Pagos atribuidos a este asesor: en efectivo (registrados por él) y por
+  // Wompi (de sus clientes asignados, atribuidos por el webhook al confirmar).
   const { data: pagos } = await supabase
     .from('pago')
     .select(`
@@ -24,7 +25,8 @@ export default async function AsesorPagosPage() {
       credito ( id_credito, cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono ) )
     `)
     .eq('id_usuario_receptor', user.id)
-    .eq('metodo_pago', 'EFECTIVO')
+    .in('metodo_pago', ['EFECTIVO', 'WOMPI'])
+    .eq('estado', 'CONFIRMADO')
     .order('fecha_pago', { ascending: false })
 
   // Totales
@@ -44,8 +46,8 @@ export default async function AsesorPagosPage() {
   return (
     <div className="flex flex-col gap-8 pb-10">
       <header>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Pagos en Efectivo</h1>
-        <p className="text-slate-400 mt-1">Registro de pagos recibidos en efectivo por tu gestión.</p>
+        <h1 className="text-3xl font-bold text-white tracking-tight">Recaudo</h1>
+        <p className="text-slate-400 mt-1">Pagos recibidos por tu gestión: en efectivo y por Wompi (clientes asignados).</p>
       </header>
 
       {/* KPIs */}
@@ -107,6 +109,7 @@ export default async function AsesorPagosPage() {
                   <th className="px-5 py-3 text-right">Monto</th>
                   <th className="px-5 py-3 text-right">Capital</th>
                   <th className="px-5 py-3 text-right">Interés</th>
+                  <th className="px-5 py-3 text-center">Método</th>
                   <th className="px-5 py-3 text-left">Referencia</th>
                   <th className="px-5 py-3 text-left">Fecha</th>
                 </tr>
@@ -121,6 +124,11 @@ export default async function AsesorPagosPage() {
                     <td className="px-5 py-3 text-right font-semibold text-emerald-400">{formatCOP(p.monto_pagado)}</td>
                     <td className="px-5 py-3 text-right text-slate-300">{formatCOP(p.monto_capital)}</td>
                     <td className="px-5 py-3 text-right text-slate-400">{formatCOP(p.monto_interes)}</td>
+                    <td className="px-5 py-3 text-center">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        p.metodo_pago === 'WOMPI' ? 'bg-violet-500/15 text-violet-300' : 'bg-teal-500/15 text-teal-300'
+                      }`}>{p.metodo_pago === 'WOMPI' ? 'Wompi' : 'Efectivo'}</span>
+                    </td>
                     <td className="px-5 py-3 text-slate-500 font-mono text-xs">{p.referencia_externa}</td>
                     <td className="px-5 py-3 text-slate-400 text-xs">
                       {new Date(p.fecha_pago).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}

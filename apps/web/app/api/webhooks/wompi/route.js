@@ -45,6 +45,21 @@ function nuevoEstadoCredito(saldo, cuotasEnMora, estadoActual) {
   return estadoActual
 }
 
+// ── Asesor activo asignado al crédito (para atribuir el recaudo Wompi) ──────
+// Así el pago por Wompi también "cuenta" en las métricas del asesor/cobranza.
+async function asesorDeCredito(db, idCredito) {
+  const { data: cr } = await db
+    .from('credito').select('id_cliente').eq('id_credito', idCredito).maybeSingle()
+  if (!cr?.id_cliente) return null
+  const { data: asig } = await db
+    .from('asignacion_asesor')
+    .select('id_asesor')
+    .eq('id_cliente', cr.id_cliente)
+    .eq('activa', true)
+    .maybeSingle()
+  return asig?.id_asesor ?? null
+}
+
 // ── Confirmación de un pago que cubre VARIAS cuotas (pago adelantado) ────────
 // El pre-registro (api/pagos/iniciar) guardó el detalle en pago.cuotas_cubiertas.
 // Marca cada cuota como PAGADA/PAGADA_MORA, baja el saldo del crédito por la
@@ -58,10 +73,19 @@ async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
   const sumaCapital  = cubiertas.reduce((s, c) => s + Number(c.monto_capital), 0)
   const enMora       = cubiertas.filter((c) => Number(c.monto_mora) > 0 || c.estado_previo === 'VENCIDA').length
 
-  // 1. Confirmar el pago (los montos agregados ya venían del pre-registro)
+  // 1. Confirmar el pago (los montos agregados ya venían del pre-registro).
+  //    Se atribuye al asesor asignado para que el recaudo Wompi cuente en su
+  //    gestión (igual que un pago manual en efectivo).
+  const idAsesor = await asesorDeCredito(db, pago.id_credito)
   await db
     .from('pago')
-    .update({ estado: 'CONFIRMADO', monto_pagado: montoPagado, fecha_pago: ahora, updated_at: ahora })
+    .update({
+      estado: 'CONFIRMADO',
+      monto_pagado: montoPagado,
+      fecha_pago: ahora,
+      updated_at: ahora,
+      ...(idAsesor ? { id_usuario_receptor: idAsesor } : {}),
+    })
     .eq('id_recibo', pago.id_recibo)
 
   // 2. Marcar cada cuota cubierta como pagada (con o sin mora)
@@ -254,6 +278,9 @@ export async function POST(request) {
     const montoPagado = monto / 100
     const tieneMora   = Number(pago?.monto_mora ?? cuota.monto_mora_cobrada ?? 0) > 0
 
+    // Atribuir el recaudo al asesor asignado (para que cuente en su gestión).
+    const idAsesor = await asesorDeCredito(db, idCredito)
+
     // 1. Confirmar el pago (upsert: existe por pre-registro o se inserta)
     if (pago) {
       await db
@@ -266,6 +293,7 @@ export async function POST(request) {
           monto_mora:    Number(pago.monto_mora ?? 0),
           fecha_pago:    new Date().toISOString(),
           updated_at:    new Date().toISOString(),
+          ...(idAsesor ? { id_usuario_receptor: idAsesor } : {}),
         })
         .eq('id_recibo', pago.id_recibo)
     } else {
@@ -279,6 +307,7 @@ export async function POST(request) {
         metodo_pago:        'WOMPI',
         referencia_externa: referencia,
         estado:             'CONFIRMADO',
+        ...(idAsesor ? { id_usuario_receptor: idAsesor } : {}),
       })
     }
 
