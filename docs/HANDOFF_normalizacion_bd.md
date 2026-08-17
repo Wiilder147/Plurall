@@ -14,7 +14,7 @@
 | **FASE 1 — Resincronizar schema maestro + types** | ✅ COMPLETADA (commit `3f5abed`) |
 | **FASE 2 — Migración 24 (crear tablas nuevas)** | ✅ COMPLETADA (aplicada en Supabase 2026-08-17) |
 | **FASE 3 — Migración 25 (backfill + verificación)** | ✅ COMPLETADA (aplicada en Supabase 2026-08-17) |
-| FASE 4 — Recablear backend | ⏳ SIGUIENTE |
+| FASE 4 — Recablear backend | 🔵 EN CURSO (write dual-write hecho; faltan reads) |
 | FASE 5 — Recablear frontend | ⬜ pendiente |
 | FASE 6 — Migración 26 (CONTRACT / DROP) | ⬜ pendiente |
 | FASE 7 — Pruebas + build + docs | ⬜ pendiente |
@@ -26,6 +26,15 @@
 
 - ✅ Migración **`db/25`** aplicada en Supabase (2026-08-17, vía MCP). Backfill MIGRATE (no toca columnas origen). Verificado: **direccion 69**, **negocio_cliente 69** (==69 origen con nombre_negocio), **perfil_financiero 3** (==3 detalle_cliente), **cuenta_bancaria 0**; **0 huérfanos**, **0 negocios duplicados**. Fusión de duplicados escrita (dependientes→personas_cargo, ahorros→patrimonio_estimado) aunque hoy son 0 en toda la data.
   - **Decisión implícita a validar:** las 69 direcciones salieron del `cliente.ciudad`/`departamento` legacy (ej. "Barranquilla, Atlántico") y se etiquetaron **`tipo='NEGOCIO'`** (no hay ningún dato de CASA ni de dirección detallada). Si se prefiere `CASA` o un tipo neutro, ajustar en 25 antes del CONTRACT.
+
+### FASE 4 — progreso (2026-08-17)
+- ✅ **Write dual-write** en `/api/perfil` (commit `ec183ac`): al editar perfil sigue escribiendo columnas legacy de `cliente` Y espeja a `negocio_cliente` + `direccion` (NEGOCIO). Best-effort (no aborta el guardado si el espejo falla).
+- ✅ Build verde (`npm run build` EXIT=0). Se corrigió de paso un blocker preexistente ajeno a la normalización: mezcla `||`/`??` sin paréntesis en `{asesor,supervisor}/notificaciones/page.js` (commit `791523c`).
+- ⏳ **Faltan reads**: mover lecturas de negocio/finanzas/ubicación a las tablas nuevas y `score_credito` → `vw_cliente_score`. Sitios: `api/supervisor/buscar`, `api/reportes/export`, `app/{admin,supervisor}/clientes*`, `app/dashboard/perfil`, `app/asesor/*`.
+
+> ⚠️ **DECISIÓN PENDIENTE DEL USUARIO (score)** — Bloquea el swap de lecturas de score y el DROP de `cliente.score_credito` (FASE 6):
+> `cliente.score_credito` tiene **69 valores no-cero de SEED** pero **nunca lo escribe ningún código/función** (solo `DEFAULT 0`). El score real vive en la tabla `score` vía solicitud: **solo 7 clientes** tienen score real (`vw_cliente_score` = 7 filas). Es decir, la columna denormalizada es ruido de seed que no corresponde a scores reales.
+> **Opciones:** (A) usar `vw_cliente_score` como fuente única (los 62 clientes con score de seed pasarían a "sin score" — es lo correcto según el modelo); (B) backfillear `score_credito`→un `score` sintético antes de dropear (conserva los valores de seed); (C) dejar `score_credito` por ahora. Recomendado **A** (dev/seed, el score real son los 7). Confirmar en el checkpoint previo a FASE 6.
 
 ### FASE 4 — pasos concretos para retomar (recablear backend)
 Objetivo: que registro/lectura usen las tablas nuevas en vez de las columnas sobrecargadas de `cliente`/`detalle_cliente`, SIN romper el núcleo financiero ni la normalización de nombres. Orden: código primero, luego (ya en FASE 6) el DROP.
