@@ -24,7 +24,6 @@ export default async function AdminClientesPage({ searchParams }) {
       dni,
       telefono,
       email,
-      score_credito,
       created_at,
       estado_cliente ( nombre ),
       solicitud_credito ( count ),
@@ -42,6 +41,18 @@ export default async function AdminClientesPage({ searchParams }) {
   }
 
   const { data: clientes } = await query
+
+  // Score real desde la vista `vw_cliente_score` (fuente única; opción A de la
+  // normalización). Se conserva el campo `score_credito` en cada fila por
+  // compatibilidad con el render, pero su origen ya no es la columna legacy.
+  if (clientes?.length) {
+    const { data: scores } = await supabase
+      .from('vw_cliente_score')
+      .select('id_cliente, puntaje_total')
+      .in('id_cliente', clientes.map(c => c.id_cliente))
+    const scoreDe = Object.fromEntries((scores ?? []).map(s => [s.id_cliente, s.puntaje_total]))
+    clientes.forEach(c => { c.score_credito = scoreDe[c.id_cliente] ?? null })
+  }
 
   return (
     <div className="flex flex-col gap-6 pb-10">

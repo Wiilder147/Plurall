@@ -17,7 +17,7 @@ import {
  * Formulario de edición de perfil del cliente.
  * Se monta dentro del Server Component de perfil como isla interactiva.
  */
-export default function EditarPerfilForm({ cliente }) {
+export default function EditarPerfilForm({ cliente, negocio, direccion }) {
   const [abierto,    setAbierto]    = useState(false)
   const [guardando,  setGuardando]  = useState(false)
   const [exito,      setExito]      = useState(false)
@@ -33,14 +33,17 @@ export default function EditarPerfilForm({ cliente }) {
     )
   }
 
+  // Valores iniciales desde el modelo normalizado (negocio_cliente, direccion→
+  // municipio). Los nombres de campo del form siguen siendo el contrato de
+  // /api/perfil, que hace dual-write a cliente y espeja a las tablas nuevas.
   const [form, setForm] = useState({
-    telefono:                  cliente?.telefono                  ?? '',
-    direccion:                 cliente?.direccion                 ?? '',
-    ciudad:                    cliente?.ciudad                    ?? '',
-    departamento:              cliente?.departamento              ?? '',
-    nombre_negocio:            cliente?.nombre_negocio            ?? '',
-    descripcion_negocio:       cliente?.descripcion_negocio       ?? '',
-    antiguedad_negocio_meses:  cliente?.antiguedad_negocio_meses  ?? '',
+    telefono:                  cliente?.telefono                        ?? '',
+    direccion:                 direccion?.linea                         ?? '',
+    ciudad:                    direccion?.municipio?.nombre             ?? '',
+    departamento:              direccion?.municipio?.departamento?.nombre ?? '',
+    nombre_negocio:            negocio?.nombre_negocio                  ?? '',
+    descripcion_negocio:       negocio?.descripcion                     ?? '',
+    antiguedad_negocio_meses:  negocio?.antiguedad_meses                ?? '',
   })
 
   function handleChange(e) {

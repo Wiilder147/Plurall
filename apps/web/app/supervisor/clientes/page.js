@@ -23,7 +23,7 @@ export default async function SupervisorClientesPage({ searchParams }) {
 
   const SELECT_CLIENTE = `
     id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email,
-    score_credito, created_at,
+    created_at,
     estado_cliente ( nombre ),
     credito ( id_credito, estado_credito, saldo_pendiente, dias_mora_maximo )
   `
@@ -61,6 +61,17 @@ export default async function SupervisorClientesPage({ searchParams }) {
       .select(SELECT_CLIENTE)
       .order('created_at', { ascending: false })
     todos = data ?? []
+  }
+
+  // Score real desde `vw_cliente_score` (opción A). Se conserva el campo
+  // `score_credito` en cada fila por compatibilidad con el render.
+  if (todos.length) {
+    const { data: scores } = await db
+      .from('vw_cliente_score')
+      .select('id_cliente, puntaje_total')
+      .in('id_cliente', todos.map(c => c.id_cliente))
+    const scoreDe = Object.fromEntries((scores ?? []).map(s => [s.id_cliente, s.puntaje_total]))
+    todos.forEach(c => { c.score_credito = scoreDe[c.id_cliente] ?? null })
   }
 
   const clientes = filtro === 'TODOS' ? todos ?? []

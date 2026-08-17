@@ -31,8 +31,25 @@ export default async function DashboardPerfil() {
   const { data: cliente } = await supabase
     .from('cliente').select('*').eq('id_usuario_cuenta', user.id).single()
 
-  const { data: detalle } = await supabase
-    .from('detalle_cliente').select('*').eq('id_cliente', cliente?.id_cliente).single()
+  // Datos desde el modelo normalizado (reemplazan columnas legacy de `cliente`
+  // y la tabla `detalle_cliente`): negocio, ubicación, finanzas, cuenta y score.
+  const idCli = cliente?.id_cliente
+  const [{ data: negocio }, { data: dir }, { data: detalle }, { data: cuenta }, { data: scoreRow }] = idCli
+    ? await Promise.all([
+        supabase.from('negocio_cliente')
+          .select('nombre_negocio, descripcion, antiguedad_meses, tipo_negocio ( nombre )')
+          .eq('id_cliente', idCli).order('created_at', { ascending: true }).limit(1).maybeSingle(),
+        supabase.from('direccion')
+          .select('linea, tipo, municipio ( nombre, departamento ( nombre ) )')
+          .eq('id_cliente', idCli).eq('tipo', 'NEGOCIO').maybeSingle(),
+        supabase.from('perfil_financiero').select('*').eq('id_cliente', idCli).maybeSingle(),
+        supabase.from('cuenta_bancaria')
+          .select('tipo_cuenta, banco ( nombre )')
+          .eq('id_cliente', idCli).order('created_at', { ascending: true }).limit(1).maybeSingle(),
+        supabase.from('vw_cliente_score').select('puntaje_total').eq('id_cliente', idCli).maybeSingle(),
+      ])
+    : [{ data: null }, { data: null }, { data: null }, { data: null }, { data: null }]
+  const score = scoreRow?.puntaje_total ?? 0
 
   let totalCreditos = 0, creditosActivos = 0, creditosPagados = 0, totalDesembolsado = 0
 
@@ -111,9 +128,9 @@ export default async function DashboardPerfil() {
               {/* BADGE "Score" (solo si score > 0)
                   COLOR FONDO: bg-blue-500/20 (azul 20% opacidad)
                   COLOR TEXTO: text-blue-300 (azul claro) */}
-              {cliente?.score_credito > 0 && (
+              {score > 0 && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-300">
-                  <Shield className="w-3.5 h-3.5" /> Score: {cliente.score_credito}/1000
+                  <Shield className="w-3.5 h-3.5" /> Score: {score}/1000
                 </span>
               )}
             </div>
@@ -168,10 +185,10 @@ export default async function DashboardPerfil() {
             <InfoField icon={Hash} label="Número de Documento (CC)" value={cliente?.dni} />
             <InfoField icon={Phone} label="Número de Celular" value={cliente?.telefono} />
             <InfoField icon={Mail} label="Correo Electrónico" value={email_real || user.email} />
-            <InfoField icon={MapPin} label="Dirección" value={cliente?.direccion} />
+            <InfoField icon={MapPin} label="Dirección" value={dir?.linea} />
             <div className="grid grid-cols-2 gap-4">
-              <InfoField icon={Building2} label="Ciudad" value={cliente?.ciudad} />
-              <InfoField icon={MapPin} label="Departamento" value={cliente?.departamento} />
+              <InfoField icon={Building2} label="Ciudad" value={dir?.municipio?.nombre} />
+              <InfoField icon={MapPin} label="Departamento" value={dir?.municipio?.departamento?.nombre} />
             </div>
           </div>
         </section>
@@ -182,13 +199,13 @@ export default async function DashboardPerfil() {
             <Store className="w-4 h-4 text-orange-500" /> Información del Negocio
           </h3>
           <div className="space-y-4">
-            <InfoField icon={Store} label="Nombre del Negocio" value={cliente?.nombre_negocio} />
-            <InfoField icon={BarChart3} label="Descripción del Negocio" value={cliente?.descripcion_negocio} />
+            <InfoField icon={Store} label="Nombre del Negocio" value={negocio?.nombre_negocio} />
+            <InfoField icon={BarChart3} label="Descripción del Negocio" value={negocio?.descripcion} />
             <InfoField
               icon={Calendar}
               label="Antigüedad del Negocio"
-              value={cliente?.antiguedad_negocio_meses
-                ? `${Math.floor(cliente.antiguedad_negocio_meses / 12)} años y ${cliente.antiguedad_negocio_meses % 12} meses`
+              value={negocio?.antiguedad_meses
+                ? `${Math.floor(negocio.antiguedad_meses / 12)} años y ${negocio.antiguedad_meses % 12} meses`
                 : null
               }
             />
@@ -208,8 +225,8 @@ export default async function DashboardPerfil() {
             <InfoField icon={AlertCircle} label="Egresos Mensuales" value={detalle.egresos_mensuales ? formatCOP(detalle.egresos_mensuales) : null} />
             <InfoField icon={Award} label="Patrimonio Estimado" value={detalle.patrimonio_estimado ? formatCOP(detalle.patrimonio_estimado) : null} />
             <InfoField icon={CreditCard} label="Otras Obligaciones" value={detalle.otras_obligaciones ? formatCOP(detalle.otras_obligaciones) : null} />
-            <InfoField icon={Landmark} label="Banco Preferido" value={detalle.banco_preferido} />
-            <InfoField icon={CreditCard} label="Tipo de Cuenta" value={detalle.tipo_cuenta_bancaria} />
+            <InfoField icon={Landmark} label="Banco Preferido" value={cuenta?.banco?.nombre} />
+            <InfoField icon={CreditCard} label="Tipo de Cuenta" value={cuenta?.tipo_cuenta} />
           </div>
         </section>
       )}
@@ -245,7 +262,7 @@ export default async function DashboardPerfil() {
       {/* ── FORMULARIO DE EDICIÓN DE PERFIL ──
           Componente cliente: components/EditarPerfilForm.js
           Para cambiar los estilos del formulario de edición: edita ese archivo */}
-      <EditarPerfilForm cliente={cliente} />
+      <EditarPerfilForm cliente={cliente} negocio={negocio} direccion={dir} />
 
       {/* ── ZONA DE PELIGRO (D del CRUD — Delete) ──
           COLOR FONDO: bg-white, BORDE: border border-red-200 (rojo claro)

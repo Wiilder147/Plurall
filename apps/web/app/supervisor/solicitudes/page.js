@@ -50,7 +50,7 @@ export default function SupervisorSolicitudesPage() {
       .select(`
         id_solicitud, monto_solicitado, plazo_meses, fecha_solicitud, proposito,
         estado_solicitud ( nombre ),
-        cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, score_credito ),
+        cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono ),
         score ( puntaje_total, porcentaje, recomendacion )
       `)
       .order('fecha_solicitud', { ascending: false })

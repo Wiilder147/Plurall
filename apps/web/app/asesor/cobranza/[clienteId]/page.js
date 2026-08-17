@@ -36,6 +36,8 @@ export default async function AsesorFichaClientePage({ params }) {
   // Datos completos del cliente
   const [
     { data: cliente },
+    { data: negocio },
+    { data: dir },
     { data: credito },
     { data: gestiones },
   ] = await Promise.all([
@@ -44,6 +46,20 @@ export default async function AsesorFichaClientePage({ params }) {
       .select('*, estado_cliente ( nombre )')
       .eq('id_cliente', clienteId)
       .single(),
+    // Negocio y ubicación desde el modelo normalizado.
+    supabase
+      .from('negocio_cliente')
+      .select('nombre_negocio')
+      .eq('id_cliente', clienteId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('direccion')
+      .select('municipio ( nombre )')
+      .eq('id_cliente', clienteId)
+      .eq('tipo', 'NEGOCIO')
+      .maybeSingle(),
     supabase
       .from('credito')
       .select(`
@@ -129,16 +145,16 @@ export default async function AsesorFichaClientePage({ params }) {
               <p className="text-slate-500 text-xs">Email</p>
               <p className="text-slate-300">{cliente.email || '—'}</p>
             </div>
-            {cliente.ciudad && (
+            {dir?.municipio?.nombre && (
               <div>
                 <p className="text-slate-500 text-xs">Ciudad</p>
-                <p className="text-slate-300">{cliente.ciudad}</p>
+                <p className="text-slate-300">{dir.municipio.nombre}</p>
               </div>
             )}
-            {cliente.nombre_negocio && (
+            {negocio?.nombre_negocio && (
               <div className="bg-slate-700/50 rounded-lg p-3 mt-1">
                 <p className="text-teal-400 text-xs font-medium">Negocio</p>
-                <p className="text-slate-300 text-sm">{cliente.nombre_negocio}</p>
+                <p className="text-slate-300 text-sm">{negocio.nombre_negocio}</p>
               </div>
             )}
           </div>

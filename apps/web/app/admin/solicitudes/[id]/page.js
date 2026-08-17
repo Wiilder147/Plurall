@@ -68,10 +68,11 @@ export default function AdminDetalleSolicitudPage() {
           estado_solicitud ( nombre ),
           cliente (
             id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, email, telefono,
-            nombre_negocio, descripcion_negocio, score_credito,
-            detalle_cliente ( ingresos_mensuales, egresos_mensuales, otras_obligaciones ),
+            negocio_cliente ( nombre_negocio, descripcion, antiguedad_meses ),
+            perfil_financiero ( ingresos_mensuales, egresos_mensuales, otras_obligaciones ),
             documento_cliente ( tipo_documento, estado_verificacion )
           ),
+          score ( puntaje_total ),
           decision_solicitud ( resultado, monto_aprobado, plazo_aprobado, tasa_interes_aprobada, comentarios_cliente, comentarios_tecnicos, fecha_decision )
         `)
         .eq('id_solicitud', id)
@@ -157,7 +158,9 @@ export default function AdminDetalleSolicitudPage() {
   const estadoNombre = sol.estado_solicitud?.nombre?.toUpperCase() || 'PENDIENTE'
   const decision     = sol.decision_solicitud?.[0]
   const cliente      = sol.cliente
-  const detalle      = cliente?.detalle_cliente?.[0]
+  const detalle      = cliente?.perfil_financiero?.[0]
+  const negocio      = cliente?.negocio_cliente?.[0]
+  const scoreCliente = sol.score?.[0]?.puntaje_total ?? 0
   const docs         = cliente?.documento_cliente || []
   const docsAprobados = docs.filter((d) => d.estado_verificacion === 'APROBADO').length
   const esPendiente   = ['PENDIENTE', 'EN_ESTUDIO'].includes(estadoNombre)
@@ -202,11 +205,11 @@ export default function AdminDetalleSolicitudPage() {
             <p className="text-slate-400">CC: {cliente?.dni}</p>
             <p className="text-slate-400">{cliente?.telefono}</p>
             <p className="text-slate-400 text-xs">{cliente?.email}</p>
-            {cliente?.nombre_negocio && (
+            {negocio?.nombre_negocio && (
               <div className="mt-2 bg-slate-700/50 rounded-lg p-3">
                 <p className="text-orange-400 font-medium text-xs">Negocio</p>
-                <p className="text-slate-300 text-sm">{cliente.nombre_negocio}</p>
-                {cliente.descripcion_negocio && <p className="text-slate-500 text-xs mt-1">{cliente.descripcion_negocio}</p>}
+                <p className="text-slate-300 text-sm">{negocio.nombre_negocio}</p>
+                {negocio.descripcion && <p className="text-slate-500 text-xs mt-1">{negocio.descripcion}</p>}
               </div>
             )}
             {detalle && (
@@ -279,10 +282,10 @@ export default function AdminDetalleSolicitudPage() {
             <BarChart3 className="w-4 h-4 text-orange-400" /> Score crediticio
           </h2>
           <div className="bg-slate-700/50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-extrabold text-white">{cliente?.score_credito || 0}</p>
+            <p className="text-2xl font-extrabold text-white">{scoreCliente || 0}</p>
             <p className="text-slate-500 text-xs">Puntaje interno</p>
             <div className="w-full bg-slate-600 rounded-full h-1.5 mt-2">
-              <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, (cliente?.score_credito || 0) / 10)}%` }} />
+              <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, (scoreCliente || 0) / 10)}%` }} />
             </div>
           </div>
         </div>

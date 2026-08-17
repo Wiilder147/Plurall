@@ -23,7 +23,7 @@ export default async function AsesorClientesPage({ searchParams }) {
     .select(`
       id_asignacion,
       cliente (
-        id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email, score_credito,
+        id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email,
         credito ( id_credito, estado_credito, saldo_pendiente, cuotas_en_mora, dias_mora_maximo, cuota_fija, numero_cuotas, cuotas_pagadas )
       )
     `)
