@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { Users, Search, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { orBusquedaNombre, formatNombre } from '@/lib/nombre'
+import { emailVisible } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -142,8 +143,8 @@ export default async function SupervisorClientesPage({ searchParams }) {
                     <tr key={cli.id_cliente} className="hover:bg-slate-700/20 transition-colors">
                       <td className="px-5 py-4">
                         <p className="font-semibold text-slate-200">{formatNombre(cli)}</p>
-                        {cli.email && !cli.email.endsWith('@plurall.app') && (
-                          <p className="text-slate-500 text-xs">{cli.email}</p>
+                        {emailVisible(cli.email) && (
+                          <p className="text-slate-500 text-xs">{emailVisible(cli.email)}</p>
                         )}
                       </td>
                       <td className="px-5 py-4 text-slate-400 font-mono text-xs">{cli.dni}</td>

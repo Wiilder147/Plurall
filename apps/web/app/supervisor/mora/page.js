@@ -9,6 +9,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { formatCOP } from '@/lib/calculadora'
 import { AlertTriangle, Phone, DollarSign, Calendar } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
+import { esEmailSintetico } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,7 +45,7 @@ export default async function SupervisorMoraPage() {
     results.forEach(({ data }) => {
       if (!data?.user) return
       const emailReal = data.user.user_metadata?.email_real
-      if (emailReal && !emailReal.endsWith('@plurall.app')) {
+      if (!esEmailSintetico(emailReal)) {
         emailRealMap[data.user.id] = emailReal
       }
     })

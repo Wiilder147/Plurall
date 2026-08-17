@@ -13,6 +13,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { formatNombre } from '@/lib/nombre'
+import { emailVisible } from '@/lib/email'
 import { resolverPago } from '@/lib/pagos'
 
 // ── Rate limiting con Upstash Redis ─────────────────────────────────────────
@@ -168,8 +169,8 @@ export async function POST(request) {
     montoMora,
     montoACobrar,
     cuotasCubiertas,
-    // Datos del pagador (pre-fill)
-    email:    user.email,
+    // Datos del pagador (pre-fill). Solo el correo REAL; nunca el sintético.
+    email:    emailVisible(cliente.email) || '',
     nombre:   formatNombre(cliente),
     telefono: cliente.telefono,
     dni:      cliente.dni,

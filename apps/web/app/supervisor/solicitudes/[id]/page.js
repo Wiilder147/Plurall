@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { calcularAmortizacion, formatCOP } from '@/lib/calculadora'
+import { emailVisible } from '@/lib/email'
 import {
   ArrowLeft, CheckCircle2, XCircle, Loader2, AlertCircle,
   User, DollarSign, FileText, BarChart3, ChevronDown, ChevronUp,
@@ -205,7 +206,7 @@ export default function SupervisorDetalleSolicitudPage() {
             <p className="text-white font-bold text-base">{formatNombre(cliente)}</p>
             <p className="text-slate-400">CC: {cliente?.dni}</p>
             <p className="text-slate-400">{cliente?.telefono}</p>
-            <p className="text-slate-400 text-xs">{cliente?.email}</p>
+            {emailVisible(cliente?.email) && <p className="text-slate-400 text-xs">{emailVisible(cliente?.email)}</p>}
             {dir?.municipio?.nombre && <p className="text-slate-400 text-xs">{dir.municipio.nombre}</p>}
             {negocio?.nombre_negocio && (
               <div className="mt-1 bg-slate-700/50 rounded-lg p-3">

@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { calcularAmortizacion, formatCOP } from '@/lib/calculadora'
+import { emailVisible } from '@/lib/email'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -204,7 +205,7 @@ export default function AdminDetalleSolicitudPage() {
             <p className="text-white font-bold text-lg">{formatNombre(cliente)}</p>
             <p className="text-slate-400">CC: {cliente?.dni}</p>
             <p className="text-slate-400">{cliente?.telefono}</p>
-            <p className="text-slate-400 text-xs">{cliente?.email}</p>
+            {emailVisible(cliente?.email) && <p className="text-slate-400 text-xs">{emailVisible(cliente?.email)}</p>}
             {negocio?.nombre_negocio && (
               <div className="mt-2 bg-slate-700/50 rounded-lg p-3">
                 <p className="text-orange-400 font-medium text-xs">Negocio</p>

@@ -12,6 +12,7 @@ import { formatCOP } from '@/lib/calculadora'
 import EditarPerfilForm from '@/components/EditarPerfilForm'
 import EliminarCuentaBtn from '@/components/EliminarCuentaBtn'
 import { formatNombre } from '@/lib/nombre'
+import { emailVisible } from '@/lib/email'
 import {
   User, Phone, Mail, Hash, CheckCircle2, MapPin, Building2, Store,
   Calendar, Shield, CreditCard, TrendingUp, Wallet, Landmark, Users,
@@ -184,7 +185,7 @@ export default async function DashboardPerfil() {
           <div className="space-y-4">
             <InfoField icon={Hash} label="Número de Documento (CC)" value={cliente?.dni} />
             <InfoField icon={Phone} label="Número de Celular" value={cliente?.telefono} />
-            <InfoField icon={Mail} label="Correo Electrónico" value={email_real || user.email} />
+            <InfoField icon={Mail} label="Correo Electrónico" value={emailVisible(email_real || cliente?.email)} />
             <InfoField icon={MapPin} label="Dirección" value={dir?.linea} />
             <div className="grid grid-cols-2 gap-4">
               <InfoField icon={Building2} label="Ciudad" value={dir?.municipio?.nombre} />
@@ -252,8 +253,10 @@ export default async function DashboardPerfil() {
         <h3 className="font-bold text-slate-900 mb-5 flex items-center gap-2 text-sm uppercase tracking-wide">
           <Shield className="w-4 h-4 text-orange-500" /> Seguridad de la Cuenta
         </h3>
+        {/* El "email de acceso" sintético (celular@plurall.app) NO se muestra:
+            el acceso es por celular. Se muestra el celular en su lugar. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <InfoField icon={Mail} label="Email de Acceso" value={user.email} />
+          <InfoField icon={Phone} label="Celular de Acceso" value={cliente?.telefono} />
           <InfoField icon={Calendar} label="Cuenta Creada" value={new Date(user.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })} />
           <InfoField icon={Shield} label="Último Acceso" value={user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Primera sesión'} />
         </div>

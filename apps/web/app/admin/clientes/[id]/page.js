@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import CambiarCelular from '@/components/CambiarCelular'
 import { formatNombre } from '@/lib/nombre'
+import { emailVisible } from '@/lib/email'
 import {
   ArrowLeft, User, Phone, Mail, Hash, MapPin, Store,
   CreditCard, CheckCircle2, XCircle, Clock, AlertTriangle,
@@ -196,7 +197,7 @@ export default async function AdminDetalleClientePage({ params }) {
           <div className="flex flex-col gap-3 text-sm">
             <Campo icon={Hash}     label="Cédula"    value={cliente.dni} />
             <Campo icon={Phone}    label="Celular"   value={cliente.telefono} />
-            <Campo icon={Mail}     label="Email"     value={cliente.email} />
+            <Campo icon={Mail}     label="Email"     value={emailVisible(cliente.email)} />
             <Campo icon={MapPin}   label="Ciudad"    value={[dir?.municipio?.nombre, dir?.municipio?.departamento?.nombre].filter(Boolean).join(', ')} />
             <Campo icon={MapPin}   label="Dirección" value={dir?.linea} />
           </div>

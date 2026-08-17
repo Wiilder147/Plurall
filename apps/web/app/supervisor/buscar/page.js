@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { Search, Loader2, User, CreditCard, AlertTriangle, CheckCircle2, ArrowRight } from 'lucide-react'
 import { formatCOP } from '@/lib/calculadora'
 import { formatNombre } from '@/lib/nombre'
+import { emailVisible } from '@/lib/email'
 
 export default function SupervisorBuscarPage() {
   const [query,      setQuery]      = useState('')
@@ -118,7 +119,7 @@ export default function SupervisorBuscarPage() {
                       <div>
                         <p className="font-semibold text-slate-200">{formatNombre(r)}</p>
                         <p className="text-slate-500 text-xs">CC {r.dni} · {r.telefono}</p>
-                        <p className="text-slate-500 text-xs">{r.email}</p>
+                        {emailVisible(r.email) && <p className="text-slate-500 text-xs">{emailVisible(r.email)}</p>}
                         {creditoActivo && (
                           <div className="flex items-center gap-2 mt-1.5">
                             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
