@@ -207,11 +207,12 @@ export default function PagarCuotaPage({ params }) {
         signature:     { integrity: data.hash },
         redirectUrl:   data.redirectUrl,
         customerData: {
-          email:       data.email || '',
-          fullName:    data.nombre || '',
-          phoneNumber: data.telefono || '',
-          legalId:     data.dni || '',
-          legalIdType: 'CC',
+          email:             data.email || '',
+          fullName:          data.nombre || '',
+          phoneNumber:       data.telefono || '',
+          phoneNumberPrefix: '+57',
+          legalId:           data.dni || '',
+          legalIdType:       'CC',
         },
       })
 
