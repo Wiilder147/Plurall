@@ -10,7 +10,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, ClipboardList, Users, Menu, X, BarChart3, ShieldCheck, Headset, UserCircle, Gauge, Activity, CalendarClock } from 'lucide-react'
+import { LayoutDashboard, ClipboardList, Users, Menu, X, BarChart3, ShieldCheck, Headset, UserCircle, Gauge, Activity, CalendarClock, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SidebarFooter from './SidebarFooter'
@@ -26,6 +26,7 @@ const navigation = [
   { name: 'Amortización',     href: '/admin/amortizacion',icon: CalendarClock   },
   { name: 'Reportes',         href: '/admin/reportes',    icon: BarChart3       },
   { name: 'Scoring',          href: '/admin/scoring',     icon: Gauge           },
+  { name: 'Usuarios',         href: '/admin/usuarios',    icon: UserPlus        },
   { name: 'Salud sistema',    href: '/admin/salud',       icon: Activity        },
   // ── Accesos a los demás paneles (acceso total) ──
   { name: 'Panel Supervisor', href: '/supervisor',        icon: ShieldCheck     },
