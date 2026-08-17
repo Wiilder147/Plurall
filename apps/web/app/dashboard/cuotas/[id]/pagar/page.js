@@ -185,20 +185,29 @@ export default function PagarCuotaPage({ params }) {
       // Web Checkout de Wompi por redirección (más robusto que el modal
       // embebido: evita cuelgues por iframe/adblock). Los parámetros con ':'
       // van literales; solo se codifican los valores.
+      // Solo parámetros válidos del Web Checkout (docs.wompi.co). Se omiten los
+      // customer-data vacíos para no ensuciar la URL. NO existe phone-number-prefix
+      // en el Web Checkout (eso era del widget JS).
       const params = [
-        ['public-key',                        data.publicKey],
-        ['currency',                          'COP'],
-        ['amount-in-cents',                   String(data.montoEnCentavos)],
-        ['reference',                         data.referencia],
-        ['signature:integrity',               data.hash],
-        ['redirect-url',                      data.redirectUrl],
-        ['customer-data:email',               data.email || ''],
-        ['customer-data:full-name',           data.nombre || ''],
-        ['customer-data:phone-number',        data.telefono || ''],
-        ['customer-data:phone-number-prefix', '+57'],
-        ['customer-data:legal-id',            data.dni || ''],
-        ['customer-data:legal-id-type',       'CC'],
+        ['public-key',      data.publicKey],
+        ['currency',        'COP'],
+        ['amount-in-cents', String(data.montoEnCentavos)],
+        ['reference',       data.referencia],
+        ['signature:integrity', data.hash],
       ]
+      // El WAF de Wompi rechaza (403 CloudFront) redirect-url a localhost. En
+      // desarrollo local se omite: el pago igual se procesa y se reconcilia por
+      // webhook. En producción (URL pública https) sí se envía.
+      if (data.redirectUrl && !/localhost|127\.0\.0\.1/.test(data.redirectUrl)) {
+        params.push(['redirect-url', data.redirectUrl])
+      }
+      if (data.email)    params.push(['customer-data:email',        data.email])
+      if (data.nombre)   params.push(['customer-data:full-name',    data.nombre])
+      if (data.telefono) params.push(['customer-data:phone-number', String(data.telefono)])
+      if (data.dni) {
+        params.push(['customer-data:legal-id',      String(data.dni)])
+        params.push(['customer-data:legal-id-type', 'CC'])
+      }
       const qs = params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
       window.location.href = `https://checkout.wompi.co/p/?${qs}`
       // La página navega hacia Wompi; no reseteamos "pagando".
