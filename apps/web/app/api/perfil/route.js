@@ -67,7 +67,11 @@ export async function PATCH(request) {
     return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
   }
 
-  // ── Actualizar ───────────────────────────────────────────────
+  // ── Actualizar cliente ───────────────────────────────────────
+  // Dual-write (fase EXPAND de la normalización): seguimos escribiendo las
+  // columnas legacy de `cliente` Y espejamos negocio/ubicación a las tablas
+  // normalizadas (`negocio_cliente`, `direccion`). El DROP de las columnas
+  // legacy llega en la migración 26 (CONTRACT), cuando ya nadie las lea.
   const { data: clienteActualizado, error: updateErr } = await supabase
     .from('cliente')
     .update({ ...actualizacion, updated_at: new Date().toISOString() })
@@ -78,6 +82,53 @@ export async function PATCH(request) {
   if (updateErr) {
     console.error('[Perfil] Error al actualizar:', updateErr)
     return NextResponse.json({ error: 'Error al guardar los cambios' }, { status: 500 })
+  }
+
+  // ── Espejo a tablas normalizadas (best-effort, no rompe el guardado) ──
+  const idCliente = clienteRow.id_cliente
+  const tocaNegocio = ['nombre_negocio', 'descripcion_negocio', 'antiguedad_negocio_meses']
+    .some((c) => c in actualizacion)
+  const tocaUbicacion = ['direccion', 'ciudad', 'departamento'].some((c) => c in actualizacion)
+
+  try {
+    if (tocaNegocio) {
+      const negocioPatch = {
+        nombre_negocio: clienteActualizado.nombre_negocio,
+        descripcion: clienteActualizado.descripcion_negocio,
+        antiguedad_meses: clienteActualizado.antiguedad_negocio_meses,
+      }
+      // negocio_cliente es 1:N (sin UNIQUE): actualiza el negocio existente o crea el primero.
+      const { data: negocioExistente } = await supabase
+        .from('negocio_cliente')
+        .select('id_negocio')
+        .eq('id_cliente', idCliente)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+      if (negocioExistente) {
+        await supabase.from('negocio_cliente')
+          .update(negocioPatch)
+          .eq('id_negocio', negocioExistente.id_negocio)
+      } else if (negocioPatch.nombre_negocio) {
+        await supabase.from('negocio_cliente')
+          .insert({ id_cliente: idCliente, ...negocioPatch })
+      }
+    }
+
+    if (tocaUbicacion) {
+      // `direccion` guarda una línea de texto libre (dirección, ciudad, departamento)
+      // + FK municipio (pendiente de mapear). Una fila NEGOCIO por cliente (UNIQUE).
+      const linea = [clienteActualizado.direccion, clienteActualizado.ciudad, clienteActualizado.departamento]
+        .map((s) => (s ? String(s).trim() : ''))
+        .filter(Boolean)
+        .join(', ') || null
+      await supabase.from('direccion')
+        .upsert({ id_cliente: idCliente, tipo: 'NEGOCIO', linea }, { onConflict: 'id_cliente,tipo' })
+    }
+  } catch (espejoErr) {
+    // No abortar el guardado del cliente si el espejo falla; queda log para reparar.
+    console.error('[Perfil] Error al espejar a tablas normalizadas:', espejoErr)
   }
 
   return NextResponse.json({ ok: true, data: clienteActualizado })
