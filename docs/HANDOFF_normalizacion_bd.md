@@ -15,8 +15,8 @@
 | **FASE 2 — Migración 24 (crear tablas nuevas)** | ✅ COMPLETADA (aplicada en Supabase 2026-08-17) |
 | **FASE 3 — Migración 25 (backfill + verificación)** | ✅ COMPLETADA (aplicada en Supabase 2026-08-17) |
 | **FASE 4 — Recablear backend** | ✅ COMPLETADA (dual-write + reads backend + score opción A) |
-| FASE 5 — Recablear frontend | ⏳ SIGUIENTE (11 pages + EditarPerfilForm) |
-| FASE 6 — Migración 27 (CONTRACT / DROP) | ⬜ pendiente — **PARAR a confirmar antes** |
+| **FASE 5 — Recablear frontend** | ✅ COMPLETADA (commit `c2a0afc`) |
+| FASE 6 — Migración 27 (CONTRACT / DROP) | ⛔ EN CHECKPOINT — **requiere OK del usuario** (migración `db/27` ya redactada, NO aplicada) |
 | FASE 7 — Pruebas + build + docs | ⬜ pendiente |
 
 > Nota de numeración: `db/26` se usó para enriquecer `direccion.id_municipio` (soporte de reads). El CONTRACT/DROP pasa a **`db/27`**.
@@ -45,6 +45,16 @@ Archivos que aún leen columnas legacy (grep 2026-08-17). Cada uno debe leer neg
 - `app/supervisor/clientes/page.js`, `app/supervisor/buscar/page.js`, `app/supervisor/solicitudes/page.js`, `app/supervisor/solicitudes/[id]/page.js`
 - `app/asesor/clientes/page.js`, `app/asesor/cobranza/[clienteId]/page.js`
 Nota: el dual-write mantiene sincronizadas las columnas legacy, así que estas pantallas siguen funcionando hasta el DROP; pero deben migrarse antes de FASE 6.
+
+### FASE 6 — CONTRACT / DROP (⛔ checkpoint — requiere OK explícito del usuario)
+Migración **`db/27_normalizacion_contract.sql`** ya redactada (idempotente, transaccional), **NO aplicada**. Dropea de `cliente`: `direccion, ciudad, departamento, nombre_negocio, id_tipo_negocio, descripcion_negocio, antiguedad_negocio_meses, score_credito` + los 10 campos `*_casa`/`*_negocio`; y **DROP TABLE `detalle_cliente`**. Todo ya migrado y verificado (backfill 25/26, reads 4/5).
+
+**Bloqueadores de código que hay que resolver ANTES de aplicar `db/27`** (parte de FASE 6):
+1. `apps/web/app/api/perfil/route.js` (PATCH): hoy hace dual-write (escribe columnas legacy en `cliente` + espeja a tablas nuevas). Cambiar a **solo** escribir `telefono` en `cliente` y mandar negocio→`negocio_cliente`, ubicación→`direccion` (con lookup de `municipio`), sin tocar columnas legacy. Sin esto, tras el DROP el PATCH falla.
+2. Scripts de seed (`apps/web/scripts/utilidades/seed_historico_*.mjs`, `seed_supervisor_asesor.mjs`) insertan estas columnas en `cliente`/`detalle_cliente`. Actualizarlos al modelo nuevo o marcarlos obsoletos (son utilidades dev).
+3. `diagnostico_normalizacion.mjs` es read-only y tolera la ausencia; puede quedarse.
+
+**Orden seguro:** desplegar (1) y (2) → `npm run build` verde + smoke → aplicar `db/27` en Supabase → regenerar `plurall_database_completa.sql` + `database.types.ts` (FASE 7) → grep final sin referencias muertas.
 
 ### FASE 4 — pasos concretos para retomar (recablear backend)
 Objetivo: que registro/lectura usen las tablas nuevas en vez de las columnas sobrecargadas de `cliente`/`detalle_cliente`, SIN romper el núcleo financiero ni la normalización de nombres. Orden: código primero, luego (ya en FASE 6) el DROP.
