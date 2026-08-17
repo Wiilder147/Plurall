@@ -32,6 +32,19 @@ function firmaValida(evento, tx) {
   return checksum === esperado
 }
 
+// ── Recalcular el estado del crédito tras un pago ───────────────────────────
+// - saldo <= 0            → CANCELADO (crédito saldado)
+// - sin cuotas en mora    → ACTIVO   (sale de mora automáticamente)
+// - con cuotas en mora    → EN_MORA
+// Estados especiales (CASTIGADO, etc.) no se tocan salvo saldo 0.
+function nuevoEstadoCredito(saldo, cuotasEnMora, estadoActual) {
+  if (saldo <= 0) return 'CANCELADO'
+  if (estadoActual === 'ACTIVO' || estadoActual === 'EN_MORA') {
+    return cuotasEnMora <= 0 ? 'ACTIVO' : 'EN_MORA'
+  }
+  return estadoActual
+}
+
 // ── Confirmación de un pago que cubre VARIAS cuotas (pago adelantado) ────────
 // El pre-registro (api/pagos/iniciar) guardó el detalle en pago.cuotas_cubiertas.
 // Marca cada cuota como PAGADA/PAGADA_MORA, baja el saldo del crédito por la
@@ -79,15 +92,16 @@ async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
     // negativo si se consumió saldo previo). Nunca baja de 0.
     const deltaSaldoFavor = Number(pago.saldo_a_favor_delta ?? 0)
     const nuevoSaldoFavor = Math.max(0, Math.round((Number(creditoActual.saldo_a_favor ?? 0) + deltaSaldoFavor) * 100) / 100)
+    const nuevoEnMora = Math.max(0, Number(creditoActual.cuotas_en_mora ?? 0) - enMora)
 
     await db
       .from('credito')
       .update({
         saldo_pendiente: nuevoSaldo,
         cuotas_pagadas:  Number(creditoActual.cuotas_pagadas ?? 0) + cubiertas.length,
-        cuotas_en_mora:  Math.max(0, Number(creditoActual.cuotas_en_mora ?? 0) - enMora),
+        cuotas_en_mora:  nuevoEnMora,
         saldo_a_favor:   nuevoSaldoFavor,
-        estado_credito:  nuevoSaldo <= 0 ? 'CANCELADO' : creditoActual.estado_credito,
+        estado_credito:  nuevoEstadoCredito(nuevoSaldo, nuevoEnMora, creditoActual.estado_credito),
         updated_at:      ahora,
       })
       .eq('id_credito', pago.id_credito)
@@ -290,13 +304,14 @@ export async function POST(request) {
 
     if (creditoActual) {
       const nuevoSaldo = Math.max(0, Number(creditoActual.saldo_pendiente) - Number(cuota.monto_capital))
+      const nuevoEnMora = Math.max(0, Number(creditoActual.cuotas_en_mora ?? 0) - (tieneMora ? 1 : 0))
       await db
         .from('credito')
         .update({
           saldo_pendiente: nuevoSaldo,
           cuotas_pagadas:  Number(creditoActual.cuotas_pagadas ?? 0) + 1,
-          cuotas_en_mora:  Math.max(0, Number(creditoActual.cuotas_en_mora ?? 0) - (tieneMora ? 1 : 0)),
-          estado_credito:  nuevoSaldo <= 0 ? 'CANCELADO' : creditoActual.estado_credito,
+          cuotas_en_mora:  nuevoEnMora,
+          estado_credito:  nuevoEstadoCredito(nuevoSaldo, nuevoEnMora, creditoActual.estado_credito),
           updated_at:      new Date().toISOString(),
         })
         .eq('id_credito', idCredito)
