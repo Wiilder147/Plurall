@@ -32,6 +32,89 @@ function firmaValida(evento, tx) {
   return checksum === esperado
 }
 
+// ── Confirmación de un pago que cubre VARIAS cuotas (pago adelantado) ────────
+// El pre-registro (api/pagos/iniciar) guardó el detalle en pago.cuotas_cubiertas.
+// Marca cada cuota como PAGADA/PAGADA_MORA, baja el saldo del crédito por la
+// suma de capitales y actualiza contadores. Idempotente vía estado del pago.
+async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
+  const cubiertas = pago.cuotas_cubiertas
+  const montoPagado = montoCentavos / 100
+  const ahora = new Date().toISOString()
+  const hoy   = ahora.split('T')[0]
+
+  const sumaCapital  = cubiertas.reduce((s, c) => s + Number(c.monto_capital), 0)
+  const enMora       = cubiertas.filter((c) => Number(c.monto_mora) > 0 || c.estado_previo === 'VENCIDA').length
+
+  // 1. Confirmar el pago (los montos agregados ya venían del pre-registro)
+  await db
+    .from('pago')
+    .update({ estado: 'CONFIRMADO', monto_pagado: montoPagado, fecha_pago: ahora, updated_at: ahora })
+    .eq('id_recibo', pago.id_recibo)
+
+  // 2. Marcar cada cuota cubierta como pagada (con o sin mora)
+  for (const c of cubiertas) {
+    const conMora = Number(c.monto_mora) > 0
+    await db
+      .from('cuota')
+      .update({
+        estado_cuota:       conMora ? 'PAGADA_MORA' : 'PAGADA',
+        monto_pagado_real:  Number(c.monto_total_cuota) + Number(c.monto_mora),
+        monto_mora_cobrada: Number(c.monto_mora),
+        fecha_pago_real:    hoy,
+        updated_at:         ahora,
+      })
+      .eq('id_cuota', c.id_cuota)
+  }
+
+  // 3. Actualizar saldo y contadores del crédito
+  const { data: creditoActual } = await db
+    .from('credito')
+    .select('saldo_pendiente, cuotas_pagadas, cuotas_en_mora, estado_credito')
+    .eq('id_credito', pago.id_credito)
+    .maybeSingle()
+
+  if (creditoActual) {
+    const nuevoSaldo = Math.max(0, Number(creditoActual.saldo_pendiente) - sumaCapital)
+    await db
+      .from('credito')
+      .update({
+        saldo_pendiente: nuevoSaldo,
+        cuotas_pagadas:  Number(creditoActual.cuotas_pagadas ?? 0) + cubiertas.length,
+        cuotas_en_mora:  Math.max(0, Number(creditoActual.cuotas_en_mora ?? 0) - enMora),
+        estado_credito:  nuevoSaldo <= 0 ? 'CANCELADO' : creditoActual.estado_credito,
+        updated_at:      ahora,
+      })
+      .eq('id_credito', pago.id_credito)
+
+    // 4. Notificar al cliente (fire-and-forget)
+    try {
+      const { data: creditoCliente } = await db
+        .from('credito')
+        .select('cliente ( email, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido )')
+        .eq('id_credito', pago.id_credito)
+        .maybeSingle()
+
+      if (creditoCliente?.cliente?.email) {
+        const nums = cubiertas.map((c) => c.numero_cuota)
+        const etiqueta = nums.length === 1
+          ? `${nums[0]}`
+          : `${nums[0]} a ${nums[nums.length - 1]} (${nums.length} cuotas)`
+        notificarPagoConfirmado({
+          email:          creditoCliente.cliente.email,
+          nombre:         formatNombre(creditoCliente.cliente),
+          numeroCuota:    etiqueta,
+          montoPagado,
+          saldoPendiente: nuevoSaldo,
+          referencia,
+        }).catch(() => null)
+      }
+    } catch { /* No bloquear el webhook si el email falla */ }
+  }
+
+  console.log(`[Wompi Webhook] Pago multi-cuota CONFIRMADO — ${cubiertas.length} cuotas, ref ${referencia}`)
+  return NextResponse.json({ ok: true })
+}
+
 // ── Fallback: localizar cuota desde la referencia (solo si no hubo pre-registro)
 // referencia = PLR-{cuotaId[:8].upper}-{timestamp}
 async function localizarCuotaPorReferencia(referencia) {
@@ -93,6 +176,11 @@ export async function POST(request) {
     // Idempotencia: si ya fue confirmado, no reprocesar
     if (pago?.estado === 'CONFIRMADO') {
       return NextResponse.json({ ok: true, msg: 'Pago ya procesado' })
+    }
+
+    // ── Pago multi-cuota: reconciliar todas las cuotas cubiertas ──
+    if (Array.isArray(pago?.cuotas_cubiertas) && pago.cuotas_cubiertas.length > 0) {
+      return await confirmarMultiCuota(db, { pago, referencia, montoCentavos: monto })
     }
 
     // Resolver cuota: desde el pre-registro o fallback por prefijo

@@ -77,7 +77,7 @@ function ConfirmacionContent() {
     //    El webhook de Wompi debería haberlo actualizado
     const { data: pago } = await supabase
       .from('pago')
-      .select('id_recibo, monto_pagado, monto_capital, monto_interes, monto_mora, estado, metodo_pago, fecha_pago, id_cuota, id_credito, referencia_externa')
+      .select('id_recibo, monto_pagado, monto_capital, monto_interes, monto_mora, estado, metodo_pago, fecha_pago, id_cuota, id_credito, referencia_externa, cuotas_cubiertas')
       .eq('referencia_externa', referencia)
       .maybeSingle()
 
@@ -216,7 +216,17 @@ function ConfirmacionContent() {
 
           {/* Detalle del recibo */}
           <ul className="space-y-3 text-sm mb-8">
-            {cuotaData && (
+            {Array.isArray(pagoData?.cuotas_cubiertas) && pagoData.cuotas_cubiertas.length > 1 ? (
+              <li className="flex justify-between">
+                <span className="text-slate-500 font-medium">Concepto</span>
+                <span className="font-bold text-slate-900 text-right">
+                  {pagoData.cuotas_cubiertas.length} cuotas
+                  <span className="text-slate-400 font-normal ml-1">
+                    (#{pagoData.cuotas_cubiertas[0].numero_cuota} a #{pagoData.cuotas_cubiertas[pagoData.cuotas_cubiertas.length - 1].numero_cuota})
+                  </span>
+                </span>
+              </li>
+            ) : cuotaData && (
               <li className="flex justify-between">
                 <span className="text-slate-500 font-medium">Concepto</span>
                 <span className="font-bold text-slate-900">
