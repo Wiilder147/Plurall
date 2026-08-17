@@ -1,10 +1,14 @@
 /* ==========================================================================
  * ARCHIVO: route.js
  * RUTA: apps/web/app/api/pagos/iniciar/route.js
- * DESCRIPCIÓN: Endpoint de API (Backend) para manejar la lógica de iniciar
- * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * DESCRIPCIÓN: Endpoint que inicializa el pago de una cuota con Wompi.
+ * FUNCIONALIDAD: Valida propiedad de la cuota, calcula mora si aplica,
+ *                pre-registra el pago (estado PROCESANDO) para que el
+ *                webhook pueda reconciliarlo por referencia, y genera la
+ *                firma de integridad SHA-256 del widget.
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 
@@ -45,6 +49,37 @@ async function checkRateLimit(userId) {
   }
 }
 
+// ── Cálculo de intereses de mora ────────────────────────────────────────────
+// Mora = monto_total_cuota × tasa_mora_diaria × días de atraso
+function calcularMora(cuota, planPago) {
+  if (cuota.estado_cuota !== 'VENCIDA') return 0
+
+  const vencimiento = new Date(`${cuota.fecha_vencimiento}T00:00:00`)
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+
+  const dias = Math.max(1, Math.floor((hoy - vencimiento) / 86400000))
+  const tasa = Number(planPago?.tasa_mora_diaria ?? 0.001)
+
+  return Math.round(Number(cuota.monto_total_cuota) * tasa * dias * 100) / 100
+}
+
+// ── Pre-registro del pago (estado PROCESANDO) ───────────────────────────────
+// Se usa service role porque la política RLS "staff_insertar_pago" solo
+// permite insertar a staff con sesión; el cliente autenticado no puede.
+// La referencia UNIQUE (migración 23) hace este paso idempotente.
+async function preRegistrarPago(service, datos) {
+  const { data, error } = await service
+    .from('pago')
+    .insert(datos)
+    .select('id_recibo')
+    .single()
+
+  if (error?.code === '23505') return { reintentar: true } // referencia duplicada
+  if (error) return { error }
+  return { data }
+}
+
 export async function POST(request) {
   const supabase = await createClient()
 
@@ -55,10 +90,10 @@ export async function POST(request) {
   }
 
   // ── Rate limiting ────────────────────────────────────────────
-  const { permitido, restantes } = await checkRateLimit(user.id)
+  const { permitido } = await checkRateLimit(user.id)
   if (!permitido) {
     return NextResponse.json(
-      { error: `Demasiados intentos de pago. Espera unos minutos e intenta de nuevo.` },
+      { error: 'Demasiados intentos de pago. Espera unos minutos e intenta de nuevo.' },
       {
         status: 429,
         headers: { 'Retry-After': String(WINDOW_SEC) },
@@ -78,10 +113,14 @@ export async function POST(request) {
       id_cuota,
       numero_cuota,
       monto_total_cuota,
+      monto_capital,
+      monto_interes,
       estado_cuota,
+      fecha_vencimiento,
       plan_pago (
+        id_plan_pago,
         id_credito,
-        credito ( id_cliente )
+        tasa_mora_diaria
       )
     `)
     .eq('id_cuota', cuotaId)
@@ -98,7 +137,18 @@ export async function POST(request) {
     .eq('id_usuario_cuenta', user.id)
     .single()
 
-  if (!clienteRow || cuota.plan_pago.credito.id_cliente !== clienteRow.id_cliente) {
+  if (!clienteRow) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  }
+
+  // Verificar que la cuota pertenece al cliente autenticado (protección IDOR)
+  const { data: creditoRow } = await supabase
+    .from('credito')
+    .select('id_cliente')
+    .eq('id_credito', cuota.plan_pago.id_credito)
+    .single()
+
+  if (!creditoRow || creditoRow.id_cliente !== clienteRow.id_cliente) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 
@@ -106,9 +156,51 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Esta cuota no está disponible para pago' }, { status: 400 })
   }
 
-  // ── Generar datos para Wompi ─────────────────────────────────
-  const referencia      = `PLR-${cuotaId.slice(0, 8).toUpperCase()}-${Date.now()}`
-  const montoEnCentavos = Math.round(cuota.monto_total_cuota * 100)
+  // ── Monto total: cuota + mora (si está vencida) ─────────────
+  const montoMora  = calcularMora(cuota, cuota.plan_pago)
+  const montoBase  = Number(cuota.monto_total_cuota)
+  const montoTotal = Math.round((montoBase + montoMora) * 100) / 100
+
+  if (montoTotal <= 0) {
+    return NextResponse.json({ error: 'Monto de pago inválido' }, { status: 400 })
+  }
+
+  // ── Pre-registrar el pago (con reintento si la referencia colisiona) ─────
+  const service   = createServiceClient()
+  const montoEnCentavos = Math.round(montoTotal * 100)
+  let referencia  = `PLR-${cuotaId.slice(0, 8).toUpperCase()}-${Date.now()}`
+  let idRecibo    = null
+
+  for (let intento = 0; intento < 3; intento++) {
+    const res = await preRegistrarPago(service, {
+      id_cuota:           cuota.id_cuota,
+      id_credito:         cuota.plan_pago.id_credito,
+      monto_pagado:       montoTotal,
+      monto_capital:      cuota.monto_capital,
+      monto_interes:      cuota.monto_interes,
+      monto_mora:         montoMora,
+      metodo_pago:        'WOMPI',
+      referencia_externa: referencia,
+      estado:             'PROCESANDO',
+    })
+
+    if (res.reintentar) {
+      referencia = `PLR-${cuotaId.slice(0, 8).toUpperCase()}-${Date.now() + intento + 1}`
+      continue
+    }
+    if (res.error) {
+      console.error('[Pagos] Error pre-registrando pago:', res.error.message)
+      return NextResponse.json({ error: 'No se pudo iniciar el pago. Intenta más tarde.' }, { status: 500 })
+    }
+    idRecibo = res.data.id_recibo
+    break
+  }
+
+  if (!idRecibo) {
+    return NextResponse.json({ error: 'No se pudo iniciar el pago. Intenta más tarde.' }, { status: 500 })
+  }
+
+  // ── Generar firma de integridad del widget ──────────────────
   const moneda          = 'COP'
   const integritySecret = process.env.WOMPI_INTEGRITY_SECRET || ''
 
@@ -116,7 +208,7 @@ export async function POST(request) {
   const cadena = `${referencia}${montoEnCentavos}${moneda}${integritySecret}`
   const hash   = createHash('sha256').update(cadena).digest('hex')
 
-  const appUrl     = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const appUrl      = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const redirectUrl = `${appUrl}/dashboard/cuotas/confirmacion?referencia=${referencia}`
 
   return NextResponse.json({
@@ -125,6 +217,10 @@ export async function POST(request) {
     montoEnCentavos,
     hash,
     redirectUrl,
+    idRecibo,
+    montoBase,
+    montoMora,
+    montoTotal,
     // Datos del pagador (pre-fill)
     email:    user.email,
     nombre:   clienteRow.nombre_completo,

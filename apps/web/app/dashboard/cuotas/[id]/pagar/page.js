@@ -3,8 +3,10 @@
 /* ==========================================================================
  * ARCHIVO: page.js
  * RUTA: apps/web/app/dashboard/cuotas/[id]/pagar/page.js
- * DESCRIPCIÓN: Vista del panel de control del usuario.
- * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * DESCRIPCIÓN: Pantalla de pago de cuota con el widget de Wompi.
+ * FUNCIONALIDAD: Carga la cuota, solicita la firma de integridad al servidor
+ *                (/api/pagos/iniciar), muestra el desglose (capital, interés,
+ *                mora) e inyecta el widget de checkout de Wompi.
  * ========================================================================== */
 
 import { useState, useEffect, useRef } from 'react'
@@ -19,18 +21,30 @@ import {
   DollarSign,
   CalendarDays,
   TrendingDown,
+  AlertTriangle,
+  ExternalLink,
 } from 'lucide-react'
 import Link from 'next/link'
+
+// Mensajes amigables según el código de error de /api/pagos/iniciar
+const ERRORES_API = {
+  401: 'Tu sesión expiró. Inicia sesión de nuevo e intenta pagar.',
+  403: 'Esta cuota no te pertenece. Si crees que es un error, contacta soporte.',
+  404: 'La cuota que intentas pagar ya no existe.',
+  400: 'Esta cuota no está disponible para pago (puede estar pagada o cancelada).',
+  429: 'Has hecho demasiados intentos de pago. Espera unos minutos y vuelve a intentar.',
+}
 
 export default function PagarCuotaPage({ params }) {
   const router   = useRouter()
   const formRef  = useRef(null)
 
-  const [cuota,    setCuota]    = useState(null)
-  const [credito,  setCredito]  = useState(null)
-  const [loading,  setLoading]  = useState(true)
-  const [wompiData,setWompiData]= useState(null)
-  const [error,    setError]    = useState(null)
+  const [cuota,     setCuota]     = useState(null)
+  const [credito,   setCredito]   = useState(null)
+  const [loading,   setLoading]   = useState(true)
+  const [wompiData, setWompiData] = useState(null)
+  const [error,     setError]     = useState(null)
+  const [wompiError,setWompiError]= useState(null)
 
   // ── Carga datos de la cuota ──────────────────────────────────
   useEffect(() => {
@@ -73,8 +87,18 @@ export default function PagarCuotaPage({ params }) {
       if (res.ok) {
         const data = await res.json()
         setWompiData(data)
+
+        // Si Wompi no está configurado en el servidor, avisar al usuario
+        if (!data.publicKey || !data.hash) {
+          setWompiError('La pasarela de pago no está configurada todavía. Intenta más tarde o contacta soporte.')
+        }
       } else {
-        setError('No se pudo inicializar el sistema de pago. Intenta más tarde.')
+        let mensaje = ERRORES_API[res.status] || 'No se pudo inicializar el sistema de pago. Intenta más tarde.'
+        try {
+          const body = await res.json()
+          if (body?.error) mensaje = body.error
+        } catch { /* sin cuerpo */ }
+        setWompiError(mensaje)
       }
 
       setLoading(false)
@@ -84,7 +108,7 @@ export default function PagarCuotaPage({ params }) {
 
   // ── Inyectar widget Wompi cuando los datos están listos ───────
   useEffect(() => {
-    if (!wompiData || !formRef.current) return
+    if (!wompiData || !wompiData.publicKey || !wompiData.hash || !formRef.current) return
 
     // Limpiar script anterior si existe
     const existente = formRef.current.querySelector('script')
@@ -134,6 +158,9 @@ export default function PagarCuotaPage({ params }) {
     day: '2-digit', month: 'long', year: 'numeric',
   })
 
+  const montoMora  = wompiData?.montoMora ?? 0
+  const montoTotal = wompiData?.montoTotal ?? cuota.monto_total_cuota
+
   return (
     <div className="w-full flex flex-col gap-8 pb-10 max-w-2xl">
 
@@ -151,7 +178,7 @@ export default function PagarCuotaPage({ params }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-5">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-slate-400 flex items-center gap-1"><DollarSign className="w-3 h-3" />Total a pagar</span>
-            <span className="text-2xl font-extrabold text-slate-900">{formatCOP(cuota.monto_total_cuota)}</span>
+            <span className="text-2xl font-extrabold text-slate-900">{formatCOP(montoTotal)}</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs text-slate-400 flex items-center gap-1"><CalendarDays className="w-3 h-3" />Vencimiento</span>
@@ -172,22 +199,46 @@ export default function PagarCuotaPage({ params }) {
             <span className="text-slate-500">Interés</span>
             <span className="font-semibold">{formatCOP(cuota.monto_interes)}</span>
           </div>
-          {cuota.estado_cuota === 'VENCIDA' && (
-            <div className="flex justify-between col-span-2 text-red-600 font-semibold">
-              <span>⚠️ Mora acumulada</span>
-              <span>Se calculará al pagar</span>
+          {montoMora > 0 && (
+            <div className="flex justify-between text-red-600 font-semibold col-span-2 border-t border-red-100 pt-2 mt-1">
+              <span className="flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Intereses de mora ({cuota.estado_cuota === 'VENCIDA' ? 'cuota vencida' : ''})</span>
+              <span>{formatCOP(montoMora)}</span>
             </div>
           )}
+          <div className="flex justify-between col-span-2 border-t border-slate-200 pt-2 font-semibold">
+            <span className="text-slate-500">Total del pago</span>
+            <span className="text-slate-900">{formatCOP(montoTotal)}</span>
+          </div>
         </div>
+
+        {/* Referencia del pago */}
+        {wompiData?.referencia && (
+          <div className="flex items-center justify-center gap-2 text-xs text-slate-400 mb-5">
+            <span>Referencia:</span>
+            <span className="font-mono font-semibold text-slate-500">{wompiData.referencia}</span>
+          </div>
+        )}
 
         {/* Botón Wompi */}
         <div className="flex flex-col items-center gap-4">
-          {wompiData ? (
+          {wompiData && !wompiError && (
             <form ref={formRef} className="w-full flex justify-center" />
-          ) : (
+          )}
+          {!wompiData && !wompiError && (
             <div className="flex items-center gap-2 text-slate-400 text-sm">
               <Loader2 className="w-4 h-4 animate-spin" />
               Cargando pasarela de pago…
+            </div>
+          )}
+          {wompiError && (
+            <div className="w-full flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm text-red-700 font-medium">{wompiError}</p>
+                <Link href="/dashboard/cuotas" className="text-sm text-red-600 underline mt-1 inline-block">
+                  ← Volver a mis cuotas
+                </Link>
+              </div>
             </div>
           )}
         </div>
@@ -200,6 +251,12 @@ export default function PagarCuotaPage({ params }) {
           Pago procesado por <strong className="text-slate-600">Wompi — Bancolombia</strong>.
           Plurall no almacena tus datos de tarjeta. Conexión cifrada con TLS 1.3.
         </p>
+      </div>
+
+      {/* Soporte */}
+      <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
+        <ExternalLink className="w-3 h-3" />
+        ¿Problemas con tu pago? Contacta a soporte en <span className="text-slate-500 font-medium">soporte@plurall.app</span>
       </div>
     </div>
   )

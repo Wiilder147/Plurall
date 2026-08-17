@@ -3,8 +3,10 @@
 /* ==========================================================================
  * ARCHIVO: page.js
  * RUTA: apps/web/app/dashboard/cuotas/confirmacion/page.js
- * DESCRIPCIÓN: Vista del panel de control del usuario.
- * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * DESCRIPCIÓN: Confirmación de pago tras redirección de Wompi.
+ * FUNCIONALIDAD: Consulta el pago por referencia_externa. El webhook de Wompi
+ *                puede tardar unos segundos, por eso hace polling automático
+ *                cada 4s (hasta ~2 min) mientras el pago está PROCESANDO.
  * ========================================================================== */
 
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -18,10 +20,11 @@ import {
   FileText,
   ReceiptText,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react'
 import { formatCOP } from '@/lib/calculadora'
 import { createClient } from '@/lib/supabase/client'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 
 // ─── Tipos de estado del pago ────────────────────────────────────────────────
 const ESTADO_UI = {
@@ -45,6 +48,9 @@ const ESTADO_UI = {
   },
 }
 
+const POLL_INTERVAL_MS = 4000 // cada 4 segundos
+const POLL_MAX_ATTEMPTS = 30  // ~2 minutos máximo
+
 // ─── Componente principal ────────────────────────────────────────────────────
 function ConfirmacionContent() {
   const searchParams = useSearchParams()
@@ -57,6 +63,49 @@ function ConfirmacionContent() {
   const [pagoData,  setPagoData]  = useState(null)       // fila de la tabla pago
   const [cuotaData, setCuotaData] = useState(null)       // fila de la tabla cuota
   const [creditoId, setCreditoId] = useState(null)
+  const [agotado,   setAgotado]   = useState(false)      // polling terminó sin confirmación
+  const intentosRef = useRef(0)
+
+  const verificar = useCallback(async () => {
+    const supabase = createClient()
+
+    // 1. Verificar sesión
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.replace('/login'); return false }
+
+    // 2. Buscar el pago por referencia_externa en la BD
+    //    El webhook de Wompi debería haberlo actualizado
+    const { data: pago } = await supabase
+      .from('pago')
+      .select('id_recibo, monto_pagado, monto_capital, monto_interes, monto_mora, estado, metodo_pago, fecha_pago, id_cuota, id_credito, referencia_externa')
+      .eq('referencia_externa', referencia)
+      .maybeSingle()
+
+    if (!pago) {
+      // El webhook puede tardar unos segundos — seguir en "procesando"
+      return false
+    }
+
+    setPagoData(pago)
+    setCreditoId(pago.id_credito)
+
+    // 3. Obtener datos de la cuota para mostrar el número
+    if (pago.id_cuota) {
+      const { data: cuota } = await supabase
+        .from('cuota')
+        .select('numero_cuota, fecha_vencimiento, estado_cuota')
+        .eq('id_cuota', pago.id_cuota)
+        .maybeSingle()
+      if (cuota) setCuotaData(cuota)
+    }
+
+    // 4. Determinar estado visual
+    if (pago.estado === 'CONFIRMADO') setEstado('confirmado')
+    else if (pago.estado === 'FALLIDO') setEstado('fallido')
+    else return false // PROCESANDO → seguir esperando
+
+    return true // ya hay resultado definitivo
+  }, [referencia, router])
 
   useEffect(() => {
     if (!referencia) {
@@ -65,48 +114,28 @@ function ConfirmacionContent() {
       return
     }
 
-    async function verificar() {
-      const supabase = createClient()
+    intentosRef.current = 0
+    let intervalo = null
 
-      // 1. Verificar sesión
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.replace('/login'); return }
-
-      // 2. Buscar el pago por referencia_externa en la BD
-      //    El webhook de Wompi ya debería haberlo insertado
-      const { data: pago } = await supabase
-        .from('pago')
-        .select('id_recibo, monto_pagado, monto_capital, monto_interes, monto_mora, estado, metodo_pago, fecha_pago, id_cuota, id_credito, referencia_externa')
-        .eq('referencia_externa', referencia)
-        .single()
-
-      if (!pago) {
-        // El webhook puede tardar unos segundos — mostrar "procesando"
-        setEstado('procesando')
+    const ejecutar = async () => {
+      const terminado = await verificar()
+      if (terminado) {
+        clearInterval(intervalo)
         return
       }
-
-      setPagoData(pago)
-      setCreditoId(pago.id_credito)
-
-      // 3. Obtener datos de la cuota para mostrar el número
-      if (pago.id_cuota) {
-        const { data: cuota } = await supabase
-          .from('cuota')
-          .select('numero_cuota, fecha_vencimiento, estado_cuota')
-          .eq('id_cuota', pago.id_cuota)
-          .single()
-        if (cuota) setCuotaData(cuota)
+      intentosRef.current += 1
+      if (intentosRef.current >= POLL_MAX_ATTEMPTS) {
+        clearInterval(intervalo)
+        setAgotado(true)
       }
-
-      // 4. Determinar estado visual
-      if (pago.estado === 'CONFIRMADO') setEstado('confirmado')
-      else if (pago.estado === 'FALLIDO') setEstado('fallido')
-      else setEstado('procesando')
     }
 
-    verificar()
-  }, [referencia, router])
+    // Verificar de inmediato y luego hacer polling
+    ejecutar()
+    intervalo = setInterval(ejecutar, POLL_INTERVAL_MS)
+
+    return () => clearInterval(intervalo)
+  }, [referencia, verificar, router])
 
   // ── Pantalla de carga ────────────────────────────────────────
   if (estado === 'cargando') {
@@ -158,11 +187,19 @@ function ConfirmacionContent() {
           {/* Aviso procesando */}
           {estado === 'procesando' && (
             <div className="flex items-start gap-3 bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 mb-6">
-              <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
-              <p className="text-sm text-yellow-800">
-                Tu pago está siendo procesado. Esto puede tardar hasta 2 minutos.
-                Recarga la página o revisa el estado en <strong>Mis Cuotas</strong>.
-              </p>
+              <Loader2 className="w-5 h-5 text-yellow-500 animate-spin mt-0.5 shrink-0" />
+              <div className="text-sm text-yellow-800">
+                <p>
+                  Tu pago está siendo procesado. Esto puede tardar hasta 2 minutos.
+                  Estamos verificando automáticamente el estado…
+                </p>
+                {agotado && (
+                  <p className="mt-2 flex items-center gap-2 font-medium">
+                    <AlertTriangle className="w-4 h-4" />
+                    La verificación está tardando más de lo normal. Revisa <strong>Mis Cuotas</strong> en unos minutos.
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -236,6 +273,20 @@ function ConfirmacionContent() {
               >
                 <ReceiptText className="w-5 h-5" /> Ver estado de cuenta
               </a>
+            )}
+
+            {/* Reintentar verificación (cuando el polling se agotó) */}
+            {estado === 'procesando' && agotado && (
+              <button
+                onClick={async () => {
+                  setAgotado(false)
+                  intentosRef.current = 0
+                  await verificar()
+                }}
+                className="flex items-center justify-center gap-2 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3.5 rounded-xl transition-all"
+              >
+                <RefreshCw className="w-5 h-5" /> Consultar de nuevo
+              </button>
             )}
 
             {/* Volver a cuotas */}

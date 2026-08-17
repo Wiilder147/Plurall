@@ -427,10 +427,12 @@ cd apps/web && npm run dev
 | Funcionalidad | Archivo |
 |--------------|--------|
 | API iniciar pago con firma HMAC SHA-256 | `app/api/pagos/iniciar/route.js` |
+| Pre-registro del pago (PROCESANDO) al iniciar + cálculo de mora | `app/api/pagos/iniciar/route.js` |
 | Webhook Wompi con verificación de checksum | `app/api/webhooks/wompi/route.js` |
-| Idempotencia de pagos (referencia_externa UNIQUE) | `app/api/webhooks/wompi/route.js` |
+| Idempotencia de pagos (referencia_externa UNIQUE) | `db/23_wompi_pagos.sql` + webhook |
 | Actualización saldo y estado cuota tras pago | `app/api/webhooks/wompi/route.js` |
 | Registro pagos fallidos en auditoría | `app/api/webhooks/wompi/route.js` |
+| Confirmación de pago con verificación real + polling | `app/dashboard/cuotas/confirmacion/page.js` |
 | API lockout (estructura base) | `app/api/auth/lockout/route.js` |
 | API notificaciones (estructura base) | `app/api/notificaciones/solicitud/route.js` |
 
@@ -439,8 +441,7 @@ cd apps/web && npm run dev
 |--------------|----------------|
 | Lockout de cuentas | El archivo `route.js` existe pero **no hay integración con Redis** (Upstash) — las variables de entorno están definidas pero la lógica no conecta |
 | Notificaciones | La API existe pero **el template HTML del email es básico** y falta integración real con Resend en producción |
-| Confirmación de pago | La página `/dashboard/cuotas/confirmacion` no **verifica el estado real** del pago — solo muestra la referencia |
-| Tabla `historial_estado` | Está diseñada pero **ningún proceso la popula** — los cambios de estado no quedan registrados |
+| Tabla `historial_estado` | Los triggers de migración 09 ya la pueblan automáticamente para `solicitud_credito`, `credito` y `cuota` ✅ |
 
 ### ⏳ Pendiente — Por Implementar
 
