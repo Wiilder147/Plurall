@@ -58,6 +58,19 @@ export default function LoginPage() {
       }
     } catch { /* Si el endpoint falla, continuamos sin bloqueo */ }
 
+    // ── Verificar que el celular esté registrado ──────────────────────────────
+    // Diferencia "número no registrado" de "contraseña incorrecta" y evita
+    // que el contador de bloqueo se mueva con números que no existen.
+    try {
+      const exRes  = await fetch(`/api/auth/existe?celular=${telLimpio}`)
+      const exData = await exRes.json()
+      if (exData.existe === false) {
+        setError('Este número no está registrado. Verifica el número o crea una cuenta.')
+        setLoading(false)
+        return
+      }
+    } catch { /* si el chequeo falla, continuamos con el login normal */ }
+
     // ── El Truco del Correo Virtual ───────────────────────────────────────────
     // Supabase Auth requiere un email. Creamos uno virtual: 3001234567@plurall.app
     const fakeEmail = `${telLimpio}@plurall.app`.toLowerCase()
@@ -65,6 +78,7 @@ export default function LoginPage() {
     const { error: authError } = await supabase.auth.signInWithPassword({ email: fakeEmail, password })
 
     if (authError) {
+      // Aquí ya sabemos que el número existe → el fallo es de contraseña.
       try {
         const res = await fetch('/api/auth/lockout', {
           method: 'POST',
@@ -76,10 +90,10 @@ export default function LoginPage() {
           setError('Demasiados intentos fallidos. Tu cuenta ha sido bloqueada por 30 minutos.')
         } else {
           const restantes = Math.max(0, 3 - (data.intentos || 0))
-          setError(`Celular o contraseña incorrectos.${restantes > 0 ? ` Intentos restantes: ${restantes}.` : ''}`)
+          setError(`Contraseña incorrecta.${restantes > 0 ? ` Intentos restantes: ${restantes}.` : ''}`)
         }
       } catch {
-        setError('Celular o contraseña incorrectos.')
+        setError('Contraseña incorrecta.')
       }
       setLoading(false)
       return

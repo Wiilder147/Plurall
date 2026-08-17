@@ -50,11 +50,12 @@ export async function POST(request) {
 
     if (!emailReal) {
       console.warn('[OTP] Cliente no encontrado para el celular:', celular)
-      // Respuesta genérica para evitar enumeración de usuarios
-      return NextResponse.json({
-        ok: true,
-        message: 'Si el celular está registrado, hemos enviado un código a su correo asociado.',
-      })
+      // Informar claramente que el número no está registrado (no enviar código
+      // "porque sí"). Nota: revela existencia de usuarios — decisión de negocio.
+      return NextResponse.json(
+        { error: 'No existe ningún usuario registrado con ese número.' },
+        { status: 404 }
+      )
     }
 
     // Generar OTP de 6 dígitos
