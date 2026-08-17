@@ -13,8 +13,8 @@
 | **FASE 0 — Diagnóstico en vivo** | ✅ COMPLETADA (ver `docs/FASE0_diagnostico_normalizacion.md`) |
 | **FASE 1 — Resincronizar schema maestro + types** | ✅ COMPLETADA (commit `3f5abed`) |
 | **FASE 2 — Migración 24 (crear tablas nuevas)** | ✅ COMPLETADA (aplicada en Supabase 2026-08-17) |
-| FASE 3 — Migración 25 (backfill + verificación) | ⏳ SIGUIENTE |
-| FASE 4 — Recablear backend | ⬜ pendiente |
+| **FASE 3 — Migración 25 (backfill + verificación)** | ✅ COMPLETADA (aplicada en Supabase 2026-08-17) |
+| FASE 4 — Recablear backend | ⏳ SIGUIENTE |
 | FASE 5 — Recablear frontend | ⬜ pendiente |
 | FASE 6 — Migración 26 (CONTRACT / DROP) | ⬜ pendiente |
 | FASE 7 — Pruebas + build + docs | ⬜ pendiente |
@@ -24,7 +24,17 @@
 - ✅ Schema maestro + `database.types.ts` regenerados por introspección de la BD viva (FASE 1, `3f5abed`).
 - ✅ Migración **`db/24`** aplicada en Supabase (2026-08-17, vía MCP). Creadas `direccion`, `negocio_cliente`, `perfil_financiero`, `cuenta_bancaria` + vista `vw_cliente_score`, con RLS (16 policies) y triggers `updated_at`. **Additivo/EXPAND**: 0 datos tocados, tablas nuevas vacías (backfill = FASE 3). Schema maestro + types resincronizados a `db/01..24`.
 
-### FASE 3 — pasos concretos para retomar (backfill, migración 25)
+- ✅ Migración **`db/25`** aplicada en Supabase (2026-08-17, vía MCP). Backfill MIGRATE (no toca columnas origen). Verificado: **direccion 69**, **negocio_cliente 69** (==69 origen con nombre_negocio), **perfil_financiero 3** (==3 detalle_cliente), **cuenta_bancaria 0**; **0 huérfanos**, **0 negocios duplicados**. Fusión de duplicados escrita (dependientes→personas_cargo, ahorros→patrimonio_estimado) aunque hoy son 0 en toda la data.
+  - **Decisión implícita a validar:** las 69 direcciones salieron del `cliente.ciudad`/`departamento` legacy (ej. "Barranquilla, Atlántico") y se etiquetaron **`tipo='NEGOCIO'`** (no hay ningún dato de CASA ni de dirección detallada). Si se prefiere `CASA` o un tipo neutro, ajustar en 25 antes del CONTRACT.
+
+### FASE 4 — pasos concretos para retomar (recablear backend)
+Objetivo: que registro/lectura usen las tablas nuevas en vez de las columnas sobrecargadas de `cliente`/`detalle_cliente`, SIN romper el núcleo financiero ni la normalización de nombres. Orden: código primero, luego (ya en FASE 6) el DROP.
+1. Grep de escrituras/lecturas a columnas a eliminar: `nombre_negocio`, `id_tipo_negocio`, `descripcion_negocio`, `antiguedad_negocio_meses`, `direccion*`, `ciudad*`, `departamento*`, `lat_*`, `lon_*`, `score_credito` en `apps/web` (endpoints de registro `/api/registro*`, portales asesor/admin que muestran negocio/finanzas, `detalle_cliente`).
+2. Registro/onboarding: al crear cliente, escribir también `negocio_cliente`/`direccion`/`perfil_financiero`/`cuenta_bancaria` (dual-write mientras conviven columnas). Revisar el trigger `handle_new_user_registration` y los endpoints de registro.
+3. Lecturas: negocio desde `negocio_cliente`, finanzas desde `perfil_financiero`, ubicación desde `direccion`, score desde `vw_cliente_score` (no `cliente.score_credito`).
+4. `npm run build` verde + smoke por portal. Commit. Luego FASE 5 (frontend) y **PARAR a confirmar antes de FASE 6 (DROP)**.
+
+### FASE 3 — pasos concretos (COMPLETADA — histórico)
 1. Escribir `db/25_normalizacion_backfill.sql` idempotente que puebla las 4 tablas nuevas desde `cliente`/`detalle_cliente`, aplicando §4:
    - `direccion`: filas CASA (`direccion_casa`/`ciudad_casa`/`lat_casa`/`lon_casa`) y NEGOCIO (`direccion_negocio`/…); usar `linea` texto; `id_municipio` NULL (mapear luego). Insertar solo donde haya algún dato no vacío. `ON CONFLICT (id_cliente,tipo) DO NOTHING`.
    - `negocio_cliente`: desde `cliente.nombre_negocio`/`id_tipo_negocio`/`descripcion_negocio`/`antiguedad_negocio_meses` + `detalle_cliente.empleados_negocio`/`arriendo_negocio` (join por `id_cliente`). Solo clientes con negocio (≈69).
