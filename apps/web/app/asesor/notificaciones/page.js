@@ -64,7 +64,7 @@ export default async function NotificacionesAsesorPage() {
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-500">
-                    <span>{formatNombre(n.cliente) || n.destinatario ?? '—'}</span>
+                    <span>{formatNombre(n.cliente) || (n.destinatario ?? '—')}</span>
                     <span className="uppercase">{n.canal ?? 'EMAIL'}</span>
                     <span>{fecha}</span>
                   </div>
