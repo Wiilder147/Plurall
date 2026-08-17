@@ -4,33 +4,26 @@
  * ARCHIVO: page.js
  * RUTA: apps/web/app/dashboard/cuotas/[id]/pagar/page.js
  * DESCRIPCIÓN: Pantalla de pago de cuota(s) con el widget de Wompi.
- * FUNCIONALIDAD: Permite elegir cuántas cuotas pagar por adelantado (1..N),
- *                muestra el desglose en vivo (capital, interés, mora) vía
- *                /api/pagos/cotizar y, al confirmar, pide la firma de
- *                integridad a /api/pagos/iniciar y abre el checkout de Wompi.
+ * FUNCIONALIDAD: Dos modos de pago:
+ *                  - "Por cuotas": elegir cuántas cuotas pagar por adelantado.
+ *                  - "Otro monto": escribir un valor libre; cubre las cuotas
+ *                     completas que alcance y el sobrante queda como saldo a
+ *                     favor. Muestra el desglose en vivo vía /api/pagos/cotizar
+ *                     y, al confirmar, pide la firma a /api/pagos/iniciar y abre
+ *                     el checkout de Wompi.
  * ========================================================================== */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { formatCOP } from '@/lib/calculadora'
 import {
-  ArrowLeft,
-  Shield,
-  Loader2,
-  AlertCircle,
-  DollarSign,
-  CalendarDays,
-  TrendingDown,
-  AlertTriangle,
-  ExternalLink,
-  Minus,
-  Plus,
-  CheckCircle2,
+  ArrowLeft, Shield, Loader2, AlertCircle, DollarSign, CalendarDays,
+  TrendingDown, AlertTriangle, ExternalLink, Minus, Plus, CheckCircle2,
+  Wallet, ListChecks, Coins,
 } from 'lucide-react'
 import Link from 'next/link'
 
-// Mensajes amigables según el código de error de las APIs de pago
 const ERRORES_API = {
   401: 'Tu sesión expiró. Inicia sesión de nuevo e intenta pagar.',
   403: 'Esta cuota no te pertenece. Si crees que es un error, contacta soporte.',
@@ -48,14 +41,20 @@ export default function PagarCuotaPage({ params }) {
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState(null)
 
+  const [modo,       setModo]       = useState('cuotas') // 'cuotas' | 'libre'
   const [numCuotas,  setNumCuotas]  = useState(1)
   const [maxCuotas,  setMaxCuotas]  = useState(1)
-  const [cotizacion, setCotizacion] = useState(null) // { cuotasCubiertas, montoBase, montoMora, montoTotal }
+  const [montoLibre, setMontoLibre] = useState('')       // string del input
+
+  const [cotizacion, setCotizacion] = useState(null)     // respuesta de /cotizar
   const [cotizando,  setCotizando]  = useState(false)
+  const [cotizaError,setCotizaError]= useState(null)     // error suave (inline)
 
   const [pagando,    setPagando]    = useState(false)
   const [wompiListo, setWompiListo] = useState(false)
-  const [wompiError, setWompiError] = useState(null)
+  const [wompiError, setWompiError] = useState(null)     // error duro (bloquea pago)
+
+  const debounceRef = useRef(null)
 
   // ── Cargar el script del widget de Wompi una sola vez ─────────
   useEffect(() => {
@@ -68,32 +67,33 @@ export default function PagarCuotaPage({ params }) {
     document.body.appendChild(script)
   }, [])
 
-  // ── Cotizar N cuotas (preview, sin escribir en BD) ────────────
-  const cotizar = useCallback(async (id, n) => {
+  // ── Cotizar (preview, sin escribir en BD) ─────────────────────
+  const cotizar = useCallback(async (payload) => {
     setCotizando(true)
+    setCotizaError(null)
     try {
       const res = await fetch('/api/pagos/cotizar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cuotaId: id, numCuotas: n }),
+        body: JSON.stringify(payload),
       })
+      const data = await res.json().catch(() => ({}))
       if (res.ok) {
-        const data = await res.json()
         setCotizacion(data)
-        setMaxCuotas(data.maxCuotas)
-        // Ajustar la selección si excede el máximo disponible
-        if (n > data.maxCuotas) setNumCuotas(data.maxCuotas)
+        if (typeof data.maxCuotas === 'number') setMaxCuotas(data.maxCuotas)
       } else {
-        setWompiError(ERRORES_API[res.status] || 'No se pudo calcular el pago. Intenta más tarde.')
+        setCotizacion(null)
+        setCotizaError(data?.error || ERRORES_API[res.status] || 'No se pudo calcular el pago.')
       }
     } catch {
-      setWompiError('No se pudo calcular el pago. Revisa tu conexión.')
+      setCotizacion(null)
+      setCotizaError('No se pudo calcular el pago. Revisa tu conexión.')
     } finally {
       setCotizando(false)
     }
   }, [])
 
-  // ── Carga inicial: cuota + crédito + primera cotización ───────
+  // ── Carga inicial ─────────────────────────────────────────────
   useEffect(() => {
     async function cargar() {
       const resolved = await params
@@ -120,18 +120,47 @@ export default function PagarCuotaPage({ params }) {
 
       setCuota(cuotaData)
       setCredito(creditoData)
-      await cotizar(id, 1)
+      await cotizar({ cuotaId: id, modo: 'cuotas', numCuotas: 1 })
       setLoading(false)
     }
     cargar()
   }, [params, router, cotizar])
 
-  // ── Cambiar el número de cuotas a pagar ───────────────────────
+  // ── Modo "por cuotas": cambiar cantidad ───────────────────────
   const cambiarNum = (n) => {
     const nuevo = Math.min(Math.max(1, n), maxCuotas)
-    if (nuevo === numCuotas) return
     setNumCuotas(nuevo)
-    cotizar(cuotaId, nuevo)
+    cotizar({ cuotaId, modo: 'cuotas', numCuotas: nuevo })
+  }
+
+  // ── Cambiar de pestaña de modo ────────────────────────────────
+  const cambiarModo = (nuevoModo) => {
+    if (nuevoModo === modo) return
+    setModo(nuevoModo)
+    setCotizaError(null)
+    if (nuevoModo === 'cuotas') {
+      cotizar({ cuotaId, modo: 'cuotas', numCuotas })
+    } else {
+      // Prefill con el valor de la cuota de partida
+      const inicial = String(Math.round(Number(cuota?.monto_total_cuota) || 0))
+      setMontoLibre(inicial)
+      cotizar({ cuotaId, modo: 'libre', montoLibre: Number(inicial) })
+    }
+  }
+
+  // ── Modo "otro monto": input con debounce ─────────────────────
+  const cambiarMonto = (valor) => {
+    const limpio = valor.replace(/[^\d]/g, '')
+    setMontoLibre(limpio)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      if (limpio && Number(limpio) > 0) {
+        cotizar({ cuotaId, modo: 'libre', montoLibre: Number(limpio) })
+      } else {
+        setCotizacion(null)
+        setCotizaError('Escribe un monto a pagar.')
+      }
+    }, 500)
   }
 
   // ── Confirmar y abrir el checkout de Wompi ────────────────────
@@ -139,10 +168,14 @@ export default function PagarCuotaPage({ params }) {
     setWompiError(null)
     setPagando(true)
     try {
+      const body = modo === 'libre'
+        ? { cuotaId, modo: 'libre', montoLibre: Number(montoLibre) }
+        : { cuotaId, modo: 'cuotas', numCuotas }
+
       const res = await fetch('/api/pagos/iniciar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cuotaId, numCuotas }),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
@@ -160,7 +193,6 @@ export default function PagarCuotaPage({ params }) {
         setPagando(false)
         return
       }
-
       if (!window.WidgetCheckout) {
         setWompiError('La pasarela de pago aún se está cargando. Espera un momento e intenta de nuevo.')
         setPagando(false)
@@ -183,7 +215,6 @@ export default function PagarCuotaPage({ params }) {
         },
       })
 
-      // Al cerrar el widget, ir a la confirmación (el webhook reconcilia el estado)
       checkout.open(() => {
         router.push(`/dashboard/cuotas/confirmacion?referencia=${data.referencia}`)
       })
@@ -217,15 +248,18 @@ export default function PagarCuotaPage({ params }) {
     )
   }
 
-  const cubiertas   = cotizacion?.cuotasCubiertas ?? []
-  const montoMora   = cotizacion?.montoMora ?? 0
-  const montoBase   = cotizacion?.montoBase ?? Number(cuota.monto_total_cuota)
-  const montoTotal  = cotizacion?.montoTotal ?? Number(cuota.monto_total_cuota)
-  const primera     = cubiertas[0]
-  const ultima      = cubiertas[cubiertas.length - 1]
-  const vencimiento = new Date(cuota.fecha_vencimiento).toLocaleDateString('es-CO', {
+  const cubiertas    = cotizacion?.cuotasCubiertas ?? []
+  const montoMora    = cotizacion?.montoMora ?? 0
+  const montoBase    = cotizacion?.montoBase ?? 0
+  const montoACobrar = cotizacion?.montoACobrar ?? 0
+  const saldoPrevio  = cotizacion?.saldoPrevio ?? 0
+  const saldoNuevo   = cotizacion?.saldoNuevo ?? 0
+  const primera      = cubiertas[0]
+  const ultima       = cubiertas[cubiertas.length - 1]
+  const vencimiento  = new Date(cuota.fecha_vencimiento).toLocaleDateString('es-CO', {
     day: '2-digit', month: 'long', year: 'numeric',
   })
+  const puedePagar = !!cotizacion && montoACobrar > 0 && !cotizaError
 
   return (
     <div className="w-full flex flex-col gap-8 pb-10 max-w-3xl mx-auto">
@@ -234,39 +268,92 @@ export default function PagarCuotaPage({ params }) {
         <Link href="/dashboard/cuotas" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-orange-500 transition-colors mb-3">
           <ArrowLeft className="w-4 h-4" /> Volver al plan de pagos
         </Link>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Pagar Cuota{numCuotas > 1 ? 's' : ''}</h1>
-        <p className="text-slate-500 mt-1">Elige cuántas cuotas pagar. Serás redirigido al portal seguro de Wompi.</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Pagar</h1>
+        <p className="text-slate-500 mt-1">Elige cómo quieres pagar. Serás redirigido al portal seguro de Wompi.</p>
       </header>
 
-      {/* Selector de número de cuotas */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="font-semibold text-slate-700">¿Cuántas cuotas quieres pagar?</h2>
-            <p className="text-sm text-slate-400 mt-0.5">
-              Puedes adelantar hasta {maxCuotas} cuota{maxCuotas > 1 ? 's' : ''} pendiente{maxCuotas > 1 ? 's' : ''}.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 self-start sm:self-auto">
-            <button
-              onClick={() => cambiarNum(numCuotas - 1)}
-              disabled={numCuotas <= 1 || cotizando}
-              className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              aria-label="Menos cuotas"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            <span className="w-10 text-center text-2xl font-extrabold text-slate-900 tabular-nums">{numCuotas}</span>
-            <button
-              onClick={() => cambiarNum(numCuotas + 1)}
-              disabled={numCuotas >= maxCuotas || cotizando}
-              className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              aria-label="Más cuotas"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
+      {/* Saldo a favor disponible */}
+      {saldoPrevio > 0 && (
+        <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm">
+          <Wallet className="w-5 h-5 text-emerald-500 shrink-0" />
+          <p className="text-emerald-800">
+            Tienes <strong>{formatCOP(saldoPrevio)}</strong> de saldo a favor. Se aplicará automáticamente a este pago.
+          </p>
         </div>
+      )}
+
+      {/* Selector de modo + entrada */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
+        {/* Tabs */}
+        <div className="grid grid-cols-2 gap-2 bg-slate-100 rounded-xl p-1 mb-6">
+          <button
+            onClick={() => cambiarModo('cuotas')}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+              modo === 'cuotas' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <ListChecks className="w-4 h-4" /> Por cuotas
+          </button>
+          <button
+            onClick={() => cambiarModo('libre')}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+              modo === 'libre' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Coins className="w-4 h-4" /> Otro monto
+          </button>
+        </div>
+
+        {/* Modo POR CUOTAS */}
+        {modo === 'cuotas' && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="font-semibold text-slate-700">¿Cuántas cuotas quieres pagar?</h2>
+              <p className="text-sm text-slate-400 mt-0.5">
+                Puedes adelantar hasta {maxCuotas} cuota{maxCuotas > 1 ? 's' : ''} pendiente{maxCuotas > 1 ? 's' : ''}.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 self-start sm:self-auto">
+              <button
+                onClick={() => cambiarNum(numCuotas - 1)}
+                disabled={numCuotas <= 1 || cotizando}
+                className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Menos cuotas"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+              <span className="w-10 text-center text-2xl font-extrabold text-slate-900 tabular-nums">{numCuotas}</span>
+              <button
+                onClick={() => cambiarNum(numCuotas + 1)}
+                disabled={numCuotas >= maxCuotas || cotizando}
+                className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Más cuotas"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modo OTRO MONTO */}
+        {modo === 'libre' && (
+          <div>
+            <h2 className="font-semibold text-slate-700">¿Cuánto quieres pagar?</h2>
+            <p className="text-sm text-slate-400 mt-0.5 mb-3">
+              Pagaremos las cuotas completas que alcance el monto; el sobrante queda como saldo a favor.
+            </p>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">$</span>
+              <input
+                inputMode="numeric"
+                value={montoLibre ? Number(montoLibre).toLocaleString('es-CO') : ''}
+                onChange={(e) => cambiarMonto(e.target.value)}
+                placeholder="Escribe el valor a pagar"
+                className="w-full pl-9 pr-4 py-3 text-lg font-bold text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400/50 focus:border-orange-400"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Listado de cuotas cubiertas */}
         {cubiertas.length > 0 && (
@@ -285,6 +372,21 @@ export default function PagarCuotaPage({ params }) {
             ))}
           </ul>
         )}
+
+        {/* Sin cuotas completas (solo abono a saldo) */}
+        {modo === 'libre' && cotizacion && cubiertas.length === 0 && !cotizaError && (
+          <div className="mt-5 flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm text-emerald-800">
+            <Wallet className="w-4 h-4 mt-0.5 shrink-0" />
+            Este monto no completa una cuota; se abonará por completo a tu saldo a favor.
+          </div>
+        )}
+
+        {/* Error de cotización (inline, suave) */}
+        {cotizaError && (
+          <p className="mt-4 flex items-center gap-2 text-sm text-red-600">
+            <AlertCircle className="w-4 h-4 shrink-0" /> {cotizaError}
+          </p>
+        )}
       </div>
 
       {/* Resumen del pago */}
@@ -292,19 +394,19 @@ export default function PagarCuotaPage({ params }) {
         <h2 className="font-semibold text-slate-700 mb-5">Resumen del pago</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-5">
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-slate-400 flex items-center gap-1"><DollarSign className="w-3 h-3" />Total a pagar</span>
-            <span className="text-2xl font-extrabold text-slate-900">{formatCOP(montoTotal)}</span>
+            <span className="text-xs text-slate-400 flex items-center gap-1"><DollarSign className="w-3 h-3" />Total a cobrar</span>
+            <span className="text-2xl font-extrabold text-slate-900">{formatCOP(montoACobrar)}</span>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs text-slate-400 flex items-center gap-1"><CalendarDays className="w-3 h-3" />Próximo vencimiento</span>
             <span className="font-semibold text-slate-700">{vencimiento}</span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-slate-400 flex items-center gap-1"><TrendingDown className="w-3 h-3" />Cuotas</span>
+            <span className="text-xs text-slate-400 flex items-center gap-1"><TrendingDown className="w-3 h-3" />Cuotas cubiertas</span>
             <span className="font-semibold text-slate-700">
               {primera && ultima
-                ? (numCuotas > 1 ? `#${primera.numero_cuota} a #${ultima.numero_cuota}` : `#${primera.numero_cuota}`)
-                : `#${cuota.numero_cuota}`} de {credito?.numero_cuotas}
+                ? (cubiertas.length > 1 ? `#${primera.numero_cuota} a #${ultima.numero_cuota}` : `#${primera.numero_cuota}`)
+                : '—'} {credito?.numero_cuotas ? `de ${credito.numero_cuotas}` : ''}
             </span>
           </div>
         </div>
@@ -316,7 +418,7 @@ export default function PagarCuotaPage({ params }) {
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500"># de cuotas</span>
-            <span className="font-semibold">{numCuotas}</span>
+            <span className="font-semibold">{cubiertas.length}</span>
           </div>
           {montoMora > 0 && (
             <div className="flex justify-between text-red-600 font-semibold col-span-2 border-t border-red-100 pt-2 mt-1">
@@ -324,9 +426,21 @@ export default function PagarCuotaPage({ params }) {
               <span>{formatCOP(montoMora)}</span>
             </div>
           )}
+          {saldoPrevio > 0 && (
+            <div className="flex justify-between text-emerald-700 col-span-2">
+              <span>Saldo a favor aplicado</span>
+              <span className="font-semibold">− {formatCOP(saldoPrevio - saldoNuevo)}</span>
+            </div>
+          )}
+          {saldoNuevo > 0 && (
+            <div className="flex justify-between text-emerald-700 col-span-2">
+              <span className="flex items-center gap-1"><Wallet className="w-3.5 h-3.5" /> Quedará como saldo a favor</span>
+              <span className="font-semibold">{formatCOP(saldoNuevo)}</span>
+            </div>
+          )}
           <div className="flex justify-between col-span-2 border-t border-slate-200 pt-2 font-semibold">
-            <span className="text-slate-500">Total del pago</span>
-            <span className="text-slate-900">{formatCOP(montoTotal)}</span>
+            <span className="text-slate-500">Total a cobrar</span>
+            <span className="text-slate-900">{formatCOP(montoACobrar)}</span>
           </div>
         </div>
 
@@ -345,7 +459,7 @@ export default function PagarCuotaPage({ params }) {
           ) : (
             <button
               onClick={handlePagar}
-              disabled={pagando || cotizando || !wompiListo || montoTotal <= 0}
+              disabled={pagando || cotizando || !wompiListo || !puedePagar}
               className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-semibold py-4 rounded-xl transition-all shadow-md shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {pagando || cotizando ? (
@@ -353,7 +467,7 @@ export default function PagarCuotaPage({ params }) {
               ) : !wompiListo ? (
                 <><Loader2 className="w-5 h-5 animate-spin" /> Cargando pasarela…</>
               ) : (
-                <><DollarSign className="w-5 h-5" /> Pagar {formatCOP(montoTotal)}</>
+                <><DollarSign className="w-5 h-5" /> Pagar {formatCOP(montoACobrar)}</>
               )}
             </button>
           )}

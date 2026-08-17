@@ -66,28 +66,35 @@ async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
       .eq('id_cuota', c.id_cuota)
   }
 
-  // 3. Actualizar saldo y contadores del crédito
+  // 3. Actualizar saldo, contadores y saldo a favor del crédito
   const { data: creditoActual } = await db
     .from('credito')
-    .select('saldo_pendiente, cuotas_pagadas, cuotas_en_mora, estado_credito')
+    .select('saldo_pendiente, cuotas_pagadas, cuotas_en_mora, estado_credito, saldo_a_favor')
     .eq('id_credito', pago.id_credito)
     .maybeSingle()
 
   if (creditoActual) {
     const nuevoSaldo = Math.max(0, Number(creditoActual.saldo_pendiente) - sumaCapital)
+    // saldo a favor: aplicar el delta calculado en el pre-registro (puede ser
+    // negativo si se consumió saldo previo). Nunca baja de 0.
+    const deltaSaldoFavor = Number(pago.saldo_a_favor_delta ?? 0)
+    const nuevoSaldoFavor = Math.max(0, Math.round((Number(creditoActual.saldo_a_favor ?? 0) + deltaSaldoFavor) * 100) / 100)
+
     await db
       .from('credito')
       .update({
         saldo_pendiente: nuevoSaldo,
         cuotas_pagadas:  Number(creditoActual.cuotas_pagadas ?? 0) + cubiertas.length,
         cuotas_en_mora:  Math.max(0, Number(creditoActual.cuotas_en_mora ?? 0) - enMora),
+        saldo_a_favor:   nuevoSaldoFavor,
         estado_credito:  nuevoSaldo <= 0 ? 'CANCELADO' : creditoActual.estado_credito,
         updated_at:      ahora,
       })
       .eq('id_credito', pago.id_credito)
 
-    // 4. Notificar al cliente (fire-and-forget)
+    // 4. Notificar al cliente (fire-and-forget) — solo si cubrió alguna cuota
     try {
+      if (cubiertas.length === 0) throw new Error('sin cuotas cubiertas — solo abono a saldo')
       const { data: creditoCliente } = await db
         .from('credito')
         .select('cliente ( email, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido )')
@@ -178,8 +185,10 @@ export async function POST(request) {
       return NextResponse.json({ ok: true, msg: 'Pago ya procesado' })
     }
 
-    // ── Pago multi-cuota: reconciliar todas las cuotas cubiertas ──
-    if (Array.isArray(pago?.cuotas_cubiertas) && pago.cuotas_cubiertas.length > 0) {
+    // ── Pago multi-cuota / monto libre: reconciliar cuotas + saldo a favor ──
+    // Cualquier pago del flujo nuevo trae cuotas_cubiertas como array (puede
+    // estar vacío si el monto libre solo alimentó el saldo a favor).
+    if (Array.isArray(pago?.cuotas_cubiertas)) {
       return await confirmarMultiCuota(db, { pago, referencia, montoCentavos: monto })
     }
 

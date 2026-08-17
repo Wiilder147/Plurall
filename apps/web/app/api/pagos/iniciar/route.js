@@ -13,7 +13,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { formatNombre } from '@/lib/nombre'
-import { resolverCuotasCubiertas } from '@/lib/pagos'
+import { resolverPago } from '@/lib/pagos'
 
 // ── Rate limiting con Upstash Redis ─────────────────────────────────────────
 // Máximo 5 intentos de pago por usuario cada 10 minutos
@@ -89,46 +89,49 @@ export async function POST(request) {
     )
   }
 
-  const { cuotaId, numCuotas } = await request.json()
+  const { cuotaId, modo, numCuotas, montoLibre } = await request.json()
 
-  // ── Resolver las cuotas cubiertas (valida propiedad + calcula montos) ────
-  const resuelto = await resolverCuotasCubiertas(supabase, { user, cuotaId, numCuotas })
+  // ── Resolver el pago (valida propiedad + calcula montos + saldo a favor) ──
+  const resuelto = await resolverPago(supabase, { user, cuotaId, modo, numCuotas, montoLibre })
   if (resuelto.error) {
     return NextResponse.json({ error: resuelto.error }, { status: resuelto.status })
   }
 
-  const { cliente, idCredito, cuotasCubiertas, montoBase, montoMora, montoTotal } = resuelto
+  const { cliente, idCredito, cuotasCubiertas, montoBase, montoMora, montoACobrar, deltaSaldo } = resuelto
 
-  if (montoTotal <= 0) {
+  if (montoACobrar <= 0) {
     return NextResponse.json({ error: 'Monto de pago inválido' }, { status: 400 })
   }
 
-  const primeraCuota = cuotasCubiertas[0]
+  // Cuota de anclaje del pago (id_cuota es NOT NULL): la primera cubierta o,
+  // si el monto libre no alcanza para ninguna, la cuota de partida.
+  const idCuotaAncla = cuotasCubiertas[0]?.id_cuota ?? cuotaId
   const sumaCapital  = cuotasCubiertas.reduce((s, c) => s + c.monto_capital, 0)
   const sumaInteres  = cuotasCubiertas.reduce((s, c) => s + c.monto_interes, 0)
 
   // ── Pre-registrar el pago (con reintento si la referencia colisiona) ─────
   const service         = createServiceClient()
-  const montoEnCentavos = Math.round(montoTotal * 100)
-  let referencia        = `PLR-${primeraCuota.id_cuota.slice(0, 8).toUpperCase()}-${Date.now()}`
+  const montoEnCentavos = Math.round(montoACobrar * 100)
+  let referencia        = `PLR-${idCuotaAncla.slice(0, 8).toUpperCase()}-${Date.now()}`
   let idRecibo          = null
 
   for (let intento = 0; intento < 3; intento++) {
     const res = await preRegistrarPago(service, {
-      id_cuota:           primeraCuota.id_cuota,
-      id_credito:         idCredito,
-      monto_pagado:       montoTotal,
-      monto_capital:      Math.round(sumaCapital * 100) / 100,
-      monto_interes:      Math.round(sumaInteres * 100) / 100,
-      monto_mora:         montoMora,
-      metodo_pago:        'WOMPI',
-      referencia_externa: referencia,
-      estado:             'PROCESANDO',
-      cuotas_cubiertas:   cuotasCubiertas,
+      id_cuota:            idCuotaAncla,
+      id_credito:          idCredito,
+      monto_pagado:        montoACobrar,
+      monto_capital:       Math.round(sumaCapital * 100) / 100,
+      monto_interes:       Math.round(sumaInteres * 100) / 100,
+      monto_mora:          montoMora,
+      metodo_pago:         'WOMPI',
+      referencia_externa:  referencia,
+      estado:              'PROCESANDO',
+      cuotas_cubiertas:    cuotasCubiertas,
+      saldo_a_favor_delta: deltaSaldo,
     })
 
     if (res.reintentar) {
-      referencia = `PLR-${primeraCuota.id_cuota.slice(0, 8).toUpperCase()}-${Date.now() + intento + 1}`
+      referencia = `PLR-${idCuotaAncla.slice(0, 8).toUpperCase()}-${Date.now() + intento + 1}`
       continue
     }
     if (res.error) {
@@ -163,7 +166,7 @@ export async function POST(request) {
     idRecibo,
     montoBase,
     montoMora,
-    montoTotal,
+    montoACobrar,
     cuotasCubiertas,
     // Datos del pagador (pre-fill)
     email:    user.email,
