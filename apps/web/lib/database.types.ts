@@ -1,8 +1,9 @@
 /**
  * database.types.ts - Tipos TS de la BD Plurall.
  * Generado desde Supabase (proyecto Plurall-Fants) el 2026-08-17,
- * estado consolidado tras migraciones db/01..24 (normalizacion FASE 2:
- * tablas direccion, negocio_cliente, perfil_financiero, cuenta_bancaria + vista vw_cliente_score).
+ * estado consolidado tras migraciones db/01..27 (normalizacion COMPLETA:
+ * cliente adelgazada; detalle_cliente eliminada; negocio_cliente,
+ * perfil_financiero, cuenta_bancaria, direccion + vista vw_cliente_score).
  * Fuente de verdad del esquema: db/plurall_database_completa.sql
  * Regenerar con: mcp Supabase generate_typescript_types / supabase gen types.
  */
@@ -206,99 +207,45 @@ export type Database = {
       }
       cliente: {
         Row: {
-          antiguedad_negocio_meses: number | null
-          ciudad: string | null
-          ciudad_casa: string | null
-          ciudad_negocio: string | null
           created_at: string | null
-          departamento: string | null
-          departamento_casa: string | null
-          departamento_negocio: string | null
-          descripcion_negocio: string | null
-          direccion: string | null
-          direccion_casa: string | null
-          direccion_negocio: string | null
           dni: string
           email: string
           id_cliente: string
           id_estado_cliente: string
           id_tipo_doc: string | null
-          id_tipo_negocio: string | null
           id_usuario_cuenta: string
-          lat_casa: number | null
-          lat_negocio: number | null
-          lon_casa: number | null
-          lon_negocio: number | null
-          nombre_negocio: string | null
           primer_apellido: string
           primer_nombre: string
-          score_credito: number | null
           segundo_apellido: string | null
           segundo_nombre: string | null
           telefono: string
           updated_at: string | null
         }
         Insert: {
-          antiguedad_negocio_meses?: number | null
-          ciudad?: string | null
-          ciudad_casa?: string | null
-          ciudad_negocio?: string | null
           created_at?: string | null
-          departamento?: string | null
-          departamento_casa?: string | null
-          departamento_negocio?: string | null
-          descripcion_negocio?: string | null
-          direccion?: string | null
-          direccion_casa?: string | null
-          direccion_negocio?: string | null
           dni: string
           email: string
           id_cliente?: string
           id_estado_cliente: string
           id_tipo_doc?: string | null
-          id_tipo_negocio?: string | null
           id_usuario_cuenta: string
-          lat_casa?: number | null
-          lat_negocio?: number | null
-          lon_casa?: number | null
-          lon_negocio?: number | null
-          nombre_negocio?: string | null
           primer_apellido: string
           primer_nombre: string
-          score_credito?: number | null
           segundo_apellido?: string | null
           segundo_nombre?: string | null
           telefono: string
           updated_at?: string | null
         }
         Update: {
-          antiguedad_negocio_meses?: number | null
-          ciudad?: string | null
-          ciudad_casa?: string | null
-          ciudad_negocio?: string | null
           created_at?: string | null
-          departamento?: string | null
-          departamento_casa?: string | null
-          departamento_negocio?: string | null
-          descripcion_negocio?: string | null
-          direccion?: string | null
-          direccion_casa?: string | null
-          direccion_negocio?: string | null
           dni?: string
           email?: string
           id_cliente?: string
           id_estado_cliente?: string
           id_tipo_doc?: string | null
-          id_tipo_negocio?: string | null
           id_usuario_cuenta?: string
-          lat_casa?: number | null
-          lat_negocio?: number | null
-          lon_casa?: number | null
-          lon_negocio?: number | null
-          nombre_negocio?: string | null
           primer_apellido?: string
           primer_nombre?: string
-          score_credito?: number | null
           segundo_apellido?: string | null
           segundo_nombre?: string | null
           telefono?: string
@@ -318,13 +265,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tipo_documento_identidad"
             referencedColumns: ["id_tipo_doc"]
-          },
-          {
-            foreignKeyName: "cliente_id_tipo_negocio_fkey"
-            columns: ["id_tipo_negocio"]
-            isOneToOne: false
-            referencedRelation: "tipo_negocio"
-            referencedColumns: ["id_tipo_negocio"]
           },
           {
             foreignKeyName: "cliente_id_usuario_cuenta_fkey"
@@ -604,92 +544,6 @@ export type Database = {
           nombre?: string
         }
         Relationships: []
-      }
-      detalle_cliente: {
-        Row: {
-          ahorros: number | null
-          arriendo_casa: number | null
-          arriendo_negocio: number | null
-          banco_preferido: string | null
-          colaboracion_gastos: boolean | null
-          created_at: string | null
-          dependientes: number | null
-          egresos_mensuales: number | null
-          empleados_negocio: number | null
-          estado_civil: string | null
-          estrato: number | null
-          id_cliente: string
-          id_detalle: string
-          ingresos_mensuales: number | null
-          nivel_educativo: string | null
-          numero_cuenta: string | null
-          otras_obligaciones: number | null
-          patrimonio_estimado: number | null
-          personas_cargo: number | null
-          tiene_vehiculo: boolean | null
-          tipo_cuenta_bancaria: string | null
-          tipo_vivienda: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          ahorros?: number | null
-          arriendo_casa?: number | null
-          arriendo_negocio?: number | null
-          banco_preferido?: string | null
-          colaboracion_gastos?: boolean | null
-          created_at?: string | null
-          dependientes?: number | null
-          egresos_mensuales?: number | null
-          empleados_negocio?: number | null
-          estado_civil?: string | null
-          estrato?: number | null
-          id_cliente: string
-          id_detalle?: string
-          ingresos_mensuales?: number | null
-          nivel_educativo?: string | null
-          numero_cuenta?: string | null
-          otras_obligaciones?: number | null
-          patrimonio_estimado?: number | null
-          personas_cargo?: number | null
-          tiene_vehiculo?: boolean | null
-          tipo_cuenta_bancaria?: string | null
-          tipo_vivienda?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          ahorros?: number | null
-          arriendo_casa?: number | null
-          arriendo_negocio?: number | null
-          banco_preferido?: string | null
-          colaboracion_gastos?: boolean | null
-          created_at?: string | null
-          dependientes?: number | null
-          egresos_mensuales?: number | null
-          empleados_negocio?: number | null
-          estado_civil?: string | null
-          estrato?: number | null
-          id_cliente?: string
-          id_detalle?: string
-          ingresos_mensuales?: number | null
-          nivel_educativo?: string | null
-          numero_cuenta?: string | null
-          otras_obligaciones?: number | null
-          patrimonio_estimado?: number | null
-          personas_cargo?: number | null
-          tiene_vehiculo?: boolean | null
-          tipo_cuenta_bancaria?: string | null
-          tipo_vivienda?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "detalle_cliente_id_cliente_fkey"
-            columns: ["id_cliente"]
-            isOneToOne: true
-            referencedRelation: "cliente"
-            referencedColumns: ["id_cliente"]
-          },
-        ]
       }
       direccion: {
         Row: {

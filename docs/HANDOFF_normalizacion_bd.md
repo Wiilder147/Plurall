@@ -16,10 +16,11 @@
 | **FASE 3 — Migración 25 (backfill + verificación)** | ✅ COMPLETADA (aplicada en Supabase 2026-08-17) |
 | **FASE 4 — Recablear backend** | ✅ COMPLETADA (dual-write + reads backend + score opción A) |
 | **FASE 5 — Recablear frontend** | ✅ COMPLETADA (commit `c2a0afc`) |
-| FASE 6 — Migración 27 (CONTRACT / DROP) | ⛔ EN CHECKPOINT — **requiere OK del usuario** (migración `db/27` ya redactada, NO aplicada) |
-| FASE 7 — Pruebas + build + docs | ⬜ pendiente |
+| **FASE 6 — Migración 27 (CONTRACT / DROP)** | ✅ COMPLETADA (OK del usuario; contract código `7ca13bf` + `db/27` aplicada 2026-08-17) |
+| **FASE 7 — Pruebas + build + docs** | ✅ COMPLETADA (schema+types regenerados, build verde, `docs/deploy_normalizacion_bd.md`) |
 
-> Nota de numeración: `db/26` se usó para enriquecer `direccion.id_municipio` (soporte de reads). El CONTRACT/DROP pasa a **`db/27`**.
+> **NORMALIZACIÓN COMPLETA (2026-08-17).** `cliente` adelgazada; `detalle_cliente` eliminada; datos en `negocio_cliente`/`direccion`/`perfil_financiero`/`cuenta_bancaria`/`vw_cliente_score`. 0 columnas legacy, 85 clientes intactos. Falta solo: merge de la rama y smoke test manual en runtime (checklist en `docs/deploy_normalizacion_bd.md`).
+> Nota de numeración: `db/26` = enrichment `direccion.id_municipio`; `db/27` = CONTRACT/DROP.
 
 ### Estado de prerequisitos
 - ✅ Migración **`db/23`** aplicada en Supabase (2026-08-13, vía MCP). `nombre_completo` eliminado; nombres atómicos 1B+2A vigentes. Código app recableado y commiteado (`deaf7a2`).

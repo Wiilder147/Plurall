@@ -172,6 +172,9 @@ CREATE TABLE perfil_usuario (
   segundo_apellido character varying(60)
 );
 
+-- cliente ADELGAZADA (mig. 27 CONTRACT): sin negocio/ubicación/finanzas/score.
+-- Negocio → negocio_cliente · Ubicación → direccion · Finanzas → perfil_financiero
+-- · Banco → cuenta_bancaria · Score → vw_cliente_score. Ver bloque "MIGRACIÓN 24".
 CREATE TABLE cliente (
   id_cliente uuid NOT NULL DEFAULT gen_random_uuid(),
   id_usuario_cuenta uuid NOT NULL,
@@ -180,57 +183,16 @@ CREATE TABLE cliente (
   dni character varying(20) NOT NULL,
   email character varying(100) NOT NULL,
   telefono character varying(20) NOT NULL,
-  direccion text,
-  ciudad character varying(100),
-  departamento character varying(100),
-  nombre_negocio character varying(150),
-  id_tipo_negocio uuid,
-  descripcion_negocio text,
-  antiguedad_negocio_meses integer,
-  score_credito integer DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  direccion_negocio text,
-  ciudad_negocio character varying(100),
-  departamento_negocio character varying(100),
-  lat_negocio numeric(10,7),
-  lon_negocio numeric(10,7),
-  direccion_casa text,
-  ciudad_casa character varying(100),
-  departamento_casa character varying(100),
-  lat_casa numeric(10,7),
-  lon_casa numeric(10,7),
   primer_nombre character varying(60) NOT NULL,
   segundo_nombre character varying(60),
   primer_apellido character varying(60) NOT NULL,
   segundo_apellido character varying(60)
 );
 
-CREATE TABLE detalle_cliente (
-  id_detalle uuid NOT NULL DEFAULT gen_random_uuid(),
-  id_cliente uuid NOT NULL,
-  tipo_vivienda character varying(50),
-  estrato integer,
-  nivel_educativo character varying(50),
-  estado_civil character varying(30),
-  personas_cargo integer DEFAULT 0,
-  ingresos_mensuales numeric(14,2),
-  egresos_mensuales numeric(14,2),
-  patrimonio_estimado numeric(14,2),
-  otras_obligaciones numeric(14,2) DEFAULT 0,
-  banco_preferido character varying(100),
-  tipo_cuenta_bancaria character varying(30),
-  numero_cuenta character varying(30),
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  empleados_negocio integer DEFAULT 0,
-  arriendo_negocio numeric(14,2) DEFAULT 0,
-  arriendo_casa numeric(14,2) DEFAULT 0,
-  dependientes integer DEFAULT 0,
-  colaboracion_gastos boolean DEFAULT false,
-  ahorros numeric(14,2) DEFAULT 0,
-  tiene_vehiculo boolean DEFAULT false
-);
+-- detalle_cliente: ELIMINADA en mig. 27 (finanzas → perfil_financiero,
+-- banco → cuenta_bancaria, negocio → negocio_cliente).
 
 CREATE TABLE documento_cliente (
   id_documento uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -550,7 +512,6 @@ ALTER TABLE tipo_documento_legal     ADD CONSTRAINT tipo_documento_legal_pkey PR
 ALTER TABLE tipo_notificacion        ADD CONSTRAINT tipo_notificacion_pkey PRIMARY KEY (id_tipo_notif);
 ALTER TABLE perfil_usuario           ADD CONSTRAINT perfil_usuario_pkey PRIMARY KEY (id);
 ALTER TABLE cliente                  ADD CONSTRAINT cliente_pkey PRIMARY KEY (id_cliente);
-ALTER TABLE detalle_cliente          ADD CONSTRAINT detalle_cliente_pkey PRIMARY KEY (id_detalle);
 ALTER TABLE documento_cliente        ADD CONSTRAINT documento_cliente_pkey PRIMARY KEY (id_documento);
 ALTER TABLE solicitud_credito        ADD CONSTRAINT solicitud_credito_pkey PRIMARY KEY (id_solicitud);
 ALTER TABLE respuesta_cliente        ADD CONSTRAINT respuesta_cliente_pkey PRIMARY KEY (id_respuesta);
@@ -587,7 +548,6 @@ ALTER TABLE tipo_documento_legal     ADD CONSTRAINT tipo_documento_legal_codigo_
 ALTER TABLE tipo_notificacion        ADD CONSTRAINT tipo_notificacion_codigo_key UNIQUE (codigo);
 ALTER TABLE cliente                  ADD CONSTRAINT uq_cliente_dni UNIQUE (dni);
 ALTER TABLE cliente                  ADD CONSTRAINT uq_cliente_email UNIQUE (email);
-ALTER TABLE detalle_cliente          ADD CONSTRAINT uq_detalle_id_cliente UNIQUE (id_cliente);
 ALTER TABLE asignacion_asesor        ADD CONSTRAINT uq_asesor_cliente UNIQUE (id_asesor, id_cliente);
 
 -- Check
@@ -596,11 +556,6 @@ ALTER TABLE cliente ADD CONSTRAINT ck_telefono_len CHECK ((length(regexp_replace
 ALTER TABLE credito ADD CONSTRAINT ck_credito_estado CHECK (((estado_credito)::text = ANY ((ARRAY['ACTIVO'::character varying, 'EN_MORA'::character varying, 'PAGADO'::character varying, 'CANCELADO'::character varying, 'CASTIGADO'::character varying])::text[])));
 ALTER TABLE cuota ADD CONSTRAINT ck_cuota_estado CHECK (((estado_cuota)::text = ANY ((ARRAY['PENDIENTE'::character varying, 'PAGADA'::character varying, 'PAGADA_MORA'::character varying, 'VENCIDA'::character varying])::text[])));
 ALTER TABLE decision_solicitud ADD CONSTRAINT ck_decision_resultado CHECK (((resultado IS NULL) OR ((resultado)::text = ANY ((ARRAY['APROBADO'::character varying, 'RECHAZADO'::character varying, 'PREAPROBADO'::character varying])::text[]))));
-ALTER TABLE detalle_cliente ADD CONSTRAINT ck_estado_civil CHECK (((estado_civil IS NULL) OR ((estado_civil)::text = ANY ((ARRAY['SOLTERO'::character varying, 'CASADO'::character varying, 'UNION_LIBRE'::character varying, 'SEPARADO'::character varying, 'VIUDO'::character varying])::text[]))));
-ALTER TABLE detalle_cliente ADD CONSTRAINT ck_estrato CHECK (((estrato IS NULL) OR ((estrato >= 1) AND (estrato <= 6))));
-ALTER TABLE detalle_cliente ADD CONSTRAINT ck_nivel_educativo CHECK (((nivel_educativo IS NULL) OR ((nivel_educativo)::text = ANY ((ARRAY['PRIMARIA'::character varying, 'BACHILLERATO'::character varying, 'TECNICO'::character varying, 'TECNOLOGO'::character varying, 'PROFESIONAL'::character varying, 'POSGRADO'::character varying, 'NINGUNO'::character varying])::text[]))));
-ALTER TABLE detalle_cliente ADD CONSTRAINT ck_tipo_cuenta CHECK (((tipo_cuenta_bancaria IS NULL) OR ((tipo_cuenta_bancaria)::text = ANY ((ARRAY['AHORROS'::character varying, 'CORRIENTE'::character varying, 'BILLETERA'::character varying])::text[]))));
-ALTER TABLE detalle_cliente ADD CONSTRAINT ck_tipo_vivienda CHECK (((tipo_vivienda IS NULL) OR ((tipo_vivienda)::text = ANY ((ARRAY['PROPIA'::character varying, 'ARRENDADA'::character varying, 'FAMILIAR'::character varying])::text[]))));
 ALTER TABLE documento_cliente ADD CONSTRAINT ck_doc_estado_verif CHECK (((estado_verificacion)::text = ANY ((ARRAY['PENDIENTE'::character varying, 'APROBADO'::character varying, 'RECHAZADO'::character varying])::text[])));
 ALTER TABLE documento_cliente ADD CONSTRAINT ck_doc_tipo CHECK (((tipo_documento)::text = ANY ((ARRAY['CEDULA_FRONTAL'::character varying, 'CEDULA_TRASERA'::character varying, 'SELFIE'::character varying, 'RECIBO_PUBLICO'::character varying, 'FOTO_NEGOCIO'::character varying, 'RUT'::character varying, 'EXTRACTO_BANCARIO'::character varying, 'CAMARA_COMERCIO'::character varying, 'OTRO_COMPROBANTE'::character varying, 'OTRO'::character varying])::text[])));
 ALTER TABLE pago ADD CONSTRAINT ck_pago_estado CHECK (((estado)::text = ANY ((ARRAY['CONFIRMADO'::character varying, 'PENDIENTE'::character varying, 'FALLIDO'::character varying, 'RECHAZADO'::character varying, 'REVERSADO'::character varying])::text[])));
@@ -619,8 +574,6 @@ ALTER TABLE perfil_usuario     ADD CONSTRAINT perfil_usuario_id_rol_fkey FOREIGN
 ALTER TABLE cliente            ADD CONSTRAINT cliente_id_usuario_cuenta_fkey FOREIGN KEY (id_usuario_cuenta) REFERENCES perfil_usuario(id) ON DELETE RESTRICT;
 ALTER TABLE cliente            ADD CONSTRAINT cliente_id_estado_cliente_fkey FOREIGN KEY (id_estado_cliente) REFERENCES estado_cliente(id_estado_cliente);
 ALTER TABLE cliente            ADD CONSTRAINT cliente_id_tipo_doc_fkey FOREIGN KEY (id_tipo_doc) REFERENCES tipo_documento_identidad(id_tipo_doc);
-ALTER TABLE cliente            ADD CONSTRAINT cliente_id_tipo_negocio_fkey FOREIGN KEY (id_tipo_negocio) REFERENCES tipo_negocio(id_tipo_negocio);
-ALTER TABLE detalle_cliente    ADD CONSTRAINT detalle_cliente_id_cliente_fkey FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente) ON DELETE CASCADE;
 ALTER TABLE documento_cliente  ADD CONSTRAINT documento_cliente_id_cliente_fkey FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente) ON DELETE RESTRICT;
 ALTER TABLE documento_cliente  ADD CONSTRAINT documento_cliente_verificado_por_fkey FOREIGN KEY (verificado_por) REFERENCES perfil_usuario(id);
 ALTER TABLE solicitud_credito  ADD CONSTRAINT solicitud_credito_id_cliente_fkey FOREIGN KEY (id_cliente) REFERENCES cliente(id_cliente) ON DELETE RESTRICT;
@@ -677,7 +630,6 @@ CREATE INDEX idx_cliente_dni ON public.cliente USING btree (dni);
 CREATE INDEX idx_cliente_email ON public.cliente USING btree (email);
 CREATE INDEX idx_cliente_estado ON public.cliente USING btree (id_estado_cliente);
 CREATE INDEX idx_cliente_id_tipo_doc ON public.cliente USING btree (id_tipo_doc);
-CREATE INDEX idx_cliente_id_tipo_negocio ON public.cliente USING btree (id_tipo_negocio);
 CREATE INDEX idx_cliente_usuario ON public.cliente USING btree (id_usuario_cuenta);
 CREATE INDEX idx_credito_cliente ON public.credito USING btree (id_cliente);
 CREATE INDEX idx_credito_estado ON public.credito USING btree (estado_credito);
@@ -1405,7 +1357,6 @@ $function$;
 -- updated_at
 CREATE TRIGGER trg_updated_perfil_usuario  BEFORE UPDATE ON public.perfil_usuario   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 CREATE TRIGGER trg_updated_cliente         BEFORE UPDATE ON public.cliente          FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
-CREATE TRIGGER trg_updated_detalle_cliente BEFORE UPDATE ON public.detalle_cliente  FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 CREATE TRIGGER trg_updated_solicitud       BEFORE UPDATE ON public.solicitud_credito FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 CREATE TRIGGER trg_updated_credito         BEFORE UPDATE ON public.credito          FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
 CREATE TRIGGER trg_updated_cuota           BEFORE UPDATE ON public.cuota            FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
@@ -1445,7 +1396,6 @@ ALTER TABLE tipo_documento_legal     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tipo_notificacion        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE perfil_usuario           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cliente                  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE detalle_cliente          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documento_cliente        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE solicitud_credito        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE respuesta_cliente        ENABLE ROW LEVEL SECURITY;
@@ -1500,10 +1450,6 @@ CREATE POLICY "cliente_registrarse" ON cliente AS PERMISSIVE FOR INSERT WITH CHE
 CREATE POLICY "admin_gestionar_clientes" ON cliente AS PERMISSIVE FOR ALL USING (es_analista_o_admin());
 CREATE POLICY "asesor_ver_clientes_asignados" ON cliente AS PERMISSIVE FOR SELECT USING (es_asesor_de_cliente(id_cliente));
 
--- detalle_cliente
-CREATE POLICY "ver_detalle_propio" ON detalle_cliente AS PERMISSIVE FOR SELECT USING (((id_cliente = mi_id_cliente()) OR es_analista_o_admin()));
-CREATE POLICY "admin_gestionar_detalle" ON detalle_cliente AS PERMISSIVE FOR ALL USING (es_analista_o_admin());
-CREATE POLICY "asesor_ver_detalle_asignado" ON detalle_cliente AS PERMISSIVE FOR SELECT USING (es_asesor_de_cliente(id_cliente));
 
 -- documento_cliente
 CREATE POLICY "ver_documentos_propios" ON documento_cliente AS PERMISSIVE FOR SELECT USING (((id_cliente = mi_id_cliente()) OR es_analista_o_admin()));
@@ -1612,7 +1558,6 @@ COMMENT ON TABLE tipo_documento_legal IS 'Catálogo de documentos. requiere_cred
 COMMENT ON TABLE tipo_notificacion IS 'Tipos de notificación con plantillas. Canal: EMAIL/SMS/PUSH. Implementa RN-13 (recordatorio pago)';
 COMMENT ON TABLE perfil_usuario IS 'Extiende auth.users. NO almacena contraseñas — Supabase Auth las maneja. intentos_fallidos implementa RN-02';
 COMMENT ON TABLE cliente IS 'Comerciante/emprendedor. dni y email son únicos (RN-11). telefono validado a 10 dígitos (RN-01)';
-COMMENT ON TABLE detalle_cliente IS 'Información financiera y socioeconómica del cliente para el scoring';
 COMMENT ON TABLE documento_cliente IS 'Documentos KYC en Supabase Storage (bucket privado). estado_verificacion para flujo de aprobación';
 COMMENT ON TABLE solicitud_credito IS 'Solicitud de crédito. plazo_meses y tasa_propuesta son críticos para la calculadora (RF-02)';
 COMMENT ON TABLE respuesta_cliente IS 'Respuestas del formulario de solicitud. Puede ser opción múltiple o texto libre';
@@ -1641,7 +1586,8 @@ COMMENT ON COLUMN respuesta_cliente.respuesta_numerica IS 'Valor numérico de la
 -- ============================================================================
 -- NORMALIZACIÓN — MIGRACIÓN 24 (EXPAND): tablas nuevas + vista de score
 -- Ver db/24_normalizacion_tablas_nuevas.sql y docs/HANDOFF_normalizacion_bd.md.
--- Estas estructuras conviven con cliente/detalle_cliente hasta el CONTRACT (26).
+-- Reemplazan las columnas legacy de cliente y la tabla detalle_cliente, ya
+-- eliminadas por el CONTRACT (migración 27).
 -- ============================================================================
 
 CREATE TABLE direccion (
