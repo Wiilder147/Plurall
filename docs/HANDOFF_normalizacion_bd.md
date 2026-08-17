@@ -14,10 +14,12 @@
 | **FASE 1 — Resincronizar schema maestro + types** | ✅ COMPLETADA (commit `3f5abed`) |
 | **FASE 2 — Migración 24 (crear tablas nuevas)** | ✅ COMPLETADA (aplicada en Supabase 2026-08-17) |
 | **FASE 3 — Migración 25 (backfill + verificación)** | ✅ COMPLETADA (aplicada en Supabase 2026-08-17) |
-| FASE 4 — Recablear backend | 🔵 EN CURSO (write dual-write hecho; faltan reads) |
-| FASE 5 — Recablear frontend | ⬜ pendiente |
-| FASE 6 — Migración 26 (CONTRACT / DROP) | ⬜ pendiente |
+| **FASE 4 — Recablear backend** | ✅ COMPLETADA (dual-write + reads backend + score opción A) |
+| FASE 5 — Recablear frontend | ⏳ SIGUIENTE (11 pages + EditarPerfilForm) |
+| FASE 6 — Migración 27 (CONTRACT / DROP) | ⬜ pendiente — **PARAR a confirmar antes** |
 | FASE 7 — Pruebas + build + docs | ⬜ pendiente |
+
+> Nota de numeración: `db/26` se usó para enriquecer `direccion.id_municipio` (soporte de reads). El CONTRACT/DROP pasa a **`db/27`**.
 
 ### Estado de prerequisitos
 - ✅ Migración **`db/23`** aplicada en Supabase (2026-08-13, vía MCP). `nombre_completo` eliminado; nombres atómicos 1B+2A vigentes. Código app recableado y commiteado (`deaf7a2`).
@@ -32,9 +34,17 @@
 - ✅ Build verde (`npm run build` EXIT=0). Se corrigió de paso un blocker preexistente ajeno a la normalización: mezcla `||`/`??` sin paréntesis en `{asesor,supervisor}/notificaciones/page.js` (commit `791523c`).
 - ⏳ **Faltan reads**: mover lecturas de negocio/finanzas/ubicación a las tablas nuevas y `score_credito` → `vw_cliente_score`. Sitios: `api/supervisor/buscar`, `api/reportes/export`, `app/{admin,supervisor}/clientes*`, `app/dashboard/perfil`, `app/asesor/*`.
 
-> ⚠️ **DECISIÓN PENDIENTE DEL USUARIO (score)** — Bloquea el swap de lecturas de score y el DROP de `cliente.score_credito` (FASE 6):
-> `cliente.score_credito` tiene **69 valores no-cero de SEED** pero **nunca lo escribe ningún código/función** (solo `DEFAULT 0`). El score real vive en la tabla `score` vía solicitud: **solo 7 clientes** tienen score real (`vw_cliente_score` = 7 filas). Es decir, la columna denormalizada es ruido de seed que no corresponde a scores reales.
-> **Opciones:** (A) usar `vw_cliente_score` como fuente única (los 62 clientes con score de seed pasarían a "sin score" — es lo correcto según el modelo); (B) backfillear `score_credito`→un `score` sintético antes de dropear (conserva los valores de seed); (C) dejar `score_credito` por ahora. Recomendado **A** (dev/seed, el score real son los 7). Confirmar en el checkpoint previo a FASE 6.
+> ✅ **DECISIÓN DEL USUARIO (score) = opción A** (2026-08-17): `vw_cliente_score` es la fuente única del score real. Los 62 clientes con score de seed pasan a "sin score". Mandato adicional del usuario: **no dejar tablas desconectadas ni código muerto** → en FASE 6 hay que dropear `cliente.score_credito` (y demás columnas legacy) y no dejar referencias muertas. Backend ya recablea el score desde la vista (commit `aa7c149`); falta el frontend (FASE 5).
+
+### FASE 5 — worklist (frontend, reads a tablas nuevas)
+Archivos que aún leen columnas legacy (grep 2026-08-17). Cada uno debe leer negocio desde `negocio_cliente`, ubicación desde `direccion`→`municipio`→`departamento`, finanzas desde `perfil_financiero`, score desde `vw_cliente_score`:
+- `components/EditarPerfilForm.js` (form de perfil: ciudad, departamento, nombre_negocio, descripcion_negocio, antiguedad_negocio_meses)
+- `app/dashboard/perfil/page.js` (fetch que alimenta el form)
+- `app/dashboard/creditos/solicitar/page.js`
+- `app/admin/clientes/page.js`, `app/admin/clientes/[id]/page.js`, `app/admin/solicitudes/[id]/page.js`
+- `app/supervisor/clientes/page.js`, `app/supervisor/buscar/page.js`, `app/supervisor/solicitudes/page.js`, `app/supervisor/solicitudes/[id]/page.js`
+- `app/asesor/clientes/page.js`, `app/asesor/cobranza/[clienteId]/page.js`
+Nota: el dual-write mantiene sincronizadas las columnas legacy, así que estas pantallas siguen funcionando hasta el DROP; pero deben migrarse antes de FASE 6.
 
 ### FASE 4 — pasos concretos para retomar (recablear backend)
 Objetivo: que registro/lectura usen las tablas nuevas en vez de las columnas sobrecargadas de `cliente`/`detalle_cliente`, SIN romper el núcleo financiero ni la normalización de nombres. Orden: código primero, luego (ya en FASE 6) el DROP.
