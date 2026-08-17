@@ -49,14 +49,14 @@ export async function GET(request) {
   const [
     { data: creditos },
     { data: solicitudes },
-    { data: clientes },
+    { data: direcciones },
     { data: asignaciones },
     { data: asesores },
     { data: pqrs },
   ] = await Promise.all([
     db.from('credito').select('id_cliente, estado_credito, saldo_pendiente, monto_desembolsado, dias_mora_maximo, fecha_desembolso'),
     db.from('solicitud_credito').select('id_solicitud, fecha_solicitud, monto_solicitado, estado_solicitud ( nombre )'),
-    db.from('cliente').select('id_cliente, ciudad, departamento'),
+    db.from('direccion').select('id_cliente, tipo, municipio ( nombre, departamento ( nombre ) )'),
     db.from('asignacion_asesor').select('id_asesor, id_cliente, activa').eq('activa', true),
     db.from('perfil_usuario').select('id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, rol ( nombre_rol )'),
     db.from('pqr').select('estado, tipo, created_at'),
@@ -106,7 +106,12 @@ export async function GET(request) {
 
   // ── Créditos por ciudad / departamento ──
   const ciudadDe = {}, deptoDe = {}
-  ;(clientes ?? []).forEach(c => { ciudadDe[c.id_cliente] = c.ciudad || 'Sin ciudad'; deptoDe[c.id_cliente] = c.departamento || 'Sin departamento' })
+  ;(direcciones ?? []).forEach(d => {
+    // Una entrada por cliente; se prefiere la dirección de NEGOCIO.
+    if (ciudadDe[d.id_cliente] && d.tipo !== 'NEGOCIO') return
+    ciudadDe[d.id_cliente] = d.municipio?.nombre || 'Sin ciudad'
+    deptoDe[d.id_cliente] = d.municipio?.departamento?.nombre || 'Sin departamento'
+  })
   const acumular = (map, key) => { map[key] = (map[key] || 0) + 1 }
   const ciudadMap = {}, deptoMap = {}
   credsF.forEach(c => { acumular(ciudadMap, ciudadDe[c.id_cliente] || 'Sin ciudad'); acumular(deptoMap, deptoDe[c.id_cliente] || 'Sin departamento') })

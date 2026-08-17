@@ -61,25 +61,45 @@ function fmtCOP(n) {
 // ── Generadores por tipo ─────────────────────────────────────────────────────
 
 async function exportarClientes(service) {
-  const { data } = await service
-    .from('cliente')
-    .select(`
-      primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, email, telefono, ciudad, departamento,
-      score_credito, created_at,
-      estado_cliente ( nombre ),
-      tipo_negocio ( nombre )
-    `)
-    .order('created_at', { ascending: false })
+  // Modelo normalizado: identidad/estado desde `cliente`; ubicación desde
+  // `direccion`→`municipio`→`departamento`; negocio desde `negocio_cliente`;
+  // score desde la vista `vw_cliente_score` (fuente única del score real).
+  const [{ data }, { data: direcciones }, { data: negocios }, { data: scores }] = await Promise.all([
+    service.from('cliente')
+      .select(`
+        id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
+        dni, email, telefono, created_at,
+        estado_cliente ( nombre )
+      `)
+      .order('created_at', { ascending: false }),
+    service.from('direccion')
+      .select('id_cliente, tipo, municipio ( nombre, departamento ( nombre ) )'),
+    service.from('negocio_cliente')
+      .select('id_cliente, nombre_negocio, tipo_negocio ( nombre )'),
+    service.from('vw_cliente_score')
+      .select('id_cliente, puntaje_total'),
+  ])
+
+  // Índices por cliente (dirección NEGOCIO preferida; primer negocio).
+  const dirDe = {}
+  ;(direcciones ?? []).forEach(d => {
+    if (!dirDe[d.id_cliente] || d.tipo === 'NEGOCIO') dirDe[d.id_cliente] = d
+  })
+  const negDe = {}
+  ;(negocios ?? []).forEach(n => { if (!negDe[n.id_cliente]) negDe[n.id_cliente] = n })
+  const scoreDe = {}
+  ;(scores ?? []).forEach(s => { scoreDe[s.id_cliente] = s.puntaje_total })
 
   const columnas = [
     { label: 'Nombre completo',    valor: r => formatNombre(r) },
     { label: 'Cédula',             valor: r => r.dni },
     { label: 'Email',              valor: r => r.email },
     { label: 'Teléfono',           valor: r => r.telefono },
-    { label: 'Ciudad',             valor: r => r.ciudad },
-    { label: 'Departamento',       valor: r => r.departamento },
-    { label: 'Tipo de negocio',    valor: r => r.tipo_negocio?.nombre },
-    { label: 'Score crediticio',   valor: r => r.score_credito },
+    { label: 'Ciudad',             valor: r => dirDe[r.id_cliente]?.municipio?.nombre },
+    { label: 'Departamento',       valor: r => dirDe[r.id_cliente]?.municipio?.departamento?.nombre },
+    { label: 'Negocio',            valor: r => negDe[r.id_cliente]?.nombre_negocio },
+    { label: 'Tipo de negocio',    valor: r => negDe[r.id_cliente]?.tipo_negocio?.nombre },
+    { label: 'Score crediticio',   valor: r => scoreDe[r.id_cliente] ?? '' },
     { label: 'Estado',             valor: r => r.estado_cliente?.nombre },
     { label: 'Fecha registro',     valor: r => fmtFecha(r.created_at) },
   ]

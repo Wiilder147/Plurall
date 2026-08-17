@@ -80,12 +80,19 @@ export async function GET(request) {
       }))
   } else if (dim === 'asesor' || dim === 'mora' || dim === 'ciudad' || dim === 'departamento') {
     entidad = 'credito'
-    const [{ data: creditos }, { data: clientes }, { data: asignaciones }] = await Promise.all([
+    const [{ data: creditos }, { data: clientes }, { data: direcciones }, { data: asignaciones }] = await Promise.all([
       db.from('credito').select('id_credito, id_cliente, estado_credito, saldo_pendiente, monto_desembolsado, dias_mora_maximo, fecha_desembolso'),
-      db.from('cliente').select('id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, ciudad, departamento'),
+      db.from('cliente').select('id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido'),
+      db.from('direccion').select('id_cliente, tipo, municipio ( nombre, departamento ( nombre ) )'),
       db.from('asignacion_asesor').select('id_asesor, id_cliente, activa').eq('activa', true),
     ])
     const cli = {}; (clientes ?? []).forEach(c => { cli[c.id_cliente] = c })
+    // Ubicación desde el modelo normalizado (direccion→municipio→departamento).
+    const ubic = {}
+    ;(direcciones ?? []).forEach(d => {
+      if (ubic[d.id_cliente] && d.tipo !== 'NEGOCIO') return
+      ubic[d.id_cliente] = { ciudad: d.municipio?.nombre, departamento: d.municipio?.departamento?.nombre }
+    })
     const asesorDe = {}; (asignaciones ?? []).forEach(a => { asesorDe[a.id_cliente] = a.id_asesor })
     const nombreAsesor = {}; asesores.forEach(a => { nombreAsesor[a.id] = a.nombre })
 
@@ -99,8 +106,8 @@ export async function GET(request) {
           return nombre === valor
         }
         if (dim === 'mora') return c.estado_credito === 'EN_MORA' && tramo(c.dias_mora_maximo || 0) === valor
-        if (dim === 'ciudad') return (cl.ciudad || 'Sin ciudad') === valor
-        if (dim === 'departamento') return (cl.departamento || 'Sin departamento') === valor
+        if (dim === 'ciudad') return (ubic[c.id_cliente]?.ciudad || 'Sin ciudad') === valor
+        if (dim === 'departamento') return (ubic[c.id_cliente]?.departamento || 'Sin departamento') === valor
         return false
       })
       .map(c => {
@@ -109,7 +116,7 @@ export async function GET(request) {
           id: c.id_credito, id_cliente: c.id_cliente, entidad: 'credito',
           titulo: formatNombre(cl) || 'Cliente',
           subtitulo: `${COP(c.monto_desembolsado)} · ${c.estado_credito}${c.estado_credito === 'EN_MORA' ? ` · ${c.dias_mora_maximo}d mora` : ''}`,
-          badge: cl.ciudad || c.estado_credito,
+          badge: ubic[c.id_cliente]?.ciudad || c.estado_credito,
         }
       })
   } else if (dim === 'pqr_estado' || dim === 'pqr_tipo') {
