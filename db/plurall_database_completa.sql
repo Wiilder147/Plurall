@@ -1639,5 +1639,130 @@ COMMENT ON COLUMN pregunta.tipo_input IS 'SELECT | TEXTO | NUMERO | MONEDA | UBI
 COMMENT ON COLUMN respuesta_cliente.respuesta_numerica IS 'Valor numérico de la respuesta cuando la pregunta es MONEDA o NUMERO. Permite usarla en cálculos de score y métricas sin castear texto';
 
 -- ============================================================================
--- FIN DEL ESQUEMA CONSOLIDADO (2026-08-13)
+-- NORMALIZACIÓN — MIGRACIÓN 24 (EXPAND): tablas nuevas + vista de score
+-- Ver db/24_normalizacion_tablas_nuevas.sql y docs/HANDOFF_normalizacion_bd.md.
+-- Estas estructuras conviven con cliente/detalle_cliente hasta el CONTRACT (26).
+-- ============================================================================
+
+CREATE TABLE direccion (
+  id_direccion uuid NOT NULL DEFAULT gen_random_uuid(),
+  id_cliente uuid NOT NULL,
+  tipo character varying(10) NOT NULL,
+  linea text,
+  id_municipio uuid,
+  lat numeric(10,7),
+  lon numeric(10,7),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE negocio_cliente (
+  id_negocio uuid NOT NULL DEFAULT gen_random_uuid(),
+  id_cliente uuid NOT NULL,
+  nombre_negocio character varying(150),
+  id_tipo_negocio uuid,
+  descripcion text,
+  antiguedad_meses integer,
+  empleados integer DEFAULT 0,
+  arriendo_negocio numeric(14,2) DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE perfil_financiero (
+  id_perfil uuid NOT NULL DEFAULT gen_random_uuid(),
+  id_cliente uuid NOT NULL,
+  tipo_vivienda character varying(50),
+  estrato integer,
+  nivel_educativo character varying(50),
+  estado_civil character varying(30),
+  personas_cargo integer DEFAULT 0,
+  ingresos_mensuales numeric(14,2),
+  egresos_mensuales numeric(14,2),
+  patrimonio_estimado numeric(14,2),
+  otras_obligaciones numeric(14,2) DEFAULT 0,
+  arriendo_casa numeric(14,2) DEFAULT 0,
+  colaboracion_gastos boolean DEFAULT false,
+  tiene_vehiculo boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE cuenta_bancaria (
+  id_cuenta uuid NOT NULL DEFAULT gen_random_uuid(),
+  id_cliente uuid NOT NULL,
+  id_banco uuid,
+  tipo_cuenta character varying(30),
+  numero character varying(30),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+);
+
+-- PK / FK / constraints
+ALTER TABLE direccion         ADD CONSTRAINT pk_direccion PRIMARY KEY (id_direccion);
+ALTER TABLE negocio_cliente   ADD CONSTRAINT pk_negocio_cliente PRIMARY KEY (id_negocio);
+ALTER TABLE perfil_financiero ADD CONSTRAINT pk_perfil_financiero PRIMARY KEY (id_perfil);
+ALTER TABLE cuenta_bancaria   ADD CONSTRAINT pk_cuenta_bancaria PRIMARY KEY (id_cuenta);
+
+ALTER TABLE direccion         ADD CONSTRAINT fk_direccion_cliente   FOREIGN KEY (id_cliente)   REFERENCES cliente (id_cliente) ON DELETE CASCADE;
+ALTER TABLE direccion         ADD CONSTRAINT fk_direccion_municipio FOREIGN KEY (id_municipio) REFERENCES municipio (id_municipio);
+ALTER TABLE direccion         ADD CONSTRAINT ck_direccion_tipo CHECK (tipo IN ('CASA','NEGOCIO'));
+ALTER TABLE negocio_cliente   ADD CONSTRAINT fk_negocio_cliente      FOREIGN KEY (id_cliente)      REFERENCES cliente (id_cliente) ON DELETE CASCADE;
+ALTER TABLE negocio_cliente   ADD CONSTRAINT fk_negocio_tipo_negocio FOREIGN KEY (id_tipo_negocio) REFERENCES tipo_negocio (id_tipo_negocio);
+ALTER TABLE perfil_financiero ADD CONSTRAINT fk_perfil_financiero_cliente FOREIGN KEY (id_cliente) REFERENCES cliente (id_cliente) ON DELETE CASCADE;
+ALTER TABLE perfil_financiero ADD CONSTRAINT ux_perfil_financiero_cliente UNIQUE (id_cliente);
+ALTER TABLE cuenta_bancaria   ADD CONSTRAINT fk_cuenta_bancaria_cliente FOREIGN KEY (id_cliente) REFERENCES cliente (id_cliente) ON DELETE CASCADE;
+ALTER TABLE cuenta_bancaria   ADD CONSTRAINT fk_cuenta_bancaria_banco   FOREIGN KEY (id_banco)   REFERENCES banco (id_banco);
+
+CREATE INDEX ix_direccion_cliente         ON direccion (id_cliente);
+CREATE UNIQUE INDEX ux_direccion_cliente_tipo ON direccion (id_cliente, tipo);
+CREATE INDEX ix_negocio_cliente_cliente    ON negocio_cliente (id_cliente);
+CREATE INDEX ix_cuenta_bancaria_cliente    ON cuenta_bancaria (id_cliente);
+
+-- Vista: último score por cliente (reemplaza cliente.score_credito)
+CREATE OR REPLACE VIEW vw_cliente_score AS
+SELECT DISTINCT ON (sc.id_cliente)
+       sc.id_cliente, s.id_score, s.id_solicitud, s.puntaje_total,
+       s.puntaje_maximo_posible, s.porcentaje, s.recomendacion, s.fecha_evaluacion
+FROM score s
+JOIN solicitud_credito sc ON sc.id_solicitud = s.id_solicitud
+ORDER BY sc.id_cliente, s.fecha_evaluacion DESC, s.created_at DESC;
+
+-- updated_at
+CREATE TRIGGER trg_direccion_updated_at         BEFORE UPDATE ON direccion         FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_negocio_cliente_updated_at   BEFORE UPDATE ON negocio_cliente   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_perfil_financiero_updated_at BEFORE UPDATE ON perfil_financiero FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+CREATE TRIGGER trg_cuenta_bancaria_updated_at   BEFORE UPDATE ON cuenta_bancaria   FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+
+-- RLS (patrón detalle_cliente)
+ALTER TABLE direccion         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE negocio_cliente   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE perfil_financiero ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cuenta_bancaria   ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "ver_direccion_propia"       ON direccion         AS PERMISSIVE FOR SELECT USING (((id_cliente = mi_id_cliente()) OR es_analista_o_admin()));
+CREATE POLICY "cliente_gestiona_direccion" ON direccion         AS PERMISSIVE FOR ALL    USING ((id_cliente = mi_id_cliente())) WITH CHECK ((id_cliente = mi_id_cliente()));
+CREATE POLICY "admin_gestiona_direccion"   ON direccion         AS PERMISSIVE FOR ALL    USING (es_analista_o_admin());
+CREATE POLICY "asesor_ve_direccion"        ON direccion         AS PERMISSIVE FOR SELECT USING (es_asesor_de_cliente(id_cliente));
+CREATE POLICY "ver_negocio_propio"         ON negocio_cliente   AS PERMISSIVE FOR SELECT USING (((id_cliente = mi_id_cliente()) OR es_analista_o_admin()));
+CREATE POLICY "cliente_gestiona_negocio"   ON negocio_cliente   AS PERMISSIVE FOR ALL    USING ((id_cliente = mi_id_cliente())) WITH CHECK ((id_cliente = mi_id_cliente()));
+CREATE POLICY "admin_gestiona_negocio"     ON negocio_cliente   AS PERMISSIVE FOR ALL    USING (es_analista_o_admin());
+CREATE POLICY "asesor_ve_negocio"          ON negocio_cliente   AS PERMISSIVE FOR SELECT USING (es_asesor_de_cliente(id_cliente));
+CREATE POLICY "ver_finanzas_propias"       ON perfil_financiero AS PERMISSIVE FOR SELECT USING (((id_cliente = mi_id_cliente()) OR es_analista_o_admin()));
+CREATE POLICY "cliente_gestiona_finanzas"  ON perfil_financiero AS PERMISSIVE FOR ALL    USING ((id_cliente = mi_id_cliente())) WITH CHECK ((id_cliente = mi_id_cliente()));
+CREATE POLICY "admin_gestiona_finanzas"    ON perfil_financiero AS PERMISSIVE FOR ALL    USING (es_analista_o_admin());
+CREATE POLICY "asesor_ve_finanzas"         ON perfil_financiero AS PERMISSIVE FOR SELECT USING (es_asesor_de_cliente(id_cliente));
+CREATE POLICY "ver_cuenta_propia"          ON cuenta_bancaria   AS PERMISSIVE FOR SELECT USING (((id_cliente = mi_id_cliente()) OR es_analista_o_admin()));
+CREATE POLICY "cliente_gestiona_cuenta"    ON cuenta_bancaria   AS PERMISSIVE FOR ALL    USING ((id_cliente = mi_id_cliente())) WITH CHECK ((id_cliente = mi_id_cliente()));
+CREATE POLICY "admin_gestiona_cuenta"      ON cuenta_bancaria   AS PERMISSIVE FOR ALL    USING (es_analista_o_admin());
+CREATE POLICY "asesor_ve_cuenta"           ON cuenta_bancaria   AS PERMISSIVE FOR SELECT USING (es_asesor_de_cliente(id_cliente));
+
+COMMENT ON TABLE direccion IS 'Ubicación normalizada CASA/NEGOCIO del cliente (1:N). Reemplaza cliente.direccion/*_casa/*_negocio. Migración 24.';
+COMMENT ON TABLE negocio_cliente IS 'Negocios del cliente (1:N). Reemplaza cliente.nombre_negocio/etc + detalle_cliente.empleados_negocio/arriendo_negocio. Migración 24.';
+COMMENT ON TABLE perfil_financiero IS 'Finanzas del cliente (1:1). Reemplaza campos financieros de detalle_cliente; duplicados fusionados (dependientes→personas_cargo, ahorros→patrimonio_estimado). Migración 24.';
+COMMENT ON TABLE cuenta_bancaria IS 'Cuentas bancarias del cliente (1:N), banco por FK. Reemplaza detalle_cliente.banco_preferido/tipo_cuenta_bancaria/numero_cuenta. Migración 24.';
+COMMENT ON VIEW vw_cliente_score IS 'Último score por cliente (vía solicitud_credito). Reemplaza la columna denormalizada cliente.score_credito. Migración 24.';
+
+-- ============================================================================
+-- FIN DEL ESQUEMA CONSOLIDADO (2026-08-13; normalización FASE 2 / mig. 24)
 -- ============================================================================

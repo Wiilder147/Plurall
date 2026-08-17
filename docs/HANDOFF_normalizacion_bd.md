@@ -11,16 +11,27 @@
 | Fase | Estado |
 |------|--------|
 | **FASE 0 — Diagnóstico en vivo** | ✅ COMPLETADA (ver `docs/FASE0_diagnostico_normalizacion.md`) |
-| **FASE 1 — Resincronizar schema maestro + types** | ⏳ SIGUIENTE |
-| FASE 2 — Migración 24 (crear tablas nuevas) | ⬜ pendiente |
-| FASE 3 — Migración 25 (backfill + verificación) | ⬜ pendiente |
+| **FASE 1 — Resincronizar schema maestro + types** | ✅ COMPLETADA (commit `3f5abed`) |
+| **FASE 2 — Migración 24 (crear tablas nuevas)** | ✅ COMPLETADA (aplicada en Supabase 2026-08-17) |
+| FASE 3 — Migración 25 (backfill + verificación) | ⏳ SIGUIENTE |
 | FASE 4 — Recablear backend | ⬜ pendiente |
 | FASE 5 — Recablear frontend | ⬜ pendiente |
 | FASE 6 — Migración 26 (CONTRACT / DROP) | ⬜ pendiente |
 | FASE 7 — Pruebas + build + docs | ⬜ pendiente |
 
-### ⚠️ Acción manual pendiente del usuario
-Ejecutar **`db/23_eliminar_nombre_completo.sql`** en el **Supabase SQL Editor** (aún no aplicada: `nombre_completo` sigue vivo en `cliente`). Es prerequisito de la decisión #1. Verificar re-ejecutando el diagnóstico (paso abajo).
+### Estado de prerequisitos
+- ✅ Migración **`db/23`** aplicada en Supabase (2026-08-13, vía MCP). `nombre_completo` eliminado; nombres atómicos 1B+2A vigentes. Código app recableado y commiteado (`deaf7a2`).
+- ✅ Schema maestro + `database.types.ts` regenerados por introspección de la BD viva (FASE 1, `3f5abed`).
+- ✅ Migración **`db/24`** aplicada en Supabase (2026-08-17, vía MCP). Creadas `direccion`, `negocio_cliente`, `perfil_financiero`, `cuenta_bancaria` + vista `vw_cliente_score`, con RLS (16 policies) y triggers `updated_at`. **Additivo/EXPAND**: 0 datos tocados, tablas nuevas vacías (backfill = FASE 3). Schema maestro + types resincronizados a `db/01..24`.
+
+### FASE 3 — pasos concretos para retomar (backfill, migración 25)
+1. Escribir `db/25_normalizacion_backfill.sql` idempotente que puebla las 4 tablas nuevas desde `cliente`/`detalle_cliente`, aplicando §4:
+   - `direccion`: filas CASA (`direccion_casa`/`ciudad_casa`/`lat_casa`/`lon_casa`) y NEGOCIO (`direccion_negocio`/…); usar `linea` texto; `id_municipio` NULL (mapear luego). Insertar solo donde haya algún dato no vacío. `ON CONFLICT (id_cliente,tipo) DO NOTHING`.
+   - `negocio_cliente`: desde `cliente.nombre_negocio`/`id_tipo_negocio`/`descripcion_negocio`/`antiguedad_negocio_meses` + `detalle_cliente.empleados_negocio`/`arriendo_negocio` (join por `id_cliente`). Solo clientes con negocio (≈69).
+   - `perfil_financiero` (1:1): desde `detalle_cliente.*` **fusionando duplicados** — `personas_cargo = COALESCE(NULLIF(personas_cargo,0), dependientes)`, `patrimonio_estimado = COALESCE(NULLIF(patrimonio_estimado,0), ahorros)`; `arriendo_casa` va aquí, NO re-sumar a egresos. `ON CONFLICT (id_cliente) DO NOTHING`.
+   - `cuenta_bancaria`: desde `detalle_cliente.banco_preferido`(texto)→FK `banco` (match por `lower(unaccent(nombre))`; dejar `id_banco` NULL si no matchea) + `tipo_cuenta_bancaria`/`numero_cuenta`.
+2. Verificación en el mismo script (comentarios) — conteos origen==destino, 0 huérfanos, spot-check de fusiones.
+3. Aplicar en Supabase vía MCP, verificar, commit. Pasar a FASE 4 (recablear backend).
 
 ---
 

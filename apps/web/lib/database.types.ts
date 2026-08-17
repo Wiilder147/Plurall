@@ -1,7 +1,8 @@
 /**
- * database.types.ts — Tipos TS de la BD Plurall.
- * Generado desde Supabase (proyecto Plurall-Fants) el 2026-08-13,
- * estado consolidado tras migraciones db/01..23 (nombres atomicos 1B+2A).
+ * database.types.ts - Tipos TS de la BD Plurall.
+ * Generado desde Supabase (proyecto Plurall-Fants) el 2026-08-17,
+ * estado consolidado tras migraciones db/01..24 (normalizacion FASE 2:
+ * tablas direccion, negocio_cliente, perfil_financiero, cuenta_bancaria + vista vw_cliente_score).
  * Fuente de verdad del esquema: db/plurall_database_completa.sql
  * Regenerar con: mcp Supabase generate_typescript_types / supabase gen types.
  */
@@ -412,6 +413,51 @@ export type Database = {
           },
         ]
       }
+      cuenta_bancaria: {
+        Row: {
+          created_at: string | null
+          id_banco: string | null
+          id_cliente: string
+          id_cuenta: string
+          numero: string | null
+          tipo_cuenta: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id_banco?: string | null
+          id_cliente: string
+          id_cuenta?: string
+          numero?: string | null
+          tipo_cuenta?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id_banco?: string | null
+          id_cliente?: string
+          id_cuenta?: string
+          numero?: string | null
+          tipo_cuenta?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_cuenta_bancaria_banco"
+            columns: ["id_banco"]
+            isOneToOne: false
+            referencedRelation: "banco"
+            referencedColumns: ["id_banco"]
+          },
+          {
+            foreignKeyName: "fk_cuenta_bancaria_cliente"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "cliente"
+            referencedColumns: ["id_cliente"]
+          },
+        ]
+      }
       cuota: {
         Row: {
           created_at: string | null
@@ -642,6 +688,57 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "cliente"
             referencedColumns: ["id_cliente"]
+          },
+        ]
+      }
+      direccion: {
+        Row: {
+          created_at: string | null
+          id_cliente: string
+          id_direccion: string
+          id_municipio: string | null
+          lat: number | null
+          linea: string | null
+          lon: number | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id_cliente: string
+          id_direccion?: string
+          id_municipio?: string | null
+          lat?: number | null
+          linea?: string | null
+          lon?: number | null
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id_cliente?: string
+          id_direccion?: string
+          id_municipio?: string | null
+          lat?: number | null
+          linea?: string | null
+          lon?: number | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_direccion_cliente"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "cliente"
+            referencedColumns: ["id_cliente"]
+          },
+          {
+            foreignKeyName: "fk_direccion_municipio"
+            columns: ["id_municipio"]
+            isOneToOne: false
+            referencedRelation: "municipio"
+            referencedColumns: ["id_municipio"]
           },
         ]
       }
@@ -1074,6 +1171,60 @@ export type Database = {
           },
         ]
       }
+      negocio_cliente: {
+        Row: {
+          antiguedad_meses: number | null
+          arriendo_negocio: number | null
+          created_at: string | null
+          descripcion: string | null
+          empleados: number | null
+          id_cliente: string
+          id_negocio: string
+          id_tipo_negocio: string | null
+          nombre_negocio: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          antiguedad_meses?: number | null
+          arriendo_negocio?: number | null
+          created_at?: string | null
+          descripcion?: string | null
+          empleados?: number | null
+          id_cliente: string
+          id_negocio?: string
+          id_tipo_negocio?: string | null
+          nombre_negocio?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          antiguedad_meses?: number | null
+          arriendo_negocio?: number | null
+          created_at?: string | null
+          descripcion?: string | null
+          empleados?: number | null
+          id_cliente?: string
+          id_negocio?: string
+          id_tipo_negocio?: string | null
+          nombre_negocio?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_negocio_cliente"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "cliente"
+            referencedColumns: ["id_cliente"]
+          },
+          {
+            foreignKeyName: "fk_negocio_tipo_negocio"
+            columns: ["id_tipo_negocio"]
+            isOneToOne: false
+            referencedRelation: "tipo_negocio"
+            referencedColumns: ["id_tipo_negocio"]
+          },
+        ]
+      }
       notificacion: {
         Row: {
           asunto: string | null
@@ -1298,6 +1449,71 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "perfil_usuario"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      perfil_financiero: {
+        Row: {
+          arriendo_casa: number | null
+          colaboracion_gastos: boolean | null
+          created_at: string | null
+          egresos_mensuales: number | null
+          estado_civil: string | null
+          estrato: number | null
+          id_cliente: string
+          id_perfil: string
+          ingresos_mensuales: number | null
+          nivel_educativo: string | null
+          otras_obligaciones: number | null
+          patrimonio_estimado: number | null
+          personas_cargo: number | null
+          tiene_vehiculo: boolean | null
+          tipo_vivienda: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          arriendo_casa?: number | null
+          colaboracion_gastos?: boolean | null
+          created_at?: string | null
+          egresos_mensuales?: number | null
+          estado_civil?: string | null
+          estrato?: number | null
+          id_cliente: string
+          id_perfil?: string
+          ingresos_mensuales?: number | null
+          nivel_educativo?: string | null
+          otras_obligaciones?: number | null
+          patrimonio_estimado?: number | null
+          personas_cargo?: number | null
+          tiene_vehiculo?: boolean | null
+          tipo_vivienda?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          arriendo_casa?: number | null
+          colaboracion_gastos?: boolean | null
+          created_at?: string | null
+          egresos_mensuales?: number | null
+          estado_civil?: string | null
+          estrato?: number | null
+          id_cliente?: string
+          id_perfil?: string
+          ingresos_mensuales?: number | null
+          nivel_educativo?: string | null
+          otras_obligaciones?: number | null
+          patrimonio_estimado?: number | null
+          personas_cargo?: number | null
+          tiene_vehiculo?: boolean | null
+          tipo_vivienda?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_perfil_financiero_cliente"
+            columns: ["id_cliente"]
+            isOneToOne: true
+            referencedRelation: "cliente"
+            referencedColumns: ["id_cliente"]
           },
         ]
       }
@@ -1843,7 +2059,34 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_cliente_score: {
+        Row: {
+          fecha_evaluacion: string | null
+          id_cliente: string | null
+          id_score: string | null
+          id_solicitud: string | null
+          porcentaje: number | null
+          puntaje_maximo_posible: number | null
+          puntaje_total: number | null
+          recomendacion: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_id_solicitud_fkey"
+            columns: ["id_solicitud"]
+            isOneToOne: false
+            referencedRelation: "solicitud_credito"
+            referencedColumns: ["id_solicitud"]
+          },
+          {
+            foreignKeyName: "solicitud_credito_id_cliente_fkey"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "cliente"
+            referencedColumns: ["id_cliente"]
+          },
+        ]
+      }
     }
     Functions: {
       asignar_asesor_a_cliente: {
