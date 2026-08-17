@@ -51,21 +51,9 @@ export default function PagarCuotaPage({ params }) {
   const [cotizaError,setCotizaError]= useState(null)     // error suave (inline)
 
   const [pagando,    setPagando]    = useState(false)
-  const [wompiListo, setWompiListo] = useState(false)
   const [wompiError, setWompiError] = useState(null)     // error duro (bloquea pago)
 
   const debounceRef = useRef(null)
-
-  // ── Cargar el script del widget de Wompi una sola vez ─────────
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.WidgetCheckout) { setWompiListo(true); return }
-    const script = document.createElement('script')
-    script.src   = 'https://checkout.wompi.co/widget.js'
-    script.async = true
-    script.onload  = () => setWompiListo(true)
-    script.onerror = () => setWompiError('No se pudo cargar la pasarela de pago. Revisa tu conexión e intenta de nuevo.')
-    document.body.appendChild(script)
-  }, [])
 
   // ── Cotizar (preview, sin escribir en BD) ─────────────────────
   const cotizar = useCallback(async (payload) => {
@@ -193,35 +181,29 @@ export default function PagarCuotaPage({ params }) {
         setPagando(false)
         return
       }
-      if (!window.WidgetCheckout) {
-        setWompiError('La pasarela de pago aún se está cargando. Espera un momento e intenta de nuevo.')
-        setPagando(false)
-        return
-      }
 
-      const checkout = new window.WidgetCheckout({
-        currency:      'COP',
-        amountInCents: data.montoEnCentavos,
-        reference:     data.referencia,
-        publicKey:     data.publicKey,
-        signature:     { integrity: data.hash },
-        redirectUrl:   data.redirectUrl,
-        customerData: {
-          email:             data.email || '',
-          fullName:          data.nombre || '',
-          phoneNumber:       data.telefono || '',
-          phoneNumberPrefix: '+57',
-          legalId:           data.dni || '',
-          legalIdType:       'CC',
-        },
-      })
-
-      checkout.open(() => {
-        router.push(`/dashboard/cuotas/confirmacion?referencia=${data.referencia}`)
-      })
-      setPagando(false)
+      // Web Checkout de Wompi por redirección (más robusto que el modal
+      // embebido: evita cuelgues por iframe/adblock). Los parámetros con ':'
+      // van literales; solo se codifican los valores.
+      const params = [
+        ['public-key',                        data.publicKey],
+        ['currency',                          'COP'],
+        ['amount-in-cents',                   String(data.montoEnCentavos)],
+        ['reference',                         data.referencia],
+        ['signature:integrity',               data.hash],
+        ['redirect-url',                      data.redirectUrl],
+        ['customer-data:email',               data.email || ''],
+        ['customer-data:full-name',           data.nombre || ''],
+        ['customer-data:phone-number',        data.telefono || ''],
+        ['customer-data:phone-number-prefix', '+57'],
+        ['customer-data:legal-id',            data.dni || ''],
+        ['customer-data:legal-id-type',       'CC'],
+      ]
+      const qs = params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
+      window.location.href = `https://checkout.wompi.co/p/?${qs}`
+      // La página navega hacia Wompi; no reseteamos "pagando".
     } catch (e) {
-      console.error('[Pago] Error abriendo el checkout:', e)
+      console.error('[Pago] Error redirigiendo al checkout:', e)
       setWompiError('Ocurrió un error al abrir la pasarela de pago. Intenta de nuevo.')
       setPagando(false)
     }
@@ -460,13 +442,13 @@ export default function PagarCuotaPage({ params }) {
           ) : (
             <button
               onClick={handlePagar}
-              disabled={pagando || cotizando || !wompiListo || !puedePagar}
+              disabled={pagando || cotizando || !puedePagar}
               className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-white font-semibold py-4 rounded-xl transition-all shadow-md shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {pagando || cotizando ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /> Preparando…</>
-              ) : !wompiListo ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /> Cargando pasarela…</>
+              {pagando ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Redirigiendo a Wompi…</>
+              ) : cotizando ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Calculando…</>
               ) : (
                 <><DollarSign className="w-5 h-5" /> Pagar {formatCOP(montoACobrar)}</>
               )}
