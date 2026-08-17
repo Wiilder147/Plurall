@@ -9,6 +9,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { formatCOP } from '@/lib/calculadora'
 import { UserCheck, Users, TrendingUp, AlertTriangle } from 'lucide-react'
 import AsignarAsesorBtn from '@/components/AsignarAsesorBtn'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,7 @@ export default async function SupervisorAsesoresPage() {
   // Obtener todos los asesores
   const { data: asesores } = await service
     .from('perfil_usuario')
-    .select('id, nombre_completo, activo, rol ( nombre_rol )')
+    .select('id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, activo, rol ( nombre_rol )')
     .eq('activo', true)
     .in('id_rol',
       (await service.from('rol').select('id_rol').eq('nombre_rol', 'ASESOR')).data?.map(r => r.id_rol) ?? []
@@ -39,7 +40,7 @@ export default async function SupervisorAsesoresPage() {
     .select(`
       id_asignacion, id_asesor, activa, fecha_asignacion,
       cliente (
-        id_cliente, nombre_completo, dni, telefono,
+        id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono,
         credito ( estado_credito, saldo_pendiente, dias_mora_maximo )
       )
     `)
@@ -51,7 +52,7 @@ export default async function SupervisorAsesoresPage() {
     .from('credito')
     .select(`
       id_credito, saldo_pendiente, dias_mora_maximo,
-      cliente ( id_cliente, nombre_completo, dni, telefono )
+      cliente ( id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono )
     `)
     .eq('estado_credito', 'EN_MORA')
     .not('id_cliente', 'in',
@@ -101,10 +102,10 @@ export default async function SupervisorAsesoresPage() {
                 <div className="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400 font-bold">
-                      {asesor.nombre_completo?.charAt(0)?.toUpperCase() ?? 'A'}
+                      {formatNombre(asesor)?.charAt(0)?.toUpperCase() || 'A'}
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-200">{asesor.nombre_completo}</p>
+                      <p className="font-semibold text-slate-200">{formatNombre(asesor)}</p>
                       <p className="text-slate-500 text-xs">{misAsignaciones.length} clientes · {enMora} en mora</p>
                     </div>
                   </div>
@@ -119,7 +120,7 @@ export default async function SupervisorAsesoresPage() {
                       return (
                         <div key={a.id_asignacion} className="px-5 py-3 flex items-center justify-between">
                           <div>
-                            <p className="text-slate-300 text-sm font-medium">{a.cliente?.nombre_completo}</p>
+                            <p className="text-slate-300 text-sm font-medium">{formatNombre(a.cliente)}</p>
                             <p className="text-slate-500 text-xs">{a.cliente?.telefono} · CC {a.cliente?.dni}</p>
                           </div>
                           <div className="flex items-center gap-3">
@@ -163,7 +164,7 @@ export default async function SupervisorAsesoresPage() {
             {clientesSinAsesor.map((c) => (
               <div key={c.id_credito} className="px-5 py-3.5 flex items-center justify-between">
                 <div>
-                  <p className="text-slate-300 text-sm font-medium">{c.cliente?.nombre_completo}</p>
+                  <p className="text-slate-300 text-sm font-medium">{formatNombre(c.cliente)}</p>
                   <p className="text-slate-500 text-xs">{c.cliente?.telefono} · Saldo: {formatCOP(c.saldo_pendiente)}</p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -171,7 +172,7 @@ export default async function SupervisorAsesoresPage() {
                   {asesores && asesores.length > 0 && (
                     <AsignarAsesorBtn
                       clienteId={c.cliente?.id_cliente}
-                      asesores={asesores.map(a => ({ id: a.id, nombre: a.nombre_completo }))}
+                      asesores={asesores.map(a => ({ id: a.id, nombre: formatNombre(a) }))}
                     />
                   )}
                 </div>

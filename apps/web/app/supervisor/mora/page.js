@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { formatCOP } from '@/lib/calculadora'
 import { AlertTriangle, Phone, DollarSign, Calendar } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,7 @@ export default async function SupervisorMoraPage() {
     .select(`
       id_credito, saldo_pendiente, cuotas_en_mora, dias_mora_maximo,
       cuota_fija, fecha_desembolso,
-      cliente ( id_cliente, id_usuario_cuenta, nombre_completo, dni, telefono, email ),
+      cliente ( id_cliente, id_usuario_cuenta, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email ),
       plan_pago ( id_plan_pago )
     `)
     .eq('estado_credito', 'EN_MORA')
@@ -72,7 +73,7 @@ export default async function SupervisorMoraPage() {
     .from('gestion_cobranza')
     .select(`
       id_gestion, tipo_gestion, resultado, fecha_gestion, observaciones,
-      credito ( id_credito, cliente ( nombre_completo ) )
+      credito ( id_credito, cliente(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido) )
     `)
     .order('fecha_gestion', { ascending: false })
     .limit(10)
@@ -147,7 +148,7 @@ export default async function SupervisorMoraPage() {
                   return (
                     <tr key={c.id_credito} className="hover:bg-slate-700/20">
                       <td className="px-5 py-3">
-                        <p className="text-slate-200 font-medium">{c.cliente?.nombre_completo}</p>
+                        <p className="text-slate-200 font-medium">{formatNombre(c.cliente)}</p>
                         <p className="text-slate-500 text-xs">CC {c.cliente?.dni}</p>
                       </td>
                       <td className="px-5 py-3">
@@ -187,7 +188,7 @@ export default async function SupervisorMoraPage() {
             {gestiones.map((g) => (
               <div key={g.id_gestion} className="px-5 py-3.5 flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-slate-300 text-sm font-medium">{g.credito?.cliente?.nombre_completo}</p>
+                  <p className="text-slate-300 text-sm font-medium">{formatNombre(g.credito?.cliente)}</p>
                   <p className="text-slate-500 text-xs">{g.tipo_gestion} · {g.observaciones}</p>
                 </div>
                 <div className="text-right shrink-0">

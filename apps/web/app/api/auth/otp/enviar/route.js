@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
+import { formatNombre } from '@/lib/nombre'
 
 const GMAIL_USER = process.env.GMAIL_FROM_EMAIL || 'wfeoorjuela@gmail.com'
 
@@ -35,7 +36,7 @@ export async function POST(request) {
     // Buscar cliente por teléfono para obtener su email
     const { data: clientes } = await service
       .from('cliente')
-      .select('email, nombre_completo')
+      .select('email, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido')
       .eq('telefono', celular)
       .limit(1)
 
@@ -44,7 +45,7 @@ export async function POST(request) {
 
     if (clientes && clientes.length > 0) {
       emailReal = clientes[0].email
-      nombre = clientes[0].nombre_completo || 'Cliente'
+      nombre = formatNombre(clientes[0]) || 'Cliente'
     }
 
     if (!emailReal) {

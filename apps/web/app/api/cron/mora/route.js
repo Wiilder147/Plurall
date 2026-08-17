@@ -13,7 +13,7 @@ import { notificarAsesorCliente } from '@/lib/notificacionesInApp'
  *
  * Detecta cuotas vencidas y actualiza el estado de créditos a EN_MORA.
  * Se invoca de dos formas:
- *   1. Vercel Cron (vercel.json) — diariamente a las 6 AM Colombia
+ *   1. Vercel Cron (vercel.json) — diariamente a las 11:55 PM Colombia
  *   2. Supabase pg_cron — como fallback si no hay Vercel
  *
  * Seguridad: valida el header CRON_SECRET para evitar ejecuciones no autorizadas.

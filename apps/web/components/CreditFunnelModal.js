@@ -101,7 +101,8 @@ function getSoftResult(score) {
 }
 
 const REG_INITIAL = {
-  nombre: '', email: '', dni: '', telefono: '',
+  primer_nombre: '', segundo_nombre: '', primer_apellido: '', segundo_apellido: '',
+  email: '', dni: '', telefono: '',
   password: '', confirmPassword: '', aceptaTerminos: false,
 }
 
@@ -218,6 +219,8 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
     setAuthError('')
 
     const telLimpio = regForm.telefono.replace(/\D/g, '')
+    if (!regForm.primer_nombre.trim())         { setAuthError('El primer nombre es obligatorio.'); return }
+    if (!regForm.primer_apellido.trim())       { setAuthError('El primer apellido es obligatorio.'); return }
     if (telLimpio.length !== 10)               { setAuthError('El celular debe tener 10 dígitos.'); return }
     // El type="email" nativo acepta "usuario@gmail" sin TLD; esta validación exige dominio completo
     if (!esEmailValido(regForm.email)) {
@@ -235,7 +238,10 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
       password: regForm.password,
       options: {
         data: {
-          nombre_completo: regForm.nombre,
+          primer_nombre:    regForm.primer_nombre.trim(),
+          segundo_nombre:   regForm.segundo_nombre.trim() || null,
+          primer_apellido:  regForm.primer_apellido.trim(),
+          segundo_apellido: regForm.segundo_apellido.trim() || null,
           telefono:        telLimpio,
           dni:             regForm.dni,
           email_real:      regForm.email.trim().toLowerCase(),
@@ -589,8 +595,32 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
               {/* ── REGISTRO FORM ── */}
               {authMode === 'registro' && (
                 <form onSubmit={handleRegistro} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'primer_nombre',    label: 'Primer nombre *',    placeholder: 'Juan',   required: true },
+                      { id: 'segundo_nombre',   label: 'Segundo nombre',     placeholder: 'Opcional', required: false },
+                      { id: 'primer_apellido',  label: 'Primer apellido *',  placeholder: 'Pérez',  required: true },
+                      { id: 'segundo_apellido', label: 'Segundo apellido',   placeholder: 'Opcional', required: false },
+                    ].map(f => (
+                      <div key={f.id}>
+                        <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">{f.label}</label>
+                        <input
+                          type="text"
+                          value={regForm[f.id]}
+                          onChange={e => {
+                            const clean = e.target.value.replace(/[0-9]/g, '')
+                            if (clean !== e.target.value) showHint(f.id, 'No debe contener números')
+                            setRegForm(prev => ({ ...prev, [f.id]: clean }))
+                          }}
+                          placeholder={f.placeholder}
+                          required={f.required}
+                          className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-accent-400 text-slate-900"
+                        />
+                        {hints[f.id] && <p className="text-xs text-amber-500 mt-1 ml-1 animate-fade-in">⚠ {hints[f.id]}</p>}
+                      </div>
+                    ))}
+                  </div>
                   {[
-                    { id: 'nombre',   label: 'Nombre completo',          type: 'text',  inputMode: undefined,   icon: <User size={16} />,   placeholder: 'Ej. Juan Pérez' },
                     { id: 'email',    label: 'Correo electrónico',       type: 'email', inputMode: undefined,   icon: <Mail size={16} />,   placeholder: 'tucorreo@ejemplo.com' },
                     { id: 'dni',      label: 'Documento (CC)',           type: 'text',  inputMode: 'numeric',   icon: <IdCard size={16} />, placeholder: 'Ej. 1020304050', maxLength: 12 },
                     { id: 'telefono', label: 'Celular (10 dígitos)',     type: 'tel',   inputMode: 'numeric',   icon: <Phone size={16} />,  placeholder: 'Ej. 3001234567', maxLength: 10 },
@@ -604,11 +634,6 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                         value={regForm[f.id]}
                         onChange={e => {
                           let val = e.target.value
-                          if (f.id === 'nombre') {
-                            const clean = val.replace(/[0-9]/g, '')
-                            if (clean !== val) showHint('nombre', 'El nombre no debe contener números')
-                            val = clean
-                          }
                           if (f.id === 'dni' || f.id === 'telefono') {
                             const clean = val.replace(/\D/g, '')
                             if (clean !== val) showHint(f.id, 'Solo se permiten números en este campo')

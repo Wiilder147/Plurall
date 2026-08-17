@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { orBusquedaNombre } from '@/lib/nombre'
 
 function getServiceClient() {
   return createServiceClient(
@@ -51,10 +52,10 @@ export async function GET(request) {
   const { data: porDatos } = await service
     .from('cliente')
     .select(`
-      id_cliente, nombre_completo, dni, telefono, email, score_credito,
+      id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email,
       credito ( id_credito, estado_credito, saldo_pendiente, dias_mora_maximo )
     `)
-    .or(`nombre_completo.ilike.%${q}%,dni.ilike.%${q}%,telefono.ilike.%${q}%,email.ilike.%${q}%`)
+    .or(orBusquedaNombre(q))
     .limit(10)
 
   // Buscar también por ID de crédito (si el query parece un UUID)
@@ -64,7 +65,7 @@ export async function GET(request) {
       .from('credito')
       .select(`
         id_credito, estado_credito, saldo_pendiente, dias_mora_maximo,
-        cliente ( id_cliente, nombre_completo, dni, telefono, email, score_credito )
+        cliente ( id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email )
       `)
       .ilike('id_credito', `${q}%`)
       .limit(5)
@@ -86,6 +87,20 @@ export async function GET(request) {
   })
 
   const resultados = Array.from(mapa.values()).slice(0, 15)
+
+  // Score desde la vista `vw_cliente_score` (fuente única del score real).
+  // Se mantiene el campo `score_credito` en la respuesta por compatibilidad
+  // con el frontend, pero su origen ya no es la columna denormalizada.
+  const ids = resultados.map(r => r.id_cliente)
+  if (ids.length) {
+    const { data: scores } = await service
+      .from('vw_cliente_score')
+      .select('id_cliente, puntaje_total')
+      .in('id_cliente', ids)
+    const scoreDe = {}
+    ;(scores ?? []).forEach(s => { scoreDe[s.id_cliente] = s.puntaje_total })
+    resultados.forEach(r => { r.score_credito = scoreDe[r.id_cliente] ?? null })
+  }
 
   return NextResponse.json({ resultados })
 }

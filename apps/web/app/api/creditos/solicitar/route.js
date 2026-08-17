@@ -15,6 +15,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { notificarSolicitudRecibida } from '@/lib/notificaciones'
+import { formatNombre } from '@/lib/nombre'
 
 // Códigos de negocio devueltos por la RPC → status HTTP
 const STATUS_POR_ERROR = {
@@ -80,14 +81,14 @@ export async function POST(request) {
     if (data.resultado_buro !== 'RECHAZAR') {
       const { data: cliente } = await supabase
         .from('cliente')
-        .select('nombre_completo, email')
+        .select('primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email')
         .eq('id_usuario_cuenta', user.id)
         .single()
 
       if (cliente?.email) {
         notificarSolicitudRecibida({
           email:       cliente.email,
-          nombre:      cliente.nombre_completo,
+          nombre:      formatNombre(cliente),
           solicitudId: data.solicitudId,
           monto,
           plazo,

@@ -9,6 +9,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import CambiarCelular from '@/components/CambiarCelular'
+import { formatNombre } from '@/lib/nombre'
 import {
   ArrowLeft, User, Phone, Mail, Hash, MapPin, Store,
   CreditCard, CheckCircle2, XCircle, Clock, AlertTriangle,
@@ -56,20 +57,45 @@ export default async function AdminDetalleClientePage({ params }) {
   const [
     { data: cliente },
     { data: detalle },
+    { data: negocio },
+    { data: dir },
+    { data: scoreRow },
     { data: documentos },
     { data: solicitudes },
     { data: creditos },
   ] = await Promise.all([
     supabase
       .from('cliente')
-      .select('*, estado_cliente ( nombre ), tipo_negocio ( nombre )')
+      .select('*, estado_cliente ( nombre )')
       .eq('id_cliente', clienteId)
       .single(),
+    // Finanzas desde perfil_financiero (reemplaza detalle_cliente).
     supabase
-      .from('detalle_cliente')
+      .from('perfil_financiero')
       .select('*')
       .eq('id_cliente', clienteId)
-      .single(),
+      .maybeSingle(),
+    // Negocio desde negocio_cliente (reemplaza columnas de negocio en cliente).
+    supabase
+      .from('negocio_cliente')
+      .select('nombre_negocio, descripcion, antiguedad_meses, tipo_negocio ( nombre )')
+      .eq('id_cliente', clienteId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    // Ubicación desde direccion→municipio→departamento.
+    supabase
+      .from('direccion')
+      .select('linea, tipo, municipio ( nombre, departamento ( nombre ) )')
+      .eq('id_cliente', clienteId)
+      .eq('tipo', 'NEGOCIO')
+      .maybeSingle(),
+    // Score real desde vw_cliente_score (opción A).
+    supabase
+      .from('vw_cliente_score')
+      .select('puntaje_total')
+      .eq('id_cliente', clienteId)
+      .maybeSingle(),
     supabase
       .from('documento_cliente')
       .select('id_documento, tipo_documento, estado_verificacion, created_at, url_archivo')
@@ -97,7 +123,7 @@ export default async function AdminDetalleClientePage({ params }) {
     )
   }
 
-  const nombre        = cliente.nombre_completo
+  const nombre        = formatNombre(cliente)
   const estadoCliente = cliente.estado_cliente?.nombre?.toUpperCase()
   const creditoActivo = creditos?.find(c => ['ACTIVO', 'EN_MORA'].includes(c.estado_credito))
   const totalDesemb   = creditos?.reduce((s, c) => s + (c.monto_desembolsado || 0), 0) ?? 0
@@ -133,9 +159,9 @@ export default async function AdminDetalleClientePage({ params }) {
             }`}>
               {estadoCliente || 'ACTIVO'}
             </span>
-            {cliente.score_credito > 0 && (
+            {(scoreRow?.puntaje_total ?? 0) > 0 && (
               <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400">
-                Score: {cliente.score_credito}
+                Score: {scoreRow.puntaje_total}
               </span>
             )}
           </div>
@@ -171,8 +197,8 @@ export default async function AdminDetalleClientePage({ params }) {
             <Campo icon={Hash}     label="Cédula"    value={cliente.dni} />
             <Campo icon={Phone}    label="Celular"   value={cliente.telefono} />
             <Campo icon={Mail}     label="Email"     value={cliente.email} />
-            <Campo icon={MapPin}   label="Ciudad"    value={[cliente.ciudad, cliente.departamento].filter(Boolean).join(', ')} />
-            <Campo icon={MapPin}   label="Dirección" value={cliente.direccion} />
+            <Campo icon={MapPin}   label="Ciudad"    value={[dir?.municipio?.nombre, dir?.municipio?.departamento?.nombre].filter(Boolean).join(', ')} />
+            <Campo icon={MapPin}   label="Dirección" value={dir?.linea} />
           </div>
         </div>
 
@@ -182,11 +208,11 @@ export default async function AdminDetalleClientePage({ params }) {
             <Store className="w-4 h-4 text-orange-400" /> Negocio
           </h2>
           <div className="flex flex-col gap-3 text-sm">
-            <Campo icon={Store}    label="Nombre"      value={cliente.nombre_negocio} />
-            <Campo icon={BarChart3} label="Tipo"       value={cliente.tipo_negocio?.nombre} />
+            <Campo icon={Store}    label="Nombre"      value={negocio?.nombre_negocio} />
+            <Campo icon={BarChart3} label="Tipo"       value={negocio?.tipo_negocio?.nombre} />
             <Campo icon={Calendar} label="Antigüedad"  value={
-              cliente.antiguedad_negocio_meses
-                ? `${Math.floor(cliente.antiguedad_negocio_meses / 12)}a ${cliente.antiguedad_negocio_meses % 12}m`
+              negocio?.antiguedad_meses
+                ? `${Math.floor(negocio.antiguedad_meses / 12)}a ${negocio.antiguedad_meses % 12}m`
                 : null
             } />
             {detalle && (

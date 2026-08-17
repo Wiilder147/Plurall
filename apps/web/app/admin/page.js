@@ -13,6 +13,7 @@ import QuickActions from '@/components/dashboard/QuickActions'
 import HeroMetric from '@/components/dashboard/HeroMetric'
 import StatusBadge from '@/components/dashboard/StatusBadge'
 import AnalyticsSection from '@/components/AnalyticsSection'
+import { formatNombre, primerNombre } from '@/lib/nombre'
 import {
   ClipboardList, Users, TrendingUp, AlertTriangle,
   Clock, BarChart3, ShieldCheck, Headset,
@@ -34,7 +35,7 @@ export default async function AdminDashboardPage() {
     { count: cuotasVencidas },
     { count: totalSolicitudes },
   ] = await Promise.all([
-    supabase.from('perfil_usuario').select('nombre_completo').eq('id', user.id).single(),
+    supabase.from('perfil_usuario').select('primer_nombre, segundo_nombre, primer_apellido, segundo_apellido').eq('id', user.id).single(),
     supabase.from('solicitud_credito')
       .select('*', { count: 'exact', head: true })
       .in('estado_solicitud.nombre', ['PENDIENTE', 'EN_ESTUDIO'])
@@ -47,7 +48,7 @@ export default async function AdminDashboardPage() {
       .select(`
         id_solicitud, monto_solicitado, plazo_meses, fecha_solicitud,
         estado_solicitud ( nombre ),
-        cliente ( nombre_completo )
+        cliente(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido)
       `)
       .order('fecha_solicitud', { ascending: false })
       .limit(5),
@@ -57,7 +58,7 @@ export default async function AdminDashboardPage() {
   ])
 
   const totalCartera = cartera?.reduce((sum, c) => sum + (c.saldo_pendiente || 0), 0) || 0
-  const primerNombre = perfil?.nombre_completo?.split(' ')[0] ?? 'Admin'
+  const saludo = primerNombre(perfil) ?? 'Admin'
 
   const kpis = [
     { label: 'Solicitudes pendientes', value: pendientes || 0, icon: Clock, color: 'text-yellow-500 bg-yellow-500/10', href: '/admin/solicitudes' },
@@ -79,7 +80,7 @@ export default async function AdminDashboardPage() {
       <DashboardHeader
         accent="orange"
         badge="Panel Administrativo"
-        title={`Bienvenido, ${primerNombre}`}
+        title={`Bienvenido, ${saludo}`}
         subtitle="Visión ejecutiva de la operación crediticia PLURALL."
         actions={
           <Link
@@ -145,7 +146,7 @@ export default async function AdminDashboardPage() {
               <PanelRow key={sol.id_solicitud} href={`/admin/solicitudes/${sol.id_solicitud}`}>
                 <div className="min-w-0">
                   <p className="font-semibold text-slate-200 text-sm truncate">
-                    {sol.cliente?.nombre_completo || 'Cliente'}
+                    {formatNombre(sol.cliente) || 'Cliente'}
                   </p>
                   <p className="text-slate-500 text-xs">
                     {formatCOP(sol.monto_solicitado)} · {sol.plazo_meses} meses

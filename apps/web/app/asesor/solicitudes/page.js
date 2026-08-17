@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { FileCheck, Clock, Phone, User, Calendar, TrendingUp, CheckCircle2, XCircle } from 'lucide-react'
 import AccionesSolicitud from './AccionesSolicitud'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,7 @@ export default async function AsesorSolicitudesPage({ searchParams }) {
       fecha_solicitud,
       comentarios_analista,
       estado_solicitud ( nombre ),
-      cliente ( nombre_completo, dni, telefono ),
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono ),
       score ( recomendacion, puntaje_total, porcentaje )
     `)
     .order('fecha_solicitud', { ascending: false })
@@ -124,7 +125,7 @@ export default async function AsesorSolicitudesPage({ searchParams }) {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-slate-200 text-sm">{sol.cliente?.nombre_completo}</p>
+                        <p className="font-semibold text-slate-200 text-sm">{formatNombre(sol.cliente)}</p>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${badge.cls}`}>
                           {badge.label}
                         </span>
@@ -170,7 +171,7 @@ export default async function AsesorSolicitudesPage({ searchParams }) {
                     {isPending ? (
                       <AccionesSolicitud
                         solicitudId={sol.id_solicitud}
-                        nombreCliente={sol.cliente?.nombre_completo ?? 'el cliente'}
+                        nombreCliente={formatNombre(sol.cliente) || 'el cliente'}
                       />
                     ) : (
                       <div className="flex items-center gap-1.5 text-xs text-slate-500">

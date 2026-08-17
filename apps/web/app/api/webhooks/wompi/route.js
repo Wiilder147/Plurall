@@ -10,6 +10,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { notificarPagoConfirmado } from '@/lib/notificaciones'
+import { formatNombre } from '@/lib/nombre'
 
 // El webhook usa service role: Wompi no tiene cookies de sesión y la política
 // RLS "staff_insertar_pago" no aplica a clientes.
@@ -208,7 +209,7 @@ export async function POST(request) {
     try {
       const { data: creditoCliente } = await db
         .from('credito')
-        .select('saldo_pendiente, cliente ( email, nombre_completo )')
+        .select('saldo_pendiente, cliente ( email, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido )')
         .eq('id_credito', idCredito)
         .maybeSingle()
 
@@ -216,7 +217,7 @@ export async function POST(request) {
         const nuevoSaldo = Math.max(0, Number(creditoActual?.saldo_pendiente ?? 0) - Number(cuota.monto_capital))
         notificarPagoConfirmado({
           email:          creditoCliente.cliente.email,
-          nombre:         creditoCliente.cliente.nombre_completo,
+          nombre:         formatNombre(creditoCliente.cliente),
           numeroCuota:    cuota.numero_cuota,
           montoPagado,
           saldoPendiente: nuevoSaldo,

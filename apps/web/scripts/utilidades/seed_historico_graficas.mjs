@@ -7,6 +7,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
+import { parseNombre } from '../../lib/nombre.js'
 dotenv.config({ path: '.env.local' })
 
 const db = createClient(
@@ -90,7 +91,7 @@ async function seed() {
       email: fakeEmail,
       password: 'Plurall2025!',
       email_confirm: true,
-      user_metadata: { nombre_completo: c.nombre, dni: c.dni, telefono: c.cel },
+      user_metadata: { ...parseNombre(c.nombre), dni: c.dni, telefono: c.cel },
     })
     if (authErr && !authErr.message.includes('already')) {
       console.warn(`  ⚠️  ${c.nombre}: ${authErr.message}`)
@@ -105,8 +106,9 @@ async function seed() {
     if (!userId) continue
 
     // 2. Perfil
+    // Perfil CLIENTE sin nombre (canónico en tabla cliente)
     await db.from('perfil_usuario').upsert(
-      { id: userId, id_rol: idRolCliente, nombre_completo: c.nombre, activo: true, intentos_fallidos: 0 },
+      { id: userId, id_rol: idRolCliente, activo: true, intentos_fallidos: 0 },
       { onConflict: 'id' }
     )
 
@@ -114,19 +116,30 @@ async function seed() {
     const { data: existeCli } = await db.from('cliente').select('id_cliente').eq('id_usuario_cuenta', userId).single()
     let clienteId = existeCli?.id_cliente
     if (!clienteId) {
+      const idCiudad = rnd(0, 4)
+      const ciudad = ['Bogotá','Medellín','Cali','Barranquilla','Bucaramanga'][idCiudad]
+      const departamento = ['Cundinamarca','Antioquia','Valle del Cauca','Atlántico','Santander'][idCiudad]
       const { data: newCli } = await db.from('cliente').insert({
         id_usuario_cuenta: userId,
         id_estado_cliente: idEstadoCli,
-        nombre_completo:   c.nombre,
+        ...parseNombre(c.nombre),
         dni:               c.dni,
         email:             fakeEmail,
         telefono:          c.cel,
-        score_credito:     rnd(550, 900),
-        ciudad:            ['Bogotá','Medellín','Cali','Barranquilla','Bucaramanga'][rnd(0,4)],
-        departamento:      ['Cundinamarca','Antioquia','Valle del Cauca','Atlántico','Santander'][rnd(0,4)],
-        nombre_negocio:    `Negocio ${c.nombre.split(' ')[0]}`,
       }).select('id_cliente').single()
       clienteId = newCli?.id_cliente
+      if (clienteId) {
+        // Modelo normalizado: negocio y ubicación en sus tablas (no en cliente).
+        await db.from('negocio_cliente').insert({
+          id_cliente: clienteId, nombre_negocio: `Negocio ${c.nombre.split(' ')[0]}`,
+        })
+        const { data: muni } = await db.from('municipio')
+          .select('id_municipio, departamento!inner ( nombre )')
+          .ilike('nombre', ciudad).ilike('departamento.nombre', departamento).limit(1).maybeSingle()
+        await db.from('direccion').insert({
+          id_cliente: clienteId, tipo: 'NEGOCIO', id_municipio: muni?.id_municipio ?? null,
+        })
+      }
     }
     if (!clienteId) continue
 

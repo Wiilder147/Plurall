@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { Users, ArrowRight, AlertTriangle, CheckCircle2, Search } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +23,7 @@ export default async function AsesorClientesPage({ searchParams }) {
     .select(`
       id_asignacion,
       cliente (
-        id_cliente, nombre_completo, dni, telefono, email, score_credito,
+        id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono, email,
         credito ( id_credito, estado_credito, saldo_pendiente, cuotas_en_mora, dias_mora_maximo, cuota_fija, numero_cuotas, cuotas_pagadas )
       )
     `)
@@ -34,7 +35,7 @@ export default async function AsesorClientesPage({ searchParams }) {
   if (buscar) {
     const q = buscar.toLowerCase()
     clientes = clientes.filter(c =>
-      c.nombre_completo?.toLowerCase().includes(q) ||
+      formatNombre(c)?.toLowerCase().includes(q) ||
       c.dni?.includes(q) ||
       c.telefono?.includes(q)
     )
@@ -76,10 +77,10 @@ export default async function AsesorClientesPage({ searchParams }) {
                   <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-base shrink-0 ${
                     enMora ? 'bg-red-500/20 text-red-400' : 'bg-teal-500/20 text-teal-400'
                   }`}>
-                    {c.nombre_completo?.charAt(0)?.toUpperCase()}
+                    {formatNombre(c)?.charAt(0)?.toUpperCase()}
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-200">{c.nombre_completo}</p>
+                    <p className="font-semibold text-slate-200">{formatNombre(c)}</p>
                     <p className="text-slate-500 text-xs">CC {c.dni} · {c.telefono}</p>
                     {creditoActivo && (
                       <div className="flex items-center gap-3 mt-1.5">

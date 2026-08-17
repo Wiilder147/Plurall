@@ -1,3 +1,12 @@
+/**
+ * database.types.ts - Tipos TS de la BD Plurall.
+ * Generado desde Supabase (proyecto Plurall-Fants) el 2026-08-17,
+ * estado consolidado tras migraciones db/01..27 (normalizacion COMPLETA:
+ * cliente adelgazada; detalle_cliente eliminada; negocio_cliente,
+ * perfil_financiero, cuenta_bancaria, direccion + vista vw_cliente_score).
+ * Fuente de verdad del esquema: db/plurall_database_completa.sql
+ * Regenerar con: mcp Supabase generate_typescript_types / supabase gen types.
+ */
 export type Json =
   | string
   | number
@@ -198,102 +207,45 @@ export type Database = {
       }
       cliente: {
         Row: {
-          antiguedad_negocio_meses: number | null
-          ciudad: string | null
-          ciudad_casa: string | null
-          ciudad_negocio: string | null
           created_at: string | null
-          departamento: string | null
-          departamento_casa: string | null
-          departamento_negocio: string | null
-          descripcion_negocio: string | null
-          direccion: string | null
-          direccion_casa: string | null
-          direccion_negocio: string | null
           dni: string
           email: string
           id_cliente: string
           id_estado_cliente: string
           id_tipo_doc: string | null
-          id_tipo_negocio: string | null
           id_usuario_cuenta: string
-          lat_casa: number | null
-          lat_negocio: number | null
-          lon_casa: number | null
-          lon_negocio: number | null
-          nombre_completo: string
-          nombre_negocio: string | null
-          primer_apellido: string | null
-          primer_nombre: string | null
-          score_credito: number | null
+          primer_apellido: string
+          primer_nombre: string
           segundo_apellido: string | null
           segundo_nombre: string | null
           telefono: string
           updated_at: string | null
         }
         Insert: {
-          antiguedad_negocio_meses?: number | null
-          ciudad?: string | null
-          ciudad_casa?: string | null
-          ciudad_negocio?: string | null
           created_at?: string | null
-          departamento?: string | null
-          departamento_casa?: string | null
-          departamento_negocio?: string | null
-          descripcion_negocio?: string | null
-          direccion?: string | null
-          direccion_casa?: string | null
-          direccion_negocio?: string | null
           dni: string
           email: string
           id_cliente?: string
           id_estado_cliente: string
           id_tipo_doc?: string | null
-          id_tipo_negocio?: string | null
           id_usuario_cuenta: string
-          lat_casa?: number | null
-          lat_negocio?: number | null
-          lon_casa?: number | null
-          lon_negocio?: number | null
-          nombre_completo: string
-          nombre_negocio?: string | null
-          primer_apellido?: string | null
-          primer_nombre?: string | null
-          score_credito?: number | null
+          primer_apellido: string
+          primer_nombre: string
           segundo_apellido?: string | null
           segundo_nombre?: string | null
           telefono: string
           updated_at?: string | null
         }
         Update: {
-          antiguedad_negocio_meses?: number | null
-          ciudad?: string | null
-          ciudad_casa?: string | null
-          ciudad_negocio?: string | null
           created_at?: string | null
-          departamento?: string | null
-          departamento_casa?: string | null
-          departamento_negocio?: string | null
-          descripcion_negocio?: string | null
-          direccion?: string | null
-          direccion_casa?: string | null
-          direccion_negocio?: string | null
           dni?: string
           email?: string
           id_cliente?: string
           id_estado_cliente?: string
           id_tipo_doc?: string | null
-          id_tipo_negocio?: string | null
           id_usuario_cuenta?: string
-          lat_casa?: number | null
-          lat_negocio?: number | null
-          lon_casa?: number | null
-          lon_negocio?: number | null
-          nombre_completo?: string
-          nombre_negocio?: string | null
-          primer_apellido?: string | null
-          primer_nombre?: string | null
-          score_credito?: number | null
+          primer_apellido?: string
+          primer_nombre?: string
           segundo_apellido?: string | null
           segundo_nombre?: string | null
           telefono?: string
@@ -313,13 +265,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tipo_documento_identidad"
             referencedColumns: ["id_tipo_doc"]
-          },
-          {
-            foreignKeyName: "cliente_id_tipo_negocio_fkey"
-            columns: ["id_tipo_negocio"]
-            isOneToOne: false
-            referencedRelation: "tipo_negocio"
-            referencedColumns: ["id_tipo_negocio"]
           },
           {
             foreignKeyName: "cliente_id_usuario_cuenta_fkey"
@@ -405,6 +350,51 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "solicitud_credito"
             referencedColumns: ["id_solicitud"]
+          },
+        ]
+      }
+      cuenta_bancaria: {
+        Row: {
+          created_at: string | null
+          id_banco: string | null
+          id_cliente: string
+          id_cuenta: string
+          numero: string | null
+          tipo_cuenta: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id_banco?: string | null
+          id_cliente: string
+          id_cuenta?: string
+          numero?: string | null
+          tipo_cuenta?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id_banco?: string | null
+          id_cliente?: string
+          id_cuenta?: string
+          numero?: string | null
+          tipo_cuenta?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_cuenta_bancaria_banco"
+            columns: ["id_banco"]
+            isOneToOne: false
+            referencedRelation: "banco"
+            referencedColumns: ["id_banco"]
+          },
+          {
+            foreignKeyName: "fk_cuenta_bancaria_cliente"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "cliente"
+            referencedColumns: ["id_cliente"]
           },
         ]
       }
@@ -555,89 +545,54 @@ export type Database = {
         }
         Relationships: []
       }
-      detalle_cliente: {
+      direccion: {
         Row: {
-          ahorros: number | null
-          arriendo_casa: number | null
-          arriendo_negocio: number | null
-          banco_preferido: string | null
-          colaboracion_gastos: boolean | null
           created_at: string | null
-          dependientes: number | null
-          egresos_mensuales: number | null
-          empleados_negocio: number | null
-          estado_civil: string | null
-          estrato: number | null
           id_cliente: string
-          id_detalle: string
-          ingresos_mensuales: number | null
-          nivel_educativo: string | null
-          numero_cuenta: string | null
-          otras_obligaciones: number | null
-          patrimonio_estimado: number | null
-          personas_cargo: number | null
-          tiene_vehiculo: boolean | null
-          tipo_cuenta_bancaria: string | null
-          tipo_vivienda: string | null
+          id_direccion: string
+          id_municipio: string | null
+          lat: number | null
+          linea: string | null
+          lon: number | null
+          tipo: string
           updated_at: string | null
         }
         Insert: {
-          ahorros?: number | null
-          arriendo_casa?: number | null
-          arriendo_negocio?: number | null
-          banco_preferido?: string | null
-          colaboracion_gastos?: boolean | null
           created_at?: string | null
-          dependientes?: number | null
-          egresos_mensuales?: number | null
-          empleados_negocio?: number | null
-          estado_civil?: string | null
-          estrato?: number | null
           id_cliente: string
-          id_detalle?: string
-          ingresos_mensuales?: number | null
-          nivel_educativo?: string | null
-          numero_cuenta?: string | null
-          otras_obligaciones?: number | null
-          patrimonio_estimado?: number | null
-          personas_cargo?: number | null
-          tiene_vehiculo?: boolean | null
-          tipo_cuenta_bancaria?: string | null
-          tipo_vivienda?: string | null
+          id_direccion?: string
+          id_municipio?: string | null
+          lat?: number | null
+          linea?: string | null
+          lon?: number | null
+          tipo: string
           updated_at?: string | null
         }
         Update: {
-          ahorros?: number | null
-          arriendo_casa?: number | null
-          arriendo_negocio?: number | null
-          banco_preferido?: string | null
-          colaboracion_gastos?: boolean | null
           created_at?: string | null
-          dependientes?: number | null
-          egresos_mensuales?: number | null
-          empleados_negocio?: number | null
-          estado_civil?: string | null
-          estrato?: number | null
           id_cliente?: string
-          id_detalle?: string
-          ingresos_mensuales?: number | null
-          nivel_educativo?: string | null
-          numero_cuenta?: string | null
-          otras_obligaciones?: number | null
-          patrimonio_estimado?: number | null
-          personas_cargo?: number | null
-          tiene_vehiculo?: boolean | null
-          tipo_cuenta_bancaria?: string | null
-          tipo_vivienda?: string | null
+          id_direccion?: string
+          id_municipio?: string | null
+          lat?: number | null
+          linea?: string | null
+          lon?: number | null
+          tipo?: string
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "detalle_cliente_id_cliente_fkey"
+            foreignKeyName: "fk_direccion_cliente"
             columns: ["id_cliente"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "cliente"
             referencedColumns: ["id_cliente"]
+          },
+          {
+            foreignKeyName: "fk_direccion_municipio"
+            columns: ["id_municipio"]
+            isOneToOne: false
+            referencedRelation: "municipio"
+            referencedColumns: ["id_municipio"]
           },
         ]
       }
@@ -1041,6 +996,89 @@ export type Database = {
         }
         Relationships: []
       }
+      municipio: {
+        Row: {
+          activo: boolean
+          id_departamento: string
+          id_municipio: string
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          id_departamento: string
+          id_municipio?: string
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          id_departamento?: string
+          id_municipio?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "municipio_id_departamento_fkey"
+            columns: ["id_departamento"]
+            isOneToOne: false
+            referencedRelation: "departamento"
+            referencedColumns: ["id_departamento"]
+          },
+        ]
+      }
+      negocio_cliente: {
+        Row: {
+          antiguedad_meses: number | null
+          arriendo_negocio: number | null
+          created_at: string | null
+          descripcion: string | null
+          empleados: number | null
+          id_cliente: string
+          id_negocio: string
+          id_tipo_negocio: string | null
+          nombre_negocio: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          antiguedad_meses?: number | null
+          arriendo_negocio?: number | null
+          created_at?: string | null
+          descripcion?: string | null
+          empleados?: number | null
+          id_cliente: string
+          id_negocio?: string
+          id_tipo_negocio?: string | null
+          nombre_negocio?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          antiguedad_meses?: number | null
+          arriendo_negocio?: number | null
+          created_at?: string | null
+          descripcion?: string | null
+          empleados?: number | null
+          id_cliente?: string
+          id_negocio?: string
+          id_tipo_negocio?: string | null
+          nombre_negocio?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_negocio_cliente"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "cliente"
+            referencedColumns: ["id_cliente"]
+          },
+          {
+            foreignKeyName: "fk_negocio_tipo_negocio"
+            columns: ["id_tipo_negocio"]
+            isOneToOne: false
+            referencedRelation: "tipo_negocio"
+            referencedColumns: ["id_tipo_negocio"]
+          },
+        ]
+      }
       notificacion: {
         Row: {
           asunto: string | null
@@ -1268,6 +1306,71 @@ export type Database = {
           },
         ]
       }
+      perfil_financiero: {
+        Row: {
+          arriendo_casa: number | null
+          colaboracion_gastos: boolean | null
+          created_at: string | null
+          egresos_mensuales: number | null
+          estado_civil: string | null
+          estrato: number | null
+          id_cliente: string
+          id_perfil: string
+          ingresos_mensuales: number | null
+          nivel_educativo: string | null
+          otras_obligaciones: number | null
+          patrimonio_estimado: number | null
+          personas_cargo: number | null
+          tiene_vehiculo: boolean | null
+          tipo_vivienda: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          arriendo_casa?: number | null
+          colaboracion_gastos?: boolean | null
+          created_at?: string | null
+          egresos_mensuales?: number | null
+          estado_civil?: string | null
+          estrato?: number | null
+          id_cliente: string
+          id_perfil?: string
+          ingresos_mensuales?: number | null
+          nivel_educativo?: string | null
+          otras_obligaciones?: number | null
+          patrimonio_estimado?: number | null
+          personas_cargo?: number | null
+          tiene_vehiculo?: boolean | null
+          tipo_vivienda?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          arriendo_casa?: number | null
+          colaboracion_gastos?: boolean | null
+          created_at?: string | null
+          egresos_mensuales?: number | null
+          estado_civil?: string | null
+          estrato?: number | null
+          id_cliente?: string
+          id_perfil?: string
+          ingresos_mensuales?: number | null
+          nivel_educativo?: string | null
+          otras_obligaciones?: number | null
+          patrimonio_estimado?: number | null
+          personas_cargo?: number | null
+          tiene_vehiculo?: boolean | null
+          tipo_vivienda?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_perfil_financiero_cliente"
+            columns: ["id_cliente"]
+            isOneToOne: true
+            referencedRelation: "cliente"
+            referencedColumns: ["id_cliente"]
+          },
+        ]
+      }
       perfil_usuario: {
         Row: {
           activo: boolean
@@ -1276,7 +1379,6 @@ export type Database = {
           id: string
           id_rol: string
           intentos_fallidos: number
-          nombre_completo: string | null
           primer_apellido: string | null
           primer_nombre: string | null
           segundo_apellido: string | null
@@ -1291,7 +1393,6 @@ export type Database = {
           id: string
           id_rol: string
           intentos_fallidos?: number
-          nombre_completo?: string | null
           primer_apellido?: string | null
           primer_nombre?: string | null
           segundo_apellido?: string | null
@@ -1306,7 +1407,6 @@ export type Database = {
           id?: string
           id_rol?: string
           intentos_fallidos?: number
-          nombre_completo?: string | null
           primer_apellido?: string | null
           primer_nombre?: string | null
           segundo_apellido?: string | null
@@ -1813,11 +1913,43 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_cliente_score: {
+        Row: {
+          fecha_evaluacion: string | null
+          id_cliente: string | null
+          id_score: string | null
+          id_solicitud: string | null
+          porcentaje: number | null
+          puntaje_maximo_posible: number | null
+          puntaje_total: number | null
+          recomendacion: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_id_solicitud_fkey"
+            columns: ["id_solicitud"]
+            isOneToOne: false
+            referencedRelation: "solicitud_credito"
+            referencedColumns: ["id_solicitud"]
+          },
+          {
+            foreignKeyName: "solicitud_credito_id_cliente_fkey"
+            columns: ["id_cliente"]
+            isOneToOne: false
+            referencedRelation: "cliente"
+            referencedColumns: ["id_cliente"]
+          },
+        ]
+      }
     }
     Functions: {
+      asignar_asesor_a_cliente: {
+        Args: { p_id_asesor: string; p_id_cliente: string }
+        Returns: string
+      }
       es_admin: { Args: never; Returns: boolean }
       es_analista_o_admin: { Args: never; Returns: boolean }
+      es_asesor_de_cliente: { Args: { p_id_cliente: string }; Returns: boolean }
       es_staff: { Args: never; Returns: boolean }
       es_supervisor_o_admin: { Args: never; Returns: boolean }
       fn_crear_solicitud_completa: {
@@ -1831,6 +1963,15 @@ export type Database = {
         Returns: Json
       }
       fn_detectar_mora: { Args: never; Returns: undefined }
+      fn_format_nombre: {
+        Args: {
+          p_primer_apellido?: string
+          p_primer_nombre: string
+          p_segundo_apellido?: string
+          p_segundo_nombre?: string
+        }
+        Returns: string
+      }
       fn_parse_nombre: {
         Args: { p_nombre: string }
         Returns: Record<string, unknown>
@@ -1838,6 +1979,10 @@ export type Database = {
       fn_puede_descargar_documento: {
         Args: { p_id_cliente: string; p_id_documento_legal: string }
         Returns: boolean
+      }
+      fn_verificar_disponibilidad: {
+        Args: { p_dni?: string; p_email?: string }
+        Returns: Json
       }
       fn_verificar_elegibilidad: { Args: never; Returns: Json }
       mi_id_cliente: { Args: never; Returns: string }

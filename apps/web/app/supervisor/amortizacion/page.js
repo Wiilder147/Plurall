@@ -7,6 +7,7 @@
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { CalendarClock, User } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,7 @@ export default async function AmortizacionSupervisorPage() {
     .from('plan_pago')
     .select(`
       id_plan_pago, num_cuotas_totales, frecuencia_pago, fecha_inicio_cobro, fecha_fin_cobro, tasa_mora_diaria,
-      credito ( monto_desembolsado, estado_credito, cliente ( nombre_completo, dni ) )
+      credito ( monto_desembolsado, estado_credito, cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni ) )
     `)
     .order('created_at', { ascending: false })
 
@@ -49,7 +50,7 @@ export default async function AmortizacionSupervisorPage() {
                     <User className="w-5 h-5 text-indigo-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-200 text-sm">{cliente?.nombre_completo ?? '—'} <span className="text-slate-500 font-normal">· CC {cliente?.dni ?? '—'}</span></p>
+                    <p className="font-semibold text-slate-200 text-sm">{formatNombre(cliente) || '—'} <span className="text-slate-500 font-normal">· CC {cliente?.dni ?? '—'}</span></p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
                       <div><p className="text-xs text-slate-500">Cuotas</p><p className="text-sm font-semibold text-slate-200">{p.num_cuotas_totales}</p></div>
                       <div><p className="text-xs text-slate-500">Frecuencia</p><p className="text-sm font-semibold text-slate-200 capitalize">{(p.frecuencia_pago || 'mensual').toLowerCase()}</p></div>

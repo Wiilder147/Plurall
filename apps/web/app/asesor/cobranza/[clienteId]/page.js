@@ -13,6 +13,7 @@ import {
   AlertTriangle, CheckCircle2, Calendar, DollarSign,
 } from 'lucide-react'
 import RegistrarGestionForm from '@/components/RegistrarGestionForm'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +36,8 @@ export default async function AsesorFichaClientePage({ params }) {
   // Datos completos del cliente
   const [
     { data: cliente },
+    { data: negocio },
+    { data: dir },
     { data: credito },
     { data: gestiones },
   ] = await Promise.all([
@@ -43,6 +46,20 @@ export default async function AsesorFichaClientePage({ params }) {
       .select('*, estado_cliente ( nombre )')
       .eq('id_cliente', clienteId)
       .single(),
+    // Negocio y ubicación desde el modelo normalizado.
+    supabase
+      .from('negocio_cliente')
+      .select('nombre_negocio')
+      .eq('id_cliente', clienteId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('direccion')
+      .select('municipio ( nombre )')
+      .eq('id_cliente', clienteId)
+      .eq('tipo', 'NEGOCIO')
+      .maybeSingle(),
     supabase
       .from('credito')
       .select(`
@@ -93,10 +110,10 @@ export default async function AsesorFichaClientePage({ params }) {
           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-black shrink-0 ${
             enMora ? 'bg-red-500/20 text-red-400' : 'bg-teal-500/20 text-teal-400'
           }`}>
-            {cliente.nombre_completo?.charAt(0)?.toUpperCase()}
+            {formatNombre(cliente)?.charAt(0)?.toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">{cliente.nombre_completo}</h1>
+            <h1 className="text-2xl font-bold text-white">{formatNombre(cliente)}</h1>
             <p className="text-slate-400 text-sm">CC {cliente.dni} · {cliente.telefono}</p>
           </div>
         </div>
@@ -128,16 +145,16 @@ export default async function AsesorFichaClientePage({ params }) {
               <p className="text-slate-500 text-xs">Email</p>
               <p className="text-slate-300">{cliente.email || '—'}</p>
             </div>
-            {cliente.ciudad && (
+            {dir?.municipio?.nombre && (
               <div>
                 <p className="text-slate-500 text-xs">Ciudad</p>
-                <p className="text-slate-300">{cliente.ciudad}</p>
+                <p className="text-slate-300">{dir.municipio.nombre}</p>
               </div>
             )}
-            {cliente.nombre_negocio && (
+            {negocio?.nombre_negocio && (
               <div className="bg-slate-700/50 rounded-lg p-3 mt-1">
                 <p className="text-teal-400 text-xs font-medium">Negocio</p>
-                <p className="text-slate-300 text-sm">{cliente.nombre_negocio}</p>
+                <p className="text-slate-300 text-sm">{negocio.nombre_negocio}</p>
               </div>
             )}
           </div>
@@ -223,7 +240,7 @@ export default async function AsesorFichaClientePage({ params }) {
         <RegistrarGestionForm
           clienteId={clienteId}
           creditoId={credito.id_credito}
-          clienteNombre={cliente.nombre_completo}
+          clienteNombre={formatNombre(cliente)}
         />
       )}
 

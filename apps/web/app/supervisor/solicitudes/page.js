@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
+import { formatNombre } from '@/lib/nombre'
 import {
   ClipboardList, ArrowRight, Clock, CheckCircle2,
   XCircle, Hourglass, TrendingUp, Send, Loader2,
@@ -49,7 +50,7 @@ export default function SupervisorSolicitudesPage() {
       .select(`
         id_solicitud, monto_solicitado, plazo_meses, fecha_solicitud, proposito,
         estado_solicitud ( nombre ),
-        cliente ( nombre_completo, dni, telefono, score_credito ),
+        cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono ),
         score ( puntaje_total, porcentaje, recomendacion )
       `)
       .order('fecha_solicitud', { ascending: false })
@@ -238,10 +239,10 @@ export default function SupervisorSolicitudesPage() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 bg-slate-700 rounded-xl flex items-center justify-center text-slate-300 font-bold text-sm shrink-0">
-                      {sol.cliente?.nombre_completo?.charAt(0)?.toUpperCase() ?? 'C'}
+                      {formatNombre(sol.cliente)?.charAt(0)?.toUpperCase() || 'C'}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-slate-200 truncate">{sol.cliente?.nombre_completo}</p>
+                      <p className="font-semibold text-slate-200 truncate">{formatNombre(sol.cliente)}</p>
                       <p className="text-slate-500 text-xs">CC {sol.cliente?.dni} · {sol.cliente?.telefono}</p>
                       <p className="text-slate-400 text-sm mt-1">{formatCOP(sol.monto_solicitado)} · {sol.plazo_meses} meses</p>
                       {sol.proposito && (

@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { notificarPqrRespondida } from '@/lib/notificaciones'
+import { formatNombre } from '@/lib/nombre'
 
 const ESTADOS = ['ABIERTO', 'EN_PROCESO', 'RESUELTO', 'CERRADO']
 
@@ -48,14 +49,14 @@ export async function PATCH(request, { params }) {
     try {
       const { data: pqr } = await supabase
         .from('pqr')
-        .select('asunto, estado, cliente ( nombre_completo, email )')
+        .select('asunto, estado, cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email )')
         .eq('id_pqr', id)
         .single()
       const email = pqr?.cliente?.email
       if (email) {
         await notificarPqrRespondida({
           email,
-          nombre: pqr.cliente?.nombre_completo,
+          nombre: formatNombre(pqr.cliente),
           asunto: pqr.asunto,
           respuesta: patch.respuesta,
           estado: pqr.estado,

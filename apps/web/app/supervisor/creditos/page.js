@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { CreditCard, User, AlertTriangle, Download } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,7 @@ export default async function CreditosSupervisorPage() {
     .select(`
       id_credito, monto_desembolsado, estado_credito, saldo_pendiente,
       numero_cuotas, cuotas_pagadas, cuotas_en_mora, dias_mora_maximo, fecha_desembolso,
-      cliente ( nombre_completo, dni )
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni )
     `)
     .order('fecha_desembolso', { ascending: false })
 
@@ -62,7 +63,7 @@ export default async function CreditosSupervisorPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-slate-200 text-sm">{c.cliente?.nombre_completo ?? '—'}</p>
+                        <p className="font-semibold text-slate-200 text-sm">{formatNombre(c.cliente) || '—'}</p>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${cls}`}>{estado.replace('_', ' ')}</span>
                         {c.cuotas_en_mora > 0 && (
                           <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 inline-flex items-center gap-1">

@@ -105,11 +105,10 @@ export default function LoginPage() {
 
   return (
     // CONTENEDOR PRINCIPAL DE LA PÁGINA
-    // COLOR DE FONDO: bg-white (blanco puro — para cambiar: bg-slate-50, bg-gray-100, etc.)
-    // DISPOSICIÓN: flex flex-col items-center justify-center (centrado vertical y horizontal)
-    // TAMAÑO MÍNIMO: min-h-screen (ocupa al menos el 100% de la pantalla)
-    // PADDING HORIZONTAL: px-4 (16px a los lados)
-    <main className="min-h-screen bg-white flex flex-col items-center justify-center px-4 relative overflow-hidden">
+    // CLASE: auth-shell (definida en globals.css) — centra el contenido y pinta
+    //        el fondo degradado suave sobre el que resalta la tarjeta blanca.
+    //        Para cambiar el fondo: edita .auth-shell en globals.css
+    <main className="auth-shell">
 
       {/* ──────────────────────────────────────────────────────────────────────
           BARRA SUPERIOR (banner informativo)
@@ -178,45 +177,48 @@ export default function LoginPage() {
 
       {/* ──────────────────────────────────────────────────────────────────────
           TARJETA CENTRAL DEL FORMULARIO
-          ANCHO MÁXIMO: max-w-sm (384px — para más ancho: max-w-md=448px, max-w-lg=512px)
-          ANIMACIÓN: animate-fade-in (aparece suavemente — definida en globals.css)
-          Z-INDEX: relative z-10 (sobre las decoraciones de fondo)
+          CLASE: auth-card (definida en globals.css) — tarjeta blanca con sombra,
+                 ancho máximo 480px y filete naranja superior.
+                 Para cambiar ancho/padding/sombra: edita .auth-card en globals.css
+          ANIMACIÓN: animate-fade-in (aparece suavemente)
           ────────────────────────────────────────────────────────────────────── */}
-      <div className="w-full max-w-sm animate-fade-in relative z-10 flex flex-col items-center">
+      <div className="auth-card animate-fade-in">
 
         {/* ── LOGO CUADRADO "P" ──
             COLOR DE FONDO: bg-navy-900 (azul muy oscuro — para cambiar: bg-slate-900, bg-blue-900)
-            TAMAÑO: w-14 h-14 (56x56px — para más grande: w-16 h-16=64px, w-20 h-20=80px)
-            BORDES: rounded-xl (muy redondeados, 12px — para circulo: rounded-full)
-            SOMBRA: shadow-md (sombra media)
-            MARGEN INFERIOR: mb-6 (24px abajo) */}
-        <div className="w-14 h-14 bg-navy-900 rounded-xl flex items-center justify-center mb-6 shadow-md">
-          {/* LETRA "P" — text-white (blanco), font-extrabold (extra negrita), text-2xl (24px) */}
-          <span className="text-white font-extrabold text-2xl">P</span>
+            TAMAÑO: w-20 h-20 (80x80px — para más pequeño: w-16 h-16=64px)
+            BORDES: rounded-2xl (muy redondeados, 16px — para circulo: rounded-full)
+            SOMBRA: shadow-lg (sombra amplia)
+            MARGEN INFERIOR: mb-7 (28px abajo) */}
+        <div className="w-20 h-20 bg-navy-900 rounded-2xl flex items-center justify-center mb-7 shadow-lg">
+          {/* LETRA "P" — color fijo #fff (no text-white, que el tema claro repinta),
+              font-extrabold (extra negrita), text-4xl (36px) */}
+          <span className="text-[#ffffff] font-extrabold text-4xl">P</span>
         </div>
 
         {/* TÍTULO PRINCIPAL "BIENVENIDO A PLURALL"
-            TAMAÑO: text-2xl (24px) en móvil, md:text-3xl (30px) en tablet+
+            TAMAÑO: text-3xl (30px) en móvil, md:text-4xl (36px) en tablet+
             COLOR: text-navy-900 (azul muy oscuro — para cambiar: text-slate-900, text-black)
             FUENTE: font-bold (negrita), uppercase (todo mayúsculas), tracking-wide (letras separadas)
-            MARGEN INFERIOR: mb-1 (4px) */}
-        <h1 className="text-2xl md:text-3xl font-bold text-navy-900 text-center tracking-wide uppercase mb-1">
+            INTERLINEADO: leading-tight (compacto, porque el título va en dos renglones)
+            MARGEN INFERIOR: mb-2 (8px) */}
+        <h1 className="text-3xl md:text-4xl font-bold text-navy-900 text-center tracking-wide uppercase leading-tight mb-2">
           BIENVENIDO A<br/>PLURALL
         </h1>
 
         {/* SUBTÍTULO "ingresa tu celular registrado"
-            COLOR: text-navy-400 (gris azulado medio — para cambiar: text-slate-500, text-gray-400)
-            TAMAÑO: text-sm (14px)
-            MARGEN INFERIOR: mb-8 (32px) */}
-        <p className="text-navy-500 text-base mb-8 text-center lowercase">
+            COLOR: text-navy-500 (gris azulado medio — para cambiar: text-slate-500, text-gray-400)
+            TAMAÑO: text-lg (18px)
+            MARGEN INFERIOR: mb-9 (36px) */}
+        <p className="text-navy-500 text-lg mb-9 text-center lowercase">
           ingresa tu celular registrado
         </p>
 
         {/* ──────────────────────────────────────────────────────────────────
             FORMULARIO PRINCIPAL DE LOGIN
-            ESPACIO ENTRE CAMPOS: space-y-4 (16px entre cada elemento)
+            ESPACIO ENTRE CAMPOS: space-y-5 (20px entre cada elemento)
             ────────────────────────────────────────────────────────────────── */}
-        <form onSubmit={handleLogin} className="w-full space-y-4 flex flex-col items-center">
+        <form onSubmit={handleLogin} className="w-full space-y-5 flex flex-col items-center">
 
           {/* MENSAJE DE ERROR (visible solo si hay error)
               COLOR DE FONDO: bg-danger/10 (rojo con 10% opacidad — definido como color custom)
@@ -236,9 +238,9 @@ export default function LoginPage() {
           <div className="w-full relative">
             {/* ÍCONO TELÉFONO — posición: absolute left-4 top-1/2 (centro vertical, 16px desde la izquierda)
                 COLOR: text-navy-400 (gris azulado)
-                TAMAÑO DEL ÍCONO: size={18} (18px) */}
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400">
-              <Phone size={18} />
+                TAMAÑO DEL ÍCONO: size={20} (20px) */}
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-navy-400">
+              <Phone size={20} />
             </div>
             {/* INPUT CELULAR
                 CLASE: input-field (definida en globals.css — incluye padding, borde, fondo, etc.)
@@ -270,9 +272,9 @@ export default function LoginPage() {
           <div className="w-full relative">
             {/* ÍCONO CANDADO — posición: absolute left-4, centrado vertical
                 COLOR: text-navy-400 (gris azulado)
-                TAMAÑO: size={18} (18px) */}
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-navy-400">
-              <Lock size={18} />
+                TAMAÑO: size={20} (20px) */}
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 text-navy-400">
+              <Lock size={20} />
             </div>
             {/* INPUT CONTRASEÑA
                 CLASE: input-field pr-12 (input-field de globals.css + padding derecho de 48px para el ojo)
@@ -285,35 +287,35 @@ export default function LoginPage() {
               placeholder="contraseña"
               required
               minLength={6}
-              className="input-field pr-12"
+              className="input-field pr-14"
               aria-label="Contraseña"
             />
             {/* BOTÓN OJO (mostrar/ocultar contraseña)
                 POSICIÓN: absolute right-4, centrado vertical (top-1/2 -translate-y-1/2)
                 COLOR: text-navy-400 en reposo, hover:text-navy-700 (más oscuro al hover)
-                TAMAÑO DEL ÍCONO: size={18} (18px) */}
+                TAMAÑO DEL ÍCONO: size={20} (20px) */}
             <button
               type="button"
               onClick={() => setShowPassword(v => !v)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-700 transition-colors"
+              className="absolute right-5 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-700 transition-colors"
               aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
 
           {/* ── BOTÓN "INGRESAR" (botón principal de submit) ──
               CLASE BASE: btn-primary (definida en globals.css — incluye color naranja, texto blanco, etc.)
               Para cambiar el COLOR DEL BOTÓN: edita .btn-primary en globals.css
-              ANCHO: w-full max-w-[200px] (100% pero máximo 200px)
-              PADDING VERTICAL: py-3 (12px arriba y abajo — para más alto: py-4=16px)
-              MARGEN SUPERIOR: mt-2 (8px)
+              ANCHO: w-full max-w-[260px] (100% pero máximo 260px)
+              ALTO: lo define .auth-card .btn-primary en globals.css (padding 0.95rem)
+              MARGEN SUPERIOR: mt-3 (12px)
               ANIMACIÓN HOVER: hover:scale-105 (crece 5% al pasar el cursor)
               FUENTE: font-bold (negrita), tracking-wide (letras separadas) */}
           <button
             type="submit"
             disabled={loading}
-            className="btn-primary w-full max-w-[200px] mt-2 py-3 flex items-center justify-center font-bold tracking-wide transition-transform hover:scale-105 lowercase"
+            className="btn-primary w-full max-w-[260px] mt-3 flex items-center justify-center font-bold tracking-wide transition-transform hover:scale-105 lowercase"
           >
             {/* SPINNER DE CARGA (visible solo mientras loading=true)
                 TAMAÑO: w-5 h-5 (20x20px)
@@ -332,12 +334,12 @@ export default function LoginPage() {
             MARGEN SUPERIOR: mt-8 (32px)
             ESPACIO ENTRE ENLACES: gap-2 (8px)
             ────────────────────────────────────────────────────────────────── */}
-        <div className="mt-8 flex flex-col items-center gap-2">
+        <div className="mt-9 pt-7 w-full border-t border-navy-100 flex flex-col items-center gap-3">
           {/* ENLACE "olvidé la contraseña"
-              COLOR: text-navy-400 (gris azulado — para cambiar: text-slate-500, text-gray-400)
-              HOVER: hover:text-navy-600 (más oscuro al hover)
-              TAMAÑO: text-sm (14px) */}
-          <Link href="/recuperar" className="text-navy-400 hover:text-navy-600 text-sm lowercase transition">
+              COLOR: text-navy-500 (gris azulado — para cambiar: text-slate-500, text-gray-400)
+              HOVER: hover:text-navy-700 (más oscuro al hover)
+              TAMAÑO: text-lg (18px — para más grande: text-xl=20px) */}
+          <Link href="/recuperar" className="text-navy-500 hover:text-navy-700 text-lg lowercase transition">
             olvidé la contraseña
           </Link>
 
@@ -345,8 +347,8 @@ export default function LoginPage() {
               COLOR: text-navy-900 (azul muy oscuro)
               HOVER: hover:text-accent-600 (naranja-anaranjado al hover)
               FUENTE: font-bold (negrita)
-              TAMAÑO: text-sm (14px) */}
-          <Link href="/registro" className="text-navy-900 hover:text-accent-600 font-bold text-sm lowercase transition">
+              TAMAÑO: text-lg (18px — para más grande: text-xl=20px) */}
+          <Link href="/registro" className="text-navy-900 hover:text-accent-600 font-bold text-lg lowercase transition">
             crear cuenta nueva
           </Link>
         </div>

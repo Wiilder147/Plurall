@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
+import { formatNombre } from '@/lib/nombre'
 
 // ── Rate limiting con Upstash Redis ─────────────────────────────────────────
 // Máximo 5 intentos de pago por usuario cada 10 minutos
@@ -133,7 +134,7 @@ export async function POST(request) {
   // Verificar que el crédito pertenezca al cliente del usuario autenticado
   const { data: clienteRow } = await supabase
     .from('cliente')
-    .select('id_cliente, nombre_completo, telefono, dni, email')
+    .select('id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, telefono, dni, email')
     .eq('id_usuario_cuenta', user.id)
     .single()
 
@@ -223,7 +224,7 @@ export async function POST(request) {
     montoTotal,
     // Datos del pagador (pre-fill)
     email:    user.email,
-    nombre:   clienteRow.nombre_completo,
+    nombre:   formatNombre(clienteRow),
     telefono: clienteRow.telefono,
     dni:      clienteRow.dni,
   })

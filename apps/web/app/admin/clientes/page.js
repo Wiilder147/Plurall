@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { Users, Search, ArrowRight, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { orBusquedaNombre, formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,12 +20,10 @@ export default async function AdminClientesPage({ searchParams }) {
   let query = supabase
     .from('cliente')
     .select(`
-      id_cliente,
-      nombre_completo,
+      id_cliente, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
       dni,
       telefono,
       email,
-      score_credito,
       created_at,
       estado_cliente ( nombre ),
       solicitud_credito ( count ),
@@ -38,10 +37,22 @@ export default async function AdminClientesPage({ searchParams }) {
     .order('created_at', { ascending: false })
 
   if (buscar) {
-    query = query.or(`nombre_completo.ilike.%${buscar}%,dni.ilike.%${buscar}%,telefono.ilike.%${buscar}%`)
+    query = query.or(orBusquedaNombre(buscar, ['dni', 'telefono']))
   }
 
   const { data: clientes } = await query
+
+  // Score real desde la vista `vw_cliente_score` (fuente única; opción A de la
+  // normalización). Se conserva el campo `score_credito` en cada fila por
+  // compatibilidad con el render, pero su origen ya no es la columna legacy.
+  if (clientes?.length) {
+    const { data: scores } = await supabase
+      .from('vw_cliente_score')
+      .select('id_cliente, puntaje_total')
+      .in('id_cliente', clientes.map(c => c.id_cliente))
+    const scoreDe = Object.fromEntries((scores ?? []).map(s => [s.id_cliente, s.puntaje_total]))
+    clientes.forEach(c => { c.score_credito = scoreDe[c.id_cliente] ?? null })
+  }
 
   return (
     <div className="flex flex-col gap-6 pb-10">
@@ -91,7 +102,7 @@ export default async function AdminClientesPage({ searchParams }) {
                   return (
                     <tr key={cli.id_cliente} className="hover:bg-slate-700/30 transition-colors">
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-200">{cli.nombre_completo}</p>
+                        <p className="font-semibold text-slate-200">{formatNombre(cli)}</p>
                         <p className="text-slate-500 text-xs">{cli.email}</p>
                       </td>
                       <td className="px-5 py-4 text-slate-400 font-mono text-xs">{cli.dni}</td>

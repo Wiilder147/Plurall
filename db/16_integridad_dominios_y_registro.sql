@@ -35,18 +35,38 @@ AS $$
 DECLARE
   v_rol_id    UUID;
   v_estado_id UUID;
-  v_nombre    TEXT;
   v_dni       TEXT;
+  v_parsed    RECORD;
+  v_pn        TEXT;
+  v_sn        TEXT;
+  v_pa        TEXT;
+  v_sa        TEXT;
+  v_raw_name  TEXT;
 BEGIN
-  SELECT id_rol           INTO v_rol_id    FROM public.rol            WHERE nombre_rol ILIKE 'CLIENTE' LIMIT 1;
+  SELECT id_rol            INTO v_rol_id    FROM public.rol            WHERE nombre_rol ILIKE 'CLIENTE' LIMIT 1;
   SELECT id_estado_cliente INTO v_estado_id FROM public.estado_cliente WHERE nombre    ILIKE 'ACTIVO'  LIMIT 1;
 
-  -- Nombre: registro propio ('nombre_completo') o OAuth Google ('full_name'/'name')
-  v_nombre := COALESCE(
-    NULLIF(NEW.raw_user_meta_data->>'nombre_completo', ''),
-    NULLIF(NEW.raw_user_meta_data->>'full_name', ''),
-    NULLIF(NEW.raw_user_meta_data->>'name', '')
-  );
+  -- Preferir partes atómicas; si no, parsear full_name / name / legado nombre_completo
+  v_pn := NULLIF(trim(NEW.raw_user_meta_data->>'primer_nombre'), '');
+  v_sn := NULLIF(trim(NEW.raw_user_meta_data->>'segundo_nombre'), '');
+  v_pa := NULLIF(trim(NEW.raw_user_meta_data->>'primer_apellido'), '');
+  v_sa := NULLIF(trim(NEW.raw_user_meta_data->>'segundo_apellido'), '');
+
+  IF v_pn IS NULL THEN
+    v_raw_name := COALESCE(
+      NULLIF(NEW.raw_user_meta_data->>'full_name', ''),
+      NULLIF(NEW.raw_user_meta_data->>'name', ''),
+      NULLIF(NEW.raw_user_meta_data->>'nombre_completo', '')
+    );
+    SELECT * INTO v_parsed FROM fn_parse_nombre(v_raw_name);
+    v_pn := v_parsed.primer_nombre;
+    v_sn := v_parsed.segundo_nombre;
+    v_pa := v_parsed.primer_apellido;
+    v_sa := v_parsed.segundo_apellido;
+  END IF;
+
+  v_pn := COALESCE(NULLIF(trim(v_pn), ''), 'SIN');
+  v_pa := COALESCE(NULLIF(trim(v_pa), ''), 'NOMBRE');
 
   -- dni: si el proveedor no lo entrega (OAuth), generar un placeholder
   -- único que quepa en cliente.dni varchar(20). 'SN' + 16 hex = 18 chars.
@@ -56,17 +76,29 @@ BEGIN
   );
 
   BEGIN
-    INSERT INTO public.perfil_usuario (id, id_rol, nombre_completo)
-    VALUES (NEW.id, v_rol_id, v_nombre)
+    -- Perfil de CLIENTE: sin nombre (canónico en cliente)
+    INSERT INTO public.perfil_usuario (id, id_rol)
+    VALUES (NEW.id, v_rol_id)
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO public.cliente (
-      id_usuario_cuenta, id_estado_cliente, nombre_completo, dni, email, telefono
+      id_usuario_cuenta,
+      id_estado_cliente,
+      primer_nombre,
+      segundo_nombre,
+      primer_apellido,
+      segundo_apellido,
+      dni,
+      email,
+      telefono
     )
     VALUES (
       NEW.id,
       v_estado_id,
-      v_nombre,
+      v_pn,
+      v_sn,
+      v_pa,
+      v_sa,
       v_dni,
       COALESCE(NEW.raw_user_meta_data->>'email_real', NEW.email),
       COALESCE(NULLIF(NEW.raw_user_meta_data->>'telefono', ''), '0000000000')
@@ -94,10 +126,15 @@ DECLARE
   u          RECORD;
   v_rol_id   UUID;
   v_estado_id UUID;
-  v_nombre   TEXT;
+  v_parsed   RECORD;
+  v_pn       TEXT;
+  v_sn       TEXT;
+  v_pa       TEXT;
+  v_sa       TEXT;
+  v_raw_name TEXT;
   v_dni      TEXT;
 BEGIN
-  SELECT id_rol           INTO v_rol_id    FROM public.rol            WHERE nombre_rol ILIKE 'CLIENTE' LIMIT 1;
+  SELECT id_rol            INTO v_rol_id    FROM public.rol            WHERE nombre_rol ILIKE 'CLIENTE' LIMIT 1;
   SELECT id_estado_cliente INTO v_estado_id FROM public.estado_cliente WHERE nombre    ILIKE 'ACTIVO'  LIMIT 1;
 
   FOR u IN
@@ -107,21 +144,42 @@ BEGIN
     WHERE p.id IS NULL
       AND au.email NOT ILIKE '%@plurall.app'   -- respeta cuentas semilla/técnicas
   LOOP
-    v_nombre := COALESCE(
-      NULLIF(u.md->>'nombre_completo',''),
-      NULLIF(u.md->>'full_name',''),
-      NULLIF(u.md->>'name','')
-    );
+    v_pn := NULLIF(trim(u.md->>'primer_nombre'), '');
+    v_sn := NULLIF(trim(u.md->>'segundo_nombre'), '');
+    v_pa := NULLIF(trim(u.md->>'primer_apellido'), '');
+    v_sa := NULLIF(trim(u.md->>'segundo_apellido'), '');
+
+    IF v_pn IS NULL THEN
+      v_raw_name := COALESCE(
+        NULLIF(u.md->>'full_name', ''),
+        NULLIF(u.md->>'name', ''),
+        NULLIF(u.md->>'nombre_completo', '')
+      );
+      SELECT * INTO v_parsed FROM fn_parse_nombre(v_raw_name);
+      v_pn := v_parsed.primer_nombre;
+      v_sn := v_parsed.segundo_nombre;
+      v_pa := v_parsed.primer_apellido;
+      v_sa := v_parsed.segundo_apellido;
+    END IF;
+
+    v_pn := COALESCE(NULLIF(trim(v_pn), ''), 'SIN');
+    v_pa := COALESCE(NULLIF(trim(v_pa), ''), 'NOMBRE');
     v_dni := COALESCE(NULLIF(u.md->>'dni',''), 'SN' || substr(replace(u.id::text,'-',''),1,16));
 
-    INSERT INTO public.perfil_usuario (id, id_rol, nombre_completo)
-    VALUES (u.id, v_rol_id, v_nombre)
+    INSERT INTO public.perfil_usuario (id, id_rol)
+    VALUES (u.id, v_rol_id)
     ON CONFLICT (id) DO NOTHING;
 
-    INSERT INTO public.cliente (id_usuario_cuenta, id_estado_cliente, nombre_completo, dni, email, telefono)
-    VALUES (u.id, v_estado_id, v_nombre, v_dni,
-            COALESCE(u.md->>'email_real', u.email),
-            COALESCE(NULLIF(u.md->>'telefono',''), '0000000000'))
+    INSERT INTO public.cliente (
+      id_usuario_cuenta, id_estado_cliente,
+      primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
+      dni, email, telefono
+    )
+    VALUES (
+      u.id, v_estado_id, v_pn, v_sn, v_pa, v_sa, v_dni,
+      COALESCE(u.md->>'email_real', u.email),
+      COALESCE(NULLIF(u.md->>'telefono',''), '0000000000')
+    )
     ON CONFLICT DO NOTHING;
 
     RAISE NOTICE 'Reparado usuario fantasma: %', u.email;

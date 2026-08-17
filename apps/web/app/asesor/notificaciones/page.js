@@ -6,6 +6,7 @@
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
 import { Bell, Mail, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,7 +25,7 @@ export default async function NotificacionesAsesorPage() {
     .select(`
       id_notificacion, canal, destinatario, asunto, estado_envio, created_at,
       tipo_notificacion ( nombre ),
-      cliente ( nombre_completo )
+      cliente(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido)
     `)
     .order('created_at', { ascending: false })
     .limit(100)
@@ -63,7 +64,7 @@ export default async function NotificacionesAsesorPage() {
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-500">
-                    <span>{n.cliente?.nombre_completo ?? n.destinatario ?? '—'}</span>
+                    <span>{formatNombre(n.cliente) || (n.destinatario ?? '—')}</span>
                     <span className="uppercase">{n.canal ?? 'EMAIL'}</span>
                     <span>{fecha}</span>
                   </div>

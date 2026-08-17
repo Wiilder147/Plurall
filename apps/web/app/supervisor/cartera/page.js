@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { formatCOP } from '@/lib/calculadora'
 import { BarChart3, TrendingUp, DollarSign, CheckCircle2, AlertTriangle, CreditCard } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +27,7 @@ export default async function SupervisorCarteraPage() {
         id_credito, estado_credito, monto_desembolsado, saldo_pendiente,
         cuota_fija, cuotas_pagadas, numero_cuotas, dias_mora_maximo,
         fecha_desembolso,
-        cliente ( nombre_completo, dni, telefono )
+        cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono )
       `)
       .in('estado_credito', ['ACTIVO', 'EN_MORA', 'CANCELADO'])
       .order('fecha_desembolso', { ascending: false }),
@@ -159,7 +160,7 @@ export default async function SupervisorCarteraPage() {
                   return (
                     <tr key={c.id_credito} className="hover:bg-slate-700/20">
                       <td className="px-5 py-3">
-                        <p className="text-slate-200 font-medium">{c.cliente?.nombre_completo}</p>
+                        <p className="text-slate-200 font-medium">{formatNombre(c.cliente)}</p>
                         <p className="text-slate-500 text-xs">{c.cliente?.dni} · {c.cliente?.telefono}</p>
                       </td>
                       <td className="px-5 py-3 text-right text-slate-300">{formatCOP(c.monto_desembolsado)}</td>

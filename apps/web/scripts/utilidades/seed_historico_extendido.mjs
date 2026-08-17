@@ -5,6 +5,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
+import { parseNombre } from '../../lib/nombre.js'
 dotenv.config({ path: '.env.local' })
 
 const db = createClient(
@@ -103,7 +104,7 @@ async function seed() {
     // Auth user
     const { data: authData, error: authErr } = await db.auth.admin.createUser({
       email: fakeEmail, password: 'Plurall2025!', email_confirm: true,
-      user_metadata: { nombre_completo: c.nombre, dni: c.dni, telefono: c.cel },
+      user_metadata: { ...parseNombre(c.nombre), dni: c.dni, telefono: c.cel },
     })
     if (authErr && !authErr.message.includes('already')) { console.warn(`  ⚠️  ${c.nombre}: ${authErr.message}`); continue }
 
@@ -116,7 +117,7 @@ async function seed() {
 
     // Perfil
     await db.from('perfil_usuario').upsert(
-      { id: userId, id_rol: idRolCliente, nombre_completo: c.nombre, activo: true, intentos_fallidos: 0 },
+      { id: userId, id_rol: idRolCliente, activo: true, intentos_fallidos: 0 },
       { onConflict: 'id' }
     )
 
@@ -127,12 +128,22 @@ async function seed() {
       const idx = rnd(0, 7)
       const { data: newCli } = await db.from('cliente').insert({
         id_usuario_cuenta: userId, id_estado_cliente: idEstadoCli,
-        nombre_completo: c.nombre, dni: c.dni, email: fakeEmail, telefono: c.cel,
-        score_credito: rnd(520, 920),
-        ciudad: ciudades[idx], departamento: deptos[idx],
-        nombre_negocio: `${negocios[rnd(0,7)]} ${c.nombre.split(' ')[0]}`,
+        ...parseNombre(c.nombre), dni: c.dni, email: fakeEmail, telefono: c.cel,
       }).select('id_cliente').single()
       clienteId = newCli?.id_cliente
+      if (clienteId) {
+        // Modelo normalizado: negocio y ubicación en sus tablas (no en cliente).
+        await db.from('negocio_cliente').insert({
+          id_cliente: clienteId, nombre_negocio: `${negocios[rnd(0,7)]} ${c.nombre.split(' ')[0]}`,
+        })
+        const ciudadNom = ciudades[idx] === 'Cartagena' ? 'Cartagena de Indias' : ciudades[idx]
+        const { data: muni } = await db.from('municipio')
+          .select('id_municipio, departamento!inner ( nombre )')
+          .ilike('nombre', ciudadNom).ilike('departamento.nombre', deptos[idx]).limit(1).maybeSingle()
+        await db.from('direccion').insert({
+          id_cliente: clienteId, tipo: 'NEGOCIO', id_municipio: muni?.id_municipio ?? null,
+        })
+      }
     }
     if (!clienteId) continue
 

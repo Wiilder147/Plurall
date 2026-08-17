@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
+import { parseNombre } from '../lib/nombre.js'
 
 dotenv.config({ path: '.env.local' })
 
@@ -33,12 +34,15 @@ async function seed() {
     email: '0000000000@plurall.app',
     password: 'password123',
     email_confirm: true,
-    user_metadata: { nombre_completo: 'Julio Administrador', rol_override: 'ADMIN' }
+    user_metadata: { ...parseNombre('Julio Administrador'), rol_override: 'ADMIN' }
   })
   
   // Cambiamos su rol a ADMIN (el trigger lo puso en CLIENTE por defecto)
   if (uAdmin?.user) {
-    await supabase.from('perfil_usuario').update({ id_rol: qRolAdmin.id_rol }).eq('id', uAdmin.user.id)
+    await supabase.from('perfil_usuario').update({
+      id_rol: qRolAdmin.id_rol,
+      ...parseNombre('Julio Administrador'),
+    }).eq('id', uAdmin.user.id)
   }
 
   // --- Usuario 2: CLIENTE CON CRÉDITO APROBADO ---
@@ -47,7 +51,7 @@ async function seed() {
     email: '1111111111@plurall.app',
     password: 'password123',
     email_confirm: true,
-    user_metadata: { nombre_completo: 'Carlos Aprobado', dni: '123456', telefono: '1111111111' }
+    user_metadata: { ...parseNombre('Carlos Aprobado'), dni: '123456', telefono: '1111111111' }
   })
   
   if (uAprob?.user) {
@@ -59,7 +63,7 @@ async function seed() {
       id_cliente: uAprob.user.id,
       id_usuario_cuenta: uAprob.user.id,
       id_estado_cliente: qEstadoCli?.id_estado_cliente || null,
-      nombre_completo: 'Carlos Aprobado',
+      ...parseNombre('Carlos Aprobado'),
       dni: '123456',
       email: uAprob.user.email,
       telefono: '1111111111'
@@ -124,7 +128,7 @@ async function seed() {
     email: '2222222222@plurall.app',
     password: 'password123',
     email_confirm: true,
-    user_metadata: { nombre_completo: 'María Pendiente', dni: '987654', telefono: '2222222222' }
+    user_metadata: { ...parseNombre('María Pendiente'), dni: '987654', telefono: '2222222222' }
   })
   
   if (uPend?.user) {
@@ -134,7 +138,7 @@ async function seed() {
       id_cliente: uPend.user.id,
       id_usuario_cuenta: uPend.user.id,
       id_estado_cliente: qEstadoCli?.id_estado_cliente || null,
-      nombre_completo: 'María Pendiente',
+      ...parseNombre('María Pendiente'),
       dni: '987654',
       email: uPend.user.email,
       telefono: '2222222222'

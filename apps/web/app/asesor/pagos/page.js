@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { DollarSign, CheckCircle2, TrendingUp } from 'lucide-react'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +21,7 @@ export default async function AsesorPagosPage() {
     .select(`
       id_recibo, monto_pagado, monto_capital, monto_interes, monto_mora,
       metodo_pago, referencia_externa, estado, fecha_pago,
-      credito ( id_credito, cliente ( nombre_completo, dni, telefono ) )
+      credito ( id_credito, cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono ) )
     `)
     .eq('id_usuario_receptor', user.id)
     .eq('metodo_pago', 'EFECTIVO')
@@ -114,7 +115,7 @@ export default async function AsesorPagosPage() {
                 {pagos.map((p) => (
                   <tr key={p.id_recibo} className="hover:bg-slate-700/20">
                     <td className="px-5 py-3">
-                      <p className="text-slate-200 font-medium">{p.credito?.cliente?.nombre_completo}</p>
+                      <p className="text-slate-200 font-medium">{formatNombre(p.credito?.cliente)}</p>
                       <p className="text-slate-500 text-xs">{p.credito?.cliente?.telefono}</p>
                     </td>
                     <td className="px-5 py-3 text-right font-semibold text-emerald-400">{formatCOP(p.monto_pagado)}</td>

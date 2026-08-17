@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { MessageSquare, User } from 'lucide-react'
 import ResponderPqr from '@/components/ResponderPqr'
+import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,7 @@ export default async function PqrAsesorPage() {
 
   const { data: pqrs } = await supabase
     .from('pqr')
-    .select('id_pqr, tipo, asunto, descripcion, estado, respuesta, created_at, cliente ( nombre_completo, dni )')
+    .select('id_pqr, tipo, asunto, descripcion, estado, respuesta, created_at, cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni )')
     .order('created_at', { ascending: false })
 
   const lista = pqrs ?? []
@@ -55,7 +56,7 @@ export default async function PqrAsesorPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-slate-200 text-sm">{p.cliente?.nombre_completo ?? '—'}</p>
+                        <p className="font-semibold text-slate-200 text-sm">{formatNombre(p.cliente) || '—'}</p>
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-300 capitalize">{p.tipo.toLowerCase()}</span>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ESTADO[p.estado] || ESTADO.ABIERTO}`}>{p.estado.replace('_', ' ')}</span>
                       </div>
