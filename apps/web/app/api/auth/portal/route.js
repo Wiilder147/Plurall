@@ -1,18 +1,18 @@
 /* ==========================================================================
  * ARCHIVO: route.js
  * RUTA: apps/web/app/api/auth/portal/route.js
- * DESCRIPCIÓN: Endpoint de API (Backend) para manejar la lógica de portal
- * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * DESCRIPCIÓN: Portal correcto según el rol + registro del acceso.
+ * FUNCIONALIDAD: Se llama tras el login exitoso. Devuelve la URL del portal del
+ *                usuario y, de paso, registra el acceso en `auditoria` con la IP
+ *                real del cliente (los triggers de BD no ven la IP HTTP, por eso
+ *                se hace aquí, en el servidor).
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { getClientIp, getUserAgent } from '@/lib/ip'
 import { NextResponse } from 'next/server'
 
-/**
- * GET /api/auth/portal
- * Devuelve la URL del portal correcto según el rol del usuario autenticado.
- * Se llama justo después del login exitoso para redirigir al portal correcto.
- */
-export async function GET() {
+export async function GET(request) {
   const supabase = await createClient()
 
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -34,7 +34,21 @@ export async function GET() {
     ASESOR:     '/asesor',
     CLIENTE:    '/dashboard/inicio',
   }
-
   const portal = portales[rol] ?? '/dashboard/inicio'
+
+  // Registrar el acceso con la IP real del cliente (fire-and-forget, no bloquea
+  // la redirección). En local la IP suele ser null (sin proxy); en producción sí.
+  try {
+    const ip = getClientIp(request)
+    await createServiceClient().from('auditoria').insert({
+      id_usuario_responsable: user.id,
+      tabla_afectada:         'auth.users',
+      id_registro_afectado:   user.id,
+      accion_realizada:       'LOGIN',
+      ip_origen:              ip,
+      user_agent:             getUserAgent(request),
+    })
+  } catch { /* no bloquear el login si la auditoría falla */ }
+
   return NextResponse.json({ portal, rol })
 }

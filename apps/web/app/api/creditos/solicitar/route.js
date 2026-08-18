@@ -16,6 +16,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { notificarSolicitudRecibida } from '@/lib/notificaciones'
 import { formatNombre } from '@/lib/nombre'
+import { getClientIp } from '@/lib/ip'
 
 // Códigos de negocio devueltos por la RPC → status HTTP
 const STATUS_POR_ERROR = {
@@ -30,12 +31,7 @@ const STATUS_POR_ERROR = {
 export async function POST(request) {
   try {
     // IP del solicitante (compatible con proxies y CDN)
-    const ip = (
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-      request.headers.get('x-real-ip') ??
-      request.headers.get('cf-connecting-ip') ??
-      null
-    )
+    const ip = getClientIp(request)
 
     const body = await request.json()
     // respuestas: [{ id_pregunta, id_opcion?, respuesta_texto?, respuesta_numerica? }]
