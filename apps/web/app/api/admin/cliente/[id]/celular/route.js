@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { aplicarCambioCelular } from '@/lib/celular'
 
 const STAFF = ['ADMIN', 'SUPERVISOR']
 
@@ -37,33 +38,15 @@ export async function PATCH(request, { params }) {
     .from('cliente').select('id_cliente, id_usuario_cuenta, telefono').eq('id_cliente', id).single()
   if (!cliente) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
 
-  const nuevoEmail = `${cel}@plurall.app`
+  // El helper registra el número anterior, cambia el acceso y detecta reúso.
+  const res = await aplicarCambioCelular(service, {
+    cliente,
+    nuevoCelular: cel,
+    liberadoPor:  user.id,
+    motivo:       'Cambio por staff',
+  })
+  if (res.error) return NextResponse.json({ error: res.error }, { status: res.status })
 
-  // Actualizar identidad de acceso en Auth (si tiene cuenta vinculada)
-  if (cliente.id_usuario_cuenta) {
-    const { error: authUpdErr } = await service.auth.admin.updateUserById(cliente.id_usuario_cuenta, {
-      email: nuevoEmail,
-      email_confirm: true,
-    })
-    if (authUpdErr) {
-      const msg = authUpdErr.message?.toLowerCase() || ''
-      if (msg.includes('already') || msg.includes('exists') || msg.includes('registered')) {
-        return NextResponse.json({ error: 'Ese celular ya está registrado en otra cuenta' }, { status: 409 })
-      }
-      console.error('[Cambiar celular auth]', authUpdErr)
-      return NextResponse.json({ error: 'No se pudo actualizar el acceso del cliente' }, { status: 500 })
-    }
-  }
-
-  // Actualizar teléfono y email de contacto del cliente
-  const { error: updErr } = await service
-    .from('cliente')
-    .update({ telefono: cel, email: nuevoEmail, updated_at: new Date().toISOString() })
-    .eq('id_cliente', id)
-  if (updErr) {
-    console.error('[Cambiar celular cliente]', updErr)
-    return NextResponse.json({ error: 'No se pudo actualizar el teléfono' }, { status: 500 })
-  }
-
-  return NextResponse.json({ ok: true, celular: cel })
+  // Se informa el reúso al frontend (además de la notificación al staff).
+  return NextResponse.json({ ok: true, celular: res.celular, reuso: res.reuso ?? null })
 }

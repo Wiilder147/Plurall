@@ -13,6 +13,7 @@ import EditarPerfilForm from '@/components/EditarPerfilForm'
 import EliminarCuentaBtn from '@/components/EliminarCuentaBtn'
 import { formatNombre } from '@/lib/nombre'
 import { emailVisible } from '@/lib/email'
+import CambiarCelularCliente from '@/components/CambiarCelularCliente'
 import {
   User, Phone, Mail, Hash, CheckCircle2, MapPin, Building2, Store,
   Calendar, Shield, CreditCard, TrendingUp, Wallet, Landmark, Users,
@@ -256,7 +257,10 @@ export default async function DashboardPerfil() {
         {/* El "email de acceso" sintético (celular@plurall.app) NO se muestra:
             el acceso es por celular. Se muestra el celular en su lugar. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <InfoField icon={Phone} label="Celular de Acceso" value={cliente?.telefono} />
+          <div>
+            <InfoField icon={Phone} label="Celular de Acceso" value={cliente?.telefono} />
+            <CambiarCelularCliente celularActual={cliente?.telefono} />
+          </div>
           <InfoField icon={Calendar} label="Cuenta Creada" value={new Date(user.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })} />
           <InfoField icon={Shield} label="Último Acceso" value={user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Primera sesión'} />
         </div>
