@@ -19,10 +19,10 @@ import {
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SidebarFooter from './SidebarFooter'
+import BuscadorClientes from './BuscadorClientes'
 
 const navigation = [
   { name: 'Panel',                 href: '/supervisor',                  icon: LayoutDashboard },
-  { name: 'Buscar cliente',        href: '/supervisor/buscar',           icon: Search          },
   { name: 'Clientes',              href: '/supervisor/clientes',         icon: Users           },
   { name: 'Créditos',              href: '/supervisor/creditos',         icon: CreditCard      },
   { name: 'Cartera',               href: '/supervisor/cartera',          icon: Shield          },
@@ -109,11 +109,16 @@ export default function SupervisorSidebar({ esAdmin = false }) {
           </div>
         </div>
 
+        {/* ── BUSCADOR DE CLIENTES (disponible en todas las secciones) ── */}
+        <div className="px-4 pt-4">
+          <BuscadorClientes basePath="/supervisor/clientes" accent="indigo" onNavigate={() => setIsOpen(false)} />
+        </div>
+
         {/* ── ZONA DE NAVEGACIÓN ──
             overflow-y-auto — permite scroll si hay demasiados items
             ESPACIO ENTRE ITEMS: gap-1 (4px)
             PADDING: py-6 px-4 */}
-        <div className="flex-1 min-h-0 py-6 px-4 flex flex-col gap-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 py-4 px-4 flex flex-col gap-1 overflow-y-auto">
           {/* Enlace de retorno al panel Admin — solo visible para el ADMIN */}
           {esAdmin && (
             <Link href="/admin" onClick={() => setIsOpen(false)}

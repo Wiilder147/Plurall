@@ -14,6 +14,7 @@ import { LayoutDashboard, ClipboardList, Users, Menu, X, BarChart3, ShieldCheck,
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SidebarFooter from './SidebarFooter'
+import BuscadorClientes from './BuscadorClientes'
 
 // LISTA DE RUTAS DEL MENÚ ADMIN — para agregar una ruta nueva:
 // { name: 'Mi Sección', href: '/admin/mi-ruta', icon: IconName }
@@ -109,7 +110,10 @@ export default function AdminSidebar() {
             PADDING: py-6 px-4 (24px vertical, 16px horizontal)
             overflow-y-auto + min-h-0 — scroll interno en pantallas bajas para que
             el botón "Cerrar sesión" del footer siempre quede visible */}
-        <div className="flex-1 min-h-0 py-6 px-4 flex flex-col gap-1 overflow-y-auto">
+        <div className="px-4 pt-4">
+          <BuscadorClientes basePath="/admin/clientes" accent="orange" onNavigate={() => setIsOpen(false)} />
+        </div>
+        <div className="flex-1 min-h-0 py-4 px-4 flex flex-col gap-1 overflow-y-auto">
           {navigation.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href))
             return (

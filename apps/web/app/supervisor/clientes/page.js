@@ -172,7 +172,7 @@ export default async function SupervisorClientesPage({ searchParams }) {
                         )}
                       </td>
                       <td className="px-5 py-4">
-                        <Link href={`/admin/clientes/${cli.id_cliente}`}
+                        <Link href={`/supervisor/clientes/${cli.id_cliente}`}
                           className="text-indigo-400 hover:text-indigo-300 transition-colors">
                           <ArrowRight className="w-4 h-4" />
                         </Link>

@@ -19,6 +19,7 @@ import {
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SidebarFooter from './SidebarFooter'
+import BuscadorClientes from './BuscadorClientes'
 
 // LISTA DE RUTAS DEL MENÚ ASESOR
 const navigation = [
@@ -107,7 +108,10 @@ export default function AsesorSidebar({ esAdmin = false }) {
             overflow-y-auto — scroll si hay demasiados items
             ESPACIO ENTRE ITEMS: gap-1 (4px)
             PADDING: py-6 px-4 */}
-        <div className="flex-1 min-h-0 py-6 px-4 flex flex-col gap-1 overflow-y-auto">
+        <div className="px-4 pt-4">
+          <BuscadorClientes basePath="/asesor/clientes" accent="teal" onNavigate={() => setIsOpen(false)} placeholder="Buscar mi cliente…" />
+        </div>
+        <div className="flex-1 min-h-0 py-4 px-4 flex flex-col gap-1 overflow-y-auto">
           {/* Enlace de retorno al panel Admin — solo visible para el ADMIN */}
           {esAdmin && (
             <Link href="/admin" onClick={() => setIsOpen(false)}
