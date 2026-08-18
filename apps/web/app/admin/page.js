@@ -15,6 +15,11 @@ import StatusBadge from '@/components/dashboard/StatusBadge'
 import AnalyticsSection from '@/components/AnalyticsSection'
 import { formatNombre, primerNombre } from '@/lib/nombre'
 import {
+  ESTADOS_CREDITO_VIGENTE,
+  contarSolicitudesPendientes,
+  contarSolicitudesTotales,
+} from '@/lib/metricas'
+import {
   ClipboardList, Users, TrendingUp, AlertTriangle,
   Clock, BarChart3, ShieldCheck, Headset,
 } from 'lucide-react'
@@ -27,23 +32,20 @@ export default async function AdminDashboardPage() {
 
   const [
     { data: perfil },
-    { count: pendientes },
+    pendientes,
     { count: totalClientes },
     { count: creditosActivos },
     { data: recientes },
     { data: cartera },
     { count: cuotasVencidas },
-    { count: totalSolicitudes },
+    totalSolicitudes,
   ] = await Promise.all([
     supabase.from('perfil_usuario').select('primer_nombre, segundo_nombre, primer_apellido, segundo_apellido').eq('id', user.id).single(),
-    supabase.from('solicitud_credito')
-      .select('*', { count: 'exact', head: true })
-      .in('estado_solicitud.nombre', ['PENDIENTE', 'EN_ESTUDIO'])
-      .not('id_estado_solicitud', 'is', null),
+    contarSolicitudesPendientes(supabase),
     supabase.from('cliente').select('*', { count: 'exact', head: true }),
     supabase.from('credito')
       .select('*', { count: 'exact', head: true })
-      .in('estado_credito', ['ACTIVO', 'EN_MORA']),
+      .in('estado_credito', ESTADOS_CREDITO_VIGENTE),
     supabase.from('solicitud_credito')
       .select(`
         id_solicitud, monto_solicitado, plazo_meses, fecha_solicitud,
@@ -52,9 +54,9 @@ export default async function AdminDashboardPage() {
       `)
       .order('fecha_solicitud', { ascending: false })
       .limit(5),
-    supabase.from('credito').select('saldo_pendiente').in('estado_credito', ['ACTIVO', 'EN_MORA']),
+    supabase.from('credito').select('saldo_pendiente').in('estado_credito', ESTADOS_CREDITO_VIGENTE),
     supabase.from('cuota').select('*', { count: 'exact', head: true }).eq('estado_cuota', 'VENCIDA'),
-    supabase.from('solicitud_credito').select('*', { count: 'exact', head: true }),
+    contarSolicitudesTotales(supabase),
   ])
 
   const totalCartera = cartera?.reduce((sum, c) => sum + (c.saldo_pendiente || 0), 0) || 0
@@ -63,7 +65,7 @@ export default async function AdminDashboardPage() {
   const kpis = [
     { label: 'Solicitudes pendientes', value: pendientes || 0, icon: Clock, color: 'text-yellow-500 bg-yellow-500/10', href: '/admin/solicitudes' },
     { label: 'Clientes registrados', value: totalClientes || 0, icon: Users, color: 'text-blue-500 bg-blue-500/10', href: '/admin/clientes' },
-    { label: 'Créditos activos', value: creditosActivos || 0, icon: TrendingUp, color: 'text-emerald-500 bg-emerald-500/10', href: '/admin/solicitudes' },
+    { label: 'Créditos activos', value: creditosActivos || 0, icon: TrendingUp, color: 'text-emerald-500 bg-emerald-500/10', href: '/admin/solicitudes', sublabel: 'vigentes (incl. mora)' },
     { label: 'Cuotas vencidas', value: cuotasVencidas || 0, icon: AlertTriangle, color: 'text-red-500 bg-red-500/10', href: '/admin/reportes' },
   ]
 

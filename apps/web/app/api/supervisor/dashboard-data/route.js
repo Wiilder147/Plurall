@@ -165,13 +165,15 @@ export async function GET(request) {
   // ── KPIs globales (siempre actuales) ─────────────────────────────────────
   const [
     { count: totalClientes  },
-    { count: creditosActivos},
+    { count: creditosVigentes},
     { count: creditosMora   },
     { count: cuotasVencidas },
     { data: carteraData     },
   ] = await Promise.all([
     db.from('cliente').select('*', { count: 'exact', head: true }),
-    db.from('credito').select('*', { count: 'exact', head: true }).eq('estado_credito', 'ACTIVO'),
+    // "Créditos activos" = vigentes (ACTIVO + EN_MORA): un crédito en mora sigue
+    // vigente. Debe coincidir con el KPI del panel de admin.
+    db.from('credito').select('*', { count: 'exact', head: true }).in('estado_credito', ['ACTIVO','EN_MORA']),
     db.from('credito').select('*', { count: 'exact', head: true }).eq('estado_credito', 'EN_MORA'),
     db.from('cuota').select('*', { count: 'exact', head: true }).eq('estado_cuota', 'VENCIDA'),
     db.from('credito').select('saldo_pendiente, monto_desembolsado').in('estado_credito', ['ACTIVO','EN_MORA']),
@@ -179,8 +181,9 @@ export async function GET(request) {
 
   const carteraSaldo      = carteraData?.reduce((s, c) => s + (c.saldo_pendiente || 0), 0) ?? 0
   const totalDesembolsado = carteraData?.reduce((s, c) => s + (c.monto_desembolsado || 0), 0) ?? 0
-  const indicadorMora     = (creditosActivos ?? 0) + (creditosMora ?? 0) > 0
-    ? ((creditosMora ?? 0) / ((creditosActivos ?? 0) + (creditosMora ?? 0)) * 100).toFixed(1)
+  // Indicador de mora = créditos en mora / créditos vigentes.
+  const indicadorMora     = (creditosVigentes ?? 0) > 0
+    ? ((creditosMora ?? 0) / (creditosVigentes ?? 1) * 100).toFixed(1)
     : '0.0'
 
   // ── Tramos de mora ────────────────────────────────────────────────────────
@@ -201,7 +204,8 @@ export async function GET(request) {
     serie,
     kpis: {
       totalClientes: totalClientes ?? 0,
-      creditosActivos: creditosActivos ?? 0,
+      // creditosActivos = vigentes (ACTIVO + EN_MORA); creditosMora es el subconjunto.
+      creditosActivos: creditosVigentes ?? 0,
       creditosMora: creditosMora ?? 0,
       cuotasVencidas: cuotasVencidas ?? 0,
       carteraSaldo, totalDesembolsado, indicadorMora,

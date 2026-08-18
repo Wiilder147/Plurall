@@ -144,7 +144,8 @@ export async function GET(request) {
     aprobadas,
     rechazadas,
     tasaAprobacion: solsF.length ? Math.round((aprobadas / solsF.length) * 100) : 0,
-    creditosActivos: credsF.filter(c => c.estado_credito === 'ACTIVO').length,
+    // Vigentes = ACTIVO + EN_MORA (un crédito en mora sigue vigente).
+    creditosActivos: credsF.filter(c => ['ACTIVO', 'EN_MORA'].includes(c.estado_credito)).length,
     creditosEnMora: enMora.length,
     carteraActiva,
     pqrAbiertas: pqrsF.filter(p => ['ABIERTO', 'EN_PROCESO'].includes(p.estado?.toUpperCase())).length,

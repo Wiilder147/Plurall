@@ -279,11 +279,13 @@ export default function SupervisorCharts() {
   }
 
   const { serie, kpis, tramos } = data
-  const totalActivos = kpis.creditosActivos + kpis.creditosMora
+  // creditosActivos ya es el total vigente (ACTIVO + EN_MORA); mora es subconjunto.
+  const totalActivos = kpis.creditosActivos
+  const creditosAlDia = Math.max(0, kpis.creditosActivos - kpis.creditosMora)
 
   const kpiCards = [
     { label: 'Clientes registrados', value: NUM(kpis.totalClientes),   icon: Users,         color: 'text-blue-400 bg-blue-500/10',       href: '/supervisor/clientes'    },
-    { label: 'Créditos activos',     value: NUM(kpis.creditosActivos), icon: TrendingUp,    color: 'text-emerald-400 bg-emerald-500/10', href: '/supervisor/cartera'     },
+    { label: 'Créditos activos',     value: NUM(kpis.creditosActivos), icon: TrendingUp,    color: 'text-emerald-400 bg-emerald-500/10', href: '/supervisor/cartera', sublabel: 'vigentes (incl. mora)' },
     { label: 'Créditos en mora',     value: NUM(kpis.creditosMora),    icon: AlertTriangle, color: 'text-red-400 bg-red-500/10',         href: '/supervisor/mora'        },
     { label: 'Cuotas vencidas',      value: NUM(kpis.cuotasVencidas),  icon: ShieldAlert,   color: 'text-orange-400 bg-orange-500/10',   href: '/supervisor/mora'        },
     { label: 'Cartera activa',       value: COP(kpis.carteraSaldo),    icon: DollarSign,    color: 'text-indigo-400 bg-indigo-500/10',   href: '/supervisor/cartera'     },
@@ -331,7 +333,7 @@ export default function SupervisorCharts() {
           value={COP(kpis.carteraSaldo)}
           sublabel={`Total desembolsado: ${COP(kpis.totalDesembolsado)}`}
           stats={[
-            { label: 'activos', value: kpis.creditosActivos, highlight: false },
+            { label: 'al día', value: creditosAlDia, highlight: false },
             { label: '·', value: '', highlight: false },
             { label: 'en mora', value: kpis.creditosMora, highlight: true },
           ]}
