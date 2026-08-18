@@ -12,6 +12,8 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import CambiarCelular from '@/components/CambiarCelular'
+import GestionAsesorCliente from '@/components/GestionAsesorCliente'
+import { createServiceClient } from '@/lib/supabase/service'
 import { formatNombre } from '@/lib/nombre'
 import { emailVisible } from '@/lib/email'
 import {
@@ -69,6 +71,26 @@ export default async function FichaClienteStaff({ clienteId, backHref = '/', pue
   const creditoActivo = creditos?.find(c => ['ACTIVO', 'EN_MORA'].includes(c.estado_credito))
   const totalDesemb   = creditos?.reduce((s, c) => s + (c.monto_desembolsado || 0), 0) ?? 0
   const docsAprobados = documentos?.filter(d => d.estado_verificacion === 'APROBADO').length ?? 0
+
+  // Gestión de asesor (solo admin/supervisor): asesor actual + lista de asesores.
+  let asesorActual = null, asesores = []
+  if (puedeEditarCelular) {
+    const service = createServiceClient()
+    const [{ data: rolAsesor }, { data: asig }] = await Promise.all([
+      service.from('rol').select('id_rol').eq('nombre_rol', 'ASESOR').single(),
+      service.from('asignacion_asesor')
+        .select('id_asesor, perfil:perfil_usuario!asignacion_asesor_id_asesor_fkey ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido )')
+        .eq('id_cliente', clienteId).eq('activa', true).maybeSingle(),
+    ])
+    if (asig?.id_asesor) asesorActual = { id: asig.id_asesor, nombre: formatNombre(asig.perfil) }
+    if (rolAsesor?.id_rol) {
+      const { data: lista } = await service
+        .from('perfil_usuario')
+        .select('id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido')
+        .eq('id_rol', rolAsesor.id_rol).eq('activo', true)
+      asesores = (lista ?? []).map(a => ({ id: a.id, nombre: formatNombre(a) }))
+    }
+  }
 
   return (
     <div className="w-full flex flex-col gap-6 pb-10 max-w-5xl">
@@ -217,6 +239,10 @@ export default async function FichaClienteStaff({ clienteId, backHref = '/', pue
             </p>
           </div>
         </div>
+      )}
+
+      {puedeEditarCelular && (
+        <GestionAsesorCliente clienteId={clienteId} asesorActual={asesorActual} asesores={asesores} />
       )}
 
       {creditos?.length > 0 && (

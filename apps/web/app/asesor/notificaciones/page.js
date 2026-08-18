@@ -5,7 +5,7 @@
  * FUNCIONALIDAD: Historial de notificaciones enviadas a los clientes.
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
-import { Bell, Mail, CheckCircle2, XCircle, Clock } from 'lucide-react'
+import { Bell, Mail, CheckCircle2, XCircle, Clock, UserCog } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
 
 export const dynamic = 'force-dynamic'
@@ -20,17 +20,30 @@ const ESTADO = {
 export default async function NotificacionesAsesorPage() {
   const supabase = await createClient()
 
-  const { data: notifs } = await supabase
-    .from('notificacion')
-    .select(`
-      id_notificacion, canal, destinatario, asunto, estado_envio, created_at,
-      tipo_notificacion ( nombre ),
-      cliente(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido)
-    `)
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const [{ data: notifs }, { data: mias }] = await Promise.all([
+    supabase
+      .from('notificacion')
+      .select(`
+        id_notificacion, canal, destinatario, asunto, estado_envio, created_at,
+        tipo_notificacion ( nombre ),
+        cliente(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    // Notificaciones dirigidas a ESTE asesor (asignaciones, avisos internos).
+    user
+      ? supabase.from('notificacion_staff')
+          .select('id_notificacion, titulo, mensaje, leida, created_at')
+          .eq('id_usuario', user.id)
+          .order('created_at', { ascending: false })
+          .limit(50)
+      : Promise.resolve({ data: [] }),
+  ])
 
   const lista = notifs ?? []
+  const misNotifs = mias ?? []
 
   return (
     <div className="flex flex-col gap-6 pb-10">
@@ -38,8 +51,36 @@ export default async function NotificacionesAsesorPage() {
         <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
           <Bell className="w-7 h-7 text-teal-400" /> Notificaciones
         </h1>
-        <p className="text-slate-400 mt-1">Historial de notificaciones enviadas a los clientes.</p>
+        <p className="text-slate-400 mt-1">Tus avisos internos e historial de notificaciones a clientes.</p>
       </header>
+
+      {/* ── Mis avisos (asignaciones de clientes, etc.) ── */}
+      {misNotifs.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+            <UserCog className="w-4 h-4 text-teal-400" /> Tus avisos
+          </h2>
+          {misNotifs.map((n) => (
+            <div key={n.id_notificacion} className={`border rounded-xl p-4 flex items-start gap-3 ${
+              n.leida ? 'bg-slate-800 border-slate-700' : 'bg-teal-500/5 border-teal-500/30'
+            }`}>
+              <div className="w-9 h-9 bg-teal-500/20 rounded-lg flex items-center justify-center shrink-0">
+                <UserCog className="w-4 h-4 text-teal-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-slate-200 text-sm">{n.titulo}</p>
+                  {!n.leida && <span className="w-2 h-2 rounded-full bg-teal-400" />}
+                </div>
+                {n.mensaje && <p className="text-slate-400 text-xs mt-0.5">{n.mensaje}</p>}
+                <p className="text-slate-500 text-xs mt-1">
+                  {new Date(n.created_at).toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {lista.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
