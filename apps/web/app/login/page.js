@@ -122,7 +122,7 @@ export default function LoginPage() {
     // CLASE: auth-shell (definida en globals.css) — centra el contenido y pinta
     //        el fondo degradado suave sobre el que resalta la tarjeta blanca.
     //        Para cambiar el fondo: edita .auth-shell en globals.css
-    <main className="auth-shell">
+    <main className="auth-shell relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
 
       {/* ──────────────────────────────────────────────────────────────────────
           BARRA SUPERIOR (banner informativo)
@@ -196,7 +196,10 @@ export default function LoginPage() {
                  Para cambiar ancho/padding/sombra: edita .auth-card en globals.css
           ANIMACIÓN: animate-fade-in (aparece suavemente)
           ────────────────────────────────────────────────────────────────────── */}
-      <div className="auth-card animate-fade-in">
+      {/* Las utilidades de layout (w-full max-w-[30rem] mx-auto…) van inline para
+          que la tarjeta tenga su forma desde el primer render y no haya un
+          parpadeo a ancho completo mientras carga la clase .auth-card. */}
+      <div className="auth-card animate-fade-in w-full max-w-[30rem] mx-auto flex flex-col items-center bg-white rounded-[2rem] shadow-xl">
 
         {/* ── LOGO CUADRADO "P" ──
             COLOR DE FONDO: bg-navy-900 (azul muy oscuro — para cambiar: bg-slate-900, bg-blue-900)

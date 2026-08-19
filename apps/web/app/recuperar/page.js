@@ -89,7 +89,7 @@ export default function RecuperarPage() {
     // COLOR DE FONDO: bg-white (blanco — para cambiar: bg-slate-50, bg-gray-50)
     // CENTRADO: flex flex-col items-center justify-center
     // overflow-hidden: oculta los triángulos decorativos que sobresalen
-    <main className="auth-shell">
+    <main className="auth-shell relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
 
       {/* TRIÁNGULOS DECORATIVOS DE FONDO (definidos en globals.css) */}
       <div className="bg-triangle-orange"></div>
@@ -118,7 +118,9 @@ export default function RecuperarPage() {
       {/* TARJETA CENTRAL
           ANCHO MÁXIMO: lo define .auth-card en globals.css (480px)
           ANIMACIÓN: animate-fade-in (aparece suavemente) */}
-      <div className="auth-card animate-fade-in">
+      {/* Utilidades de layout inline para evitar el parpadeo a ancho completo
+          mientras carga la clase .auth-card (ver login/page.js). */}
+      <div className="auth-card animate-fade-in w-full max-w-[30rem] mx-auto flex flex-col items-center bg-white rounded-[2rem] shadow-xl">
 
         {/* LOGO CUADRADO "P"
             COLOR FONDO: bg-navy-900 (azul muy oscuro)
