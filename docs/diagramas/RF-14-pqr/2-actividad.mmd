@@ -1,0 +1,13 @@
+%% RF-14 PQR - Diagrama de Actividad
+flowchart TD
+    A([Cliente en portal]) --> B{¿Usa ayuda/chatbot primero?}
+    B -- Sí y resuelve --> B1[/Fin sin PQR/] --> Z([Fin])
+    B -- No resuelve --> C[Radicar PQR: tipo, asunto, descripción]
+    C --> D[INSERT pqr estado=ABIERTO]
+    D --> E[[Staff revisa PQR]]
+    E --> F[Responder PQR]
+    F --> G[UPDATE pqr: respuesta, id_respondido_por, fecha_respuesta]
+    G --> H[Notificar al cliente RF-08]
+    H --> I{¿Resuelto?}
+    I -- Sí --> J[estado=CERRADO] --> Z
+    I -- No --> E

@@ -1,0 +1,17 @@
+%% RF-14 PQR y asistencia al usuario - Casos de Uso
+flowchart LR
+    CLI(["👤 Cliente"])
+    STAFF(["👤 Asesor/Admin"])
+    subgraph SIS["RF-14 · PQR y Asistencia"]
+        U1(["Radicar PQR"])
+        U2(["Consultar estado de PQR"])
+        U3(["Usar chatbot/ayuda"])
+        U4(["Responder PQR"])
+        U5(["Cerrar PQR"])
+        U6(["Notificar respuesta (RF-08)"])
+    end
+    CLI --- U1 & U2 & U3
+    STAFF --- U4 & U5
+    U1 -. "«extend»(sin resolver en ayuda)" .-> U3
+    U4 -. "«include»" .-> U6
+    U4 -. "«extend»" .-> U5

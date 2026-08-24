@@ -1,0 +1,19 @@
+%% RF-02 Perfil - Secuencia (guardar cambios)
+sequenceDiagram
+    autonumber
+    actor CLI as Cliente
+    participant UI as EditarPerfilForm
+    participant API as /api/perfil (PATCH)
+    participant DB as Postgres (RLS)
+
+    CLI->>UI: Modifica contacto/negocio/ubicación
+    UI->>API: PATCH datos de perfil
+    API->>DB: UPDATE cliente (telefono)
+    API->>DB: UPSERT negocio_cliente
+    API->>DB: SELECT municipio (lookup)
+    DB-->>API: id_municipio
+    API->>DB: UPSERT direccion
+    API->>DB: UPSERT perfil_financiero
+    DB-->>API: filas afectadas
+    API-->>UI: 200 OK
+    UI-->>CLI: Confirmación visual

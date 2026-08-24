@@ -1,0 +1,24 @@
+%% RF-04 Gestión de créditos y documentos legales - Casos de Uso
+flowchart LR
+    CLI(["👤 Cliente"])
+    ASE(["👤 Asesor"])
+    PUP(["🧾 Puppeteer (PDF)"])
+    subgraph SIS["RF-04 · Créditos y Documentos"]
+        U1(["Ver historial de créditos"])
+        U2(["Ver detalle de crédito y cuotas"])
+        U3(["Descargar contrato"])
+        U4(["Descargar plan de pagos"])
+        U5(["Descargar estado de cuenta"])
+        U6(["Descargar paz y salvo"])
+        U7(["Generar PDF"])
+        U8(["Registrar descarga (log)"])
+    end
+    CLI --- U1 & U2 & U3 & U4 & U5 & U6
+    ASE --- U1 & U2
+    U3 -. "«include»" .-> U7
+    U4 -. "«include»" .-> U7
+    U5 -. "«include»" .-> U7
+    U6 -. "«include»" .-> U7
+    U7 --- PUP
+    U7 -. "«extend»" .-> U8
+    U6 -. "«extend»(solo si crédito PAGADO)" .-> U2

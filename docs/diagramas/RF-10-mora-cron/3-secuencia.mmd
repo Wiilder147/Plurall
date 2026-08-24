@@ -1,0 +1,20 @@
+%% RF-10 Mora - Secuencia (cron diario)
+sequenceDiagram
+    autonumber
+    participant CRON as Vercel Cron
+    participant API as /api/cron/mora
+    participant DB as Postgres
+    participant NOT as Notificaciones (RF-08)
+
+    CRON->>API: GET (Authorization: CRON_SECRET)
+    API->>API: Validar secreto
+    alt Secreto inválido
+        API-->>CRON: 401
+    else Válido
+        API->>DB: UPDATE cuotas vencidas + mora
+        API->>DB: UPDATE créditos → EN_MORA
+        API->>DB: UPDATE créditos al día → ACTIVO
+        DB-->>API: filas afectadas
+        API->>NOT: recordatorios de vencimiento
+        API-->>CRON: 200 {resumen}
+    end

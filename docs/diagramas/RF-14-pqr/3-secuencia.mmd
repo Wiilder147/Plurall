@@ -1,0 +1,19 @@
+%% RF-14 PQR - Secuencia (radicar y responder)
+sequenceDiagram
+    autonumber
+    actor CLI as Cliente
+    participant UI as Formulario PQR
+    participant API as /api/pqr
+    participant DB as Postgres
+    actor STAFF as Asesor/Admin
+    participant NOT as Notificaciones (RF-08)
+
+    CLI->>UI: Radicar PQR (tipo, asunto, descripción)
+    UI->>API: POST pqr
+    API->>DB: INSERT pqr (ABIERTO)
+    DB-->>API: id_pqr
+    API-->>UI: 201 Created
+    STAFF->>API: PATCH /api/pqr/[id] (respuesta)
+    API->>DB: UPDATE pqr (respuesta, respondido_por, estado)
+    API->>NOT: notificar respuesta al cliente
+    API-->>STAFF: 200 OK

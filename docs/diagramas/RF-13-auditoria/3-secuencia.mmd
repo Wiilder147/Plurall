@@ -1,0 +1,16 @@
+%% RF-13 Auditoría - Secuencia (registro de acción sensible)
+sequenceDiagram
+    autonumber
+    participant API as API Route (acción sensible)
+    participant TRG as Trigger / capa de auditoría
+    participant DB as Postgres
+
+    API->>DB: UPDATE/INSERT entidad (decisión, pago, estado)
+    activate DB
+    DB->>TRG: disparo AFTER
+    TRG->>DB: INSERT auditoria (usuario, valor_anterior, valor_nuevo, ip, fecha)
+    opt Cambio de estado
+        TRG->>DB: INSERT historial_estado
+    end
+    deactivate DB
+    DB-->>API: commit

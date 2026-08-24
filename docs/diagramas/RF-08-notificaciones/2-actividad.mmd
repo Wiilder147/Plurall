@@ -1,0 +1,12 @@
+%% RF-08 Notificaciones - Diagrama de Actividad
+flowchart TD
+    A([Evento de negocio: aprobación/rechazo/pago/vencimiento]) --> B[Resolver tipo_notificacion]
+    B --> C[Obtener datos del cliente y contexto]
+    C --> D[Renderizar plantilla HTML]
+    D --> E[Enviar vía Resend/SMTP]
+    E --> F{¿Envío exitoso?}
+    F -- Sí --> G[INSERT notificacion estado=ENVIADO] --> Z([Fin])
+    F -- No --> H[INSERT notificacion estado=PENDIENTE]
+    H --> I{¿Reintentos disponibles?}
+    I -- Sí --> E
+    I -- No --> J[Marcar FALLIDO + log] --> Z

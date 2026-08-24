@@ -1,0 +1,31 @@
+%% RF-11 Analítica - Diagrama de Clases (vistas + eventos)
+classDiagram
+    direction LR
+    class VwKpiCartera {
+        <<view>>
+        +decimal cartera_total
+        +decimal cartera_mora
+        +int creditos_activos
+        +decimal indice_mora
+    }
+    class VwCohortesDesembolso {
+        <<view>>
+        +date cohorte
+        +decimal monto_desembolsado
+        +int creditos
+    }
+    class EventoFunnel {
+        +UUID id_evento
+        +UUID id_usuario
+        +UUID id_solicitud
+        +string etapa
+        +datetime fecha
+    }
+    class AnaliticaService {
+        +obtenerKpis()
+        +detalle(metrica)
+        +exportar(formato)
+    }
+    AnaliticaService ..> VwKpiCartera
+    AnaliticaService ..> VwCohortesDesembolso
+    AnaliticaService ..> EventoFunnel

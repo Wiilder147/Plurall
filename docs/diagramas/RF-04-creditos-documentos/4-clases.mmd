@@ -1,0 +1,45 @@
+%% RF-04 Créditos y Documentos - Diagrama de Clases
+classDiagram
+    direction LR
+    class Credito {
+        +UUID id_credito
+        +decimal monto_desembolsado
+        +int numero_cuotas
+        +string estado_credito
+        +decimal saldo_pendiente
+    }
+    class PlanPago {
+        +UUID id_plan_pago
+        +date fecha_inicio_cobro
+        +date fecha_fin_cobro
+    }
+    class Cuota {
+        +UUID id_cuota
+        +int numero_cuota
+        +decimal monto_total_cuota
+        +string estado_cuota
+    }
+    class DocumentoLegal {
+        +UUID id_documento_legal
+        +UUID id_credito
+        +UUID id_tipo_doc_legal
+    }
+    class TipoDocumentoLegal {
+        +UUID id_tipo_doc_legal
+        +string nombre
+    }
+    class LogDescargaDocumento {
+        +UUID id_log
+        +UUID id_documento_legal
+        +datetime fecha
+    }
+    class DocumentoService {
+        +generarPdf(tipo, idCredito)
+        +registrarDescarga()
+    }
+    Credito "1" --> "1" PlanPago
+    PlanPago "1" --> "1..*" Cuota
+    Credito "1" --> "0..*" DocumentoLegal
+    TipoDocumentoLegal "1" --> "0..*" DocumentoLegal
+    DocumentoLegal "1" --> "0..*" LogDescargaDocumento
+    DocumentoService ..> DocumentoLegal

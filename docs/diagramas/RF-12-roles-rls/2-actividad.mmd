@@ -1,0 +1,13 @@
+%% RF-12 Roles y RLS - Diagrama de Actividad (control de acceso)
+flowchart TD
+    A([Petición a ruta protegida]) --> B[Middleware: leer sesión Supabase]
+    B --> C{¿Sesión válida?}
+    C -- No --> C1[/Redirigir a /login/] --> Z([Fin])
+    C -- Sí --> D[Obtener rol desde perfil_usuario]
+    D --> E{¿Rol autorizado para la ruta?}
+    E -- No --> E1[/403 o redirección al portal propio/] --> Z
+    E -- Sí --> F[Renderizar portal por rol]
+    F --> G[Consulta a datos]
+    G --> H{Política RLS: es_admin / es_analista_o_admin / mi_id_cliente}
+    H -- Deniega --> H1[/Fila oculta/] --> Z
+    H -- Permite --> I[/Entregar datos filtrados/] --> Z

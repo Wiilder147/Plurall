@@ -1,0 +1,39 @@
+%% RF-09 Cobranza - Diagrama de Clases
+classDiagram
+    direction LR
+    class GestionCobranza {
+        +UUID id_gestion
+        +UUID id_credito
+        +UUID id_cliente
+        +UUID id_asesor
+        +string tipo_gestion
+        +decimal monto_prometido
+        +date fecha_promesa
+        +decimal monto_recibido
+        +datetime fecha_gestion
+    }
+    class AsignacionAsesor {
+        +UUID id_asignacion
+        +UUID id_asesor
+        +UUID id_cliente
+        +datetime fecha_asignacion
+        +datetime fecha_fin
+    }
+    class Credito {
+        +UUID id_credito
+        +string estado_credito
+        +decimal saldo_pendiente
+    }
+    class Cliente {
+        +UUID id_cliente
+        +string primer_nombre
+        +string telefono
+    }
+    class CobranzaService {
+        +colaMora(idAsesor)
+        +registrarGestion(dto)
+    }
+    Cliente "1" --> "0..*" AsignacionAsesor
+    Credito "1" --> "0..*" GestionCobranza
+    Cliente "1" --> "0..*" GestionCobranza
+    CobranzaService ..> GestionCobranza

@@ -1,0 +1,62 @@
+%% PLURALL - Diagrama 5: Componentes
+flowchart TB
+    subgraph CLIENT["🌐 Navegador (Cliente/Asesor/Supervisor/Admin)"]
+        UIc["React 19 · Server & Client Components<br/>Tailwind · Recharts · Leaflet"]
+    end
+
+    subgraph VERCEL["▲ Vercel (Serverless + Edge)"]
+        MW["Middleware de sesión<br/>middleware.js"]
+        subgraph PAGES["App Router — Portales"]
+            P1["/dashboard (CLIENTE)"]
+            P2["/asesor"]
+            P3["/supervisor"]
+            P4["/admin"]
+        end
+        subgraph API["API Routes (Route Handlers)"]
+            A1["auth/* · perfil"]
+            A2["creditos/solicitar · elegibilidad"]
+            A3["admin/solicitud · desembolsar · scoring"]
+            A4["pagos/iniciar · webhooks/wompi"]
+            A5["asesor/gestion · supervisor/*"]
+            A6["cron/mora · cron/recordatorios"]
+            A7["analitica · reportes/export"]
+            A8["notificaciones · pqr · documentos/*"]
+        end
+        subgraph LIB["lib/ (dominio compartido)"]
+            L1["scoring.js"]
+            L2["calculadora.js (amortización)"]
+            L3["cobranza.js"]
+            L4["notificaciones.js"]
+            L5["pdf.js / documentosLegal.js (Puppeteer)"]
+            L6["rateLimit.js"]
+            L7["supabase/ (clients SSR)"]
+        end
+    end
+
+    subgraph SUPA["🟢 Supabase"]
+        AUTH["Auth (auth.users)"]
+        PG[("PostgreSQL 15RLS · triggers · vistas KPI")]
+        STO["Storage (documentos_kyc)"]
+        PGC["pg_cron"]
+    end
+
+    subgraph EXT["Servicios externos"]
+        WOMPI["Wompi (pagos)"]
+        REDIS["Upstash Redis (rate limit)"]
+        RESEND["Resend / SMTP (email)"]
+        SENTRY["Sentry (errores + replay)"]
+    end
+
+    UIc --> MW --> PAGES
+    PAGES --> API
+    API --> LIB
+    A1 --> AUTH
+    L7 --> PG
+    A2 & A3 & A4 & A5 & A7 & A8 --> PG
+    A2 --> STO
+    A4 --> WOMPI
+    A4 --> REDIS
+    L4 --> RESEND
+    A6 --> PG
+    PGC --> PG
+    VERCEL -. telemetría .-> SENTRY

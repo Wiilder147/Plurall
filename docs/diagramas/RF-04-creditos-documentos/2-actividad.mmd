@@ -1,0 +1,11 @@
+%% RF-04 Créditos y Documentos - Diagrama de Actividad (descarga de documento legal)
+flowchart TD
+    A([Cliente abre /dashboard/documentos]) --> B[Listar créditos y documentos disponibles]
+    B --> C{¿Documento solicitado?}
+    C -- Paz y salvo --> D{¿Crédito en estado PAGADO?}
+    D -- No --> D1[/No disponible aún/] --> Z([Fin])
+    D -- Sí --> E[Recopilar datos del crédito/cuotas]
+    C -- Contrato/Plan/Estado --> E
+    E --> F[Generar PDF con Puppeteer]
+    F --> G[Registrar log_descarga_documento]
+    G --> H[/Entregar PDF al cliente/] --> Z

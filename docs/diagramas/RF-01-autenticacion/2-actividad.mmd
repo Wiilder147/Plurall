@@ -1,0 +1,19 @@
+%% RF-01 Autenticación - Diagrama de Actividad (login + recuperación)
+flowchart TD
+    A([Inicio]) --> B{¿Acción?}
+    B -- Registro --> R1[Validar celular único + dominio correo]
+    R1 --> R2{¿Válido?}
+    R2 -- No --> R3[/Mostrar error/] --> Z([Fin])
+    R2 -- Sí --> R4[Crear auth.users + perfil_usuario<br/>trigger handle_new_user_registration] --> Z
+    B -- Login --> L1[Verificar credenciales Supabase Auth]
+    L1 --> L2{¿OK?}
+    L2 -- Sí --> L3[Emitir sesión + cookie] --> L4[Redirigir por rol] --> Z
+    L2 -- No --> L5[Registrar intento fallido]
+    L5 --> L6{¿≥ 3 intentos en 30 min?}
+    L6 -- Sí --> L7[Bloquear cuenta 30 min RN-02] --> Z
+    L6 -- No --> L8[/Reintentar/] --> Z
+    B -- Recuperar --> P1[Generar OTP en otp_recuperacion]
+    P1 --> P2[Enviar OTP por email Resend]
+    P2 --> P3{¿OTP correcto y vigente?}
+    P3 -- No --> P4[/Error / reenviar/] --> Z
+    P3 -- Sí --> P5[Permitir cambio de contraseña] --> Z

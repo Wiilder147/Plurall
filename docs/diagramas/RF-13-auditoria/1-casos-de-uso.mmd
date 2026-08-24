@@ -1,0 +1,17 @@
+%% RF-13 Auditoría y trazabilidad - Casos de Uso
+flowchart LR
+    SYS(["⚙️ Sistema"])
+    ADM(["👤 Admin"])
+    subgraph SIS["RF-13 · Auditoría"]
+        U1(["Registrar acción sensible"])
+        U2(["Guardar valor anterior/nuevo"])
+        U3(["Registrar historial de estado"])
+        U4(["Capturar usuario/IP/fecha"])
+        U5(["Consultar trazabilidad"])
+    end
+    SYS --- U1 & U3
+    ADM --- U5
+    U1 -. "«include»" .-> U2
+    U1 -. "«include»" .-> U4
+    U3 -. "«include»" .-> U4
+    U5 -. "«extend»(reconstruir incidente)" .-> U1

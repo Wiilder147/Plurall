@@ -1,0 +1,18 @@
+%% RF-06 Decisión - Diagrama de Actividad
+flowchart TD
+    A([Analista abre solicitud EN_ESTUDIO]) --> B[Revisar score + datos del cliente]
+    B --> C{¿Decisión?}
+    C -- Aprobar --> D[Definir monto y tasa aprobados]
+    D --> E{¿Ya existe decisión? RN-06}
+    E -- Sí --> E1[/Bloquear: decisión inmutable/] --> Z([Fin])
+    E -- No --> F[INSERT decision_solicitud aprobada]
+    C -- Rechazar --> G[Seleccionar motivo_rechazo del catálogo]
+    G --> H{¿Motivo registrado?}
+    H -- No --> G
+    H -- Sí --> I[INSERT decision_solicitud rechazada]
+    F --> J[INSERT auditoria]
+    I --> J
+    J --> K[Notificar al cliente RF-08]
+    K --> L{¿Aprobada?}
+    L -- Sí --> M[Habilitar desembolso RF-04] --> Z
+    L -- No --> Z

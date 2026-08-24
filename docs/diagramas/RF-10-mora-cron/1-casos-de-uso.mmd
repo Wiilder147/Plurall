@@ -1,0 +1,17 @@
+%% RF-10 Detección automática de mora - Casos de Uso
+flowchart LR
+    CRON(["⏰ Vercel Cron / pg_cron"])
+    subgraph SIS["RF-10 · Mora automática"]
+        U1(["Ejecutar batch diario"])
+        U2(["Autenticar con CRON_SECRET"])
+        U3(["Marcar cuotas vencidas (RN-08)"])
+        U4(["Poner créditos en mora"])
+        U5(["Recuperar créditos al día"])
+        U6(["Disparar recordatorios"])
+    end
+    CRON --- U1
+    U1 -. "«include»" .-> U2
+    U1 -. "«include»" .-> U3
+    U3 -. "«include»" .-> U4
+    U1 -. "«include»" .-> U5
+    U4 -. "«extend»(nueva mora)" .-> U6

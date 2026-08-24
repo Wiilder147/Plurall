@@ -1,0 +1,26 @@
+%% RF-12 Roles y RLS - Secuencia (acceso a portal)
+sequenceDiagram
+    autonumber
+    actor U as Usuario
+    participant MW as middleware.js
+    participant AUTH as Supabase Auth
+    participant APP as Layout por rol
+    participant DB as Postgres (RLS)
+
+    U->>MW: GET /admin (o /asesor, /supervisor, /dashboard)
+    MW->>AUTH: getSession()
+    AUTH-->>MW: sesión + user
+    alt Sin sesión
+        MW-->>U: 302 /login
+    else Con sesión
+        MW->>DB: SELECT rol de perfil_usuario
+        DB-->>MW: rol
+        alt Rol no corresponde
+            MW-->>U: 302 al portal propio
+        else Autorizado
+            MW->>APP: continuar
+            APP->>DB: Query (RLS por rol)
+            DB-->>APP: datos filtrados
+            APP-->>U: Portal renderizado
+        end
+    end

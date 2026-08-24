@@ -1,0 +1,22 @@
+%% RF-12 Panel administrativo y control de acceso por roles - Casos de Uso
+flowchart LR
+    ADM(["👤 Admin"])
+    SUP(["👤 Supervisor"])
+    ASE(["👤 Asesor"])
+    CLI(["👤 Cliente"])
+    subgraph SIS["RF-12 · Roles y RLS"]
+        U1(["Acceder a portal por rol"])
+        U2(["Verificar sesión (middleware)"])
+        U3(["Aplicar RLS por rol"])
+        U4(["Gestionar usuarios/roles"])
+        U5(["Directorio de clientes"])
+        U6(["Redirigir según rol"])
+    end
+    ADM --- U1 & U4 & U5
+    SUP --- U1 & U5
+    ASE --- U1 & U5
+    CLI --- U1
+    U1 -. "«include»" .-> U2
+    U2 -. "«include»" .-> U3
+    U2 -. "«include»" .-> U6
+    U5 -. "«include»" .-> U3

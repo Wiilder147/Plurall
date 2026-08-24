@@ -1,0 +1,21 @@
+%% RF-03 Solicitud de crédito, cuestionario y KYC - Casos de Uso
+flowchart LR
+    CLI(["👤 Cliente"])
+    ST(["🗄️ Supabase Storage"])
+    subgraph SIS["RF-03 · Solicitud + KYC"]
+        U1(["Cotizar crédito"])
+        U2(["Radicar solicitud"])
+        U3(["Responder cuestionario"])
+        U4(["Cargar documentos KYC"])
+        U5(["Validar cooldown 90 días (RN-03)"])
+        U6(["Validar KYC obligatorio (RN-04)"])
+        U7(["Calcular score (RF-05)"])
+    end
+    CLI --- U1 & U2
+    U2 -. "«include»" .-> U3
+    U2 -. "«include»" .-> U4
+    U2 -. "«include»" .-> U5
+    U2 -. "«include»" .-> U7
+    U4 -. "«include»" .-> U6
+    U4 --- ST
+    U2 -. "«extend»(solicitud incompleta)" .-> U3

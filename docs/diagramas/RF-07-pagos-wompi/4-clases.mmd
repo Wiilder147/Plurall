@@ -1,0 +1,45 @@
+%% RF-07 Pagos Wompi - Diagrama de Clases
+classDiagram
+    direction LR
+    class Credito {
+        +UUID id_credito
+        +string estado_credito
+        +decimal saldo_pendiente
+    }
+    class PlanPago {
+        +UUID id_plan_pago
+        +decimal tasa_mora_diaria
+    }
+    class Cuota {
+        +UUID id_cuota
+        +int numero_cuota
+        +decimal monto_total_cuota
+        +string estado_cuota
+        +decimal monto_pagado_real
+    }
+    class Pago {
+        +UUID id_recibo
+        +UUID id_cuota
+        +UUID id_credito
+        +decimal monto_pagado
+        +decimal monto_capital
+        +decimal monto_interes
+        +decimal monto_mora
+        +string estado
+    }
+    class WompiWebhook {
+        +string referencia
+        +string firma
+        +verificarHmac()
+    }
+    class PagoService {
+        +iniciarPago(idCuota)
+        +confirmarPago(evento)
+        +aplicarIdempotencia()
+    }
+    Credito "1" --> "1" PlanPago
+    PlanPago "1" --> "1..*" Cuota
+    Cuota "1" --> "0..*" Pago
+    Credito "1" --> "0..*" Pago
+    PagoService ..> Pago
+    PagoService ..> WompiWebhook

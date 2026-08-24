@@ -1,0 +1,25 @@
+%% RF-03 Solicitud + KYC - Secuencia
+sequenceDiagram
+    autonumber
+    actor CLI as Cliente
+    participant UI as Stepper solicitar
+    participant ST as Storage (documentos_kyc)
+    participant API as /api/creditos/solicitar
+    participant DB as Postgres (RPC atómica)
+
+    CLI->>UI: Cotiza, responde cuestionario, adjunta KYC
+    UI->>ST: Subir cédula frontal/trasera
+    ST-->>UI: URLs
+    UI->>API: POST solicitud + respuestas + refs
+    API->>DB: Verificar elegibilidad (cooldown 90d)
+    DB-->>API: OK
+    API->>DB: RPC crear_solicitud_atomica
+    activate DB
+    DB->>DB: INSERT solicitud_credito
+    DB->>DB: INSERT respuesta_cliente[]
+    DB->>DB: INSERT documento_cliente[]
+    DB->>DB: Calcular y persistir score
+    DB-->>API: {id_solicitud, estado}
+    deactivate DB
+    API-->>UI: 201 Created
+    UI-->>CLI: Resumen + estado

@@ -1,0 +1,22 @@
+%% RF-06 Decisión de analista - Casos de Uso
+flowchart LR
+    SUP(["👤 Supervisor/Analista"])
+    ADM(["👤 Admin"])
+    subgraph SIS["RF-06 · Decisión"]
+        U1(["Revisar solicitud en estudio"])
+        U2(["Ver score y detalle"])
+        U3(["Aprobar solicitud"])
+        U4(["Rechazar solicitud"])
+        U5(["Seleccionar motivo de rechazo"])
+        U6(["Registrar decisión (inmutable RN-06)"])
+        U7(["Auditar decisión"])
+        U8(["Notificar al cliente"])
+    end
+    SUP --- U1 & U2 & U3 & U4
+    ADM --- U1 & U3 & U4
+    U1 -. "«include»" .-> U2
+    U3 -. "«include»" .-> U6
+    U4 -. "«include»" .-> U6
+    U4 -. "«include»" .-> U5
+    U6 -. "«include»" .-> U7
+    U6 -. "«extend»" .-> U8

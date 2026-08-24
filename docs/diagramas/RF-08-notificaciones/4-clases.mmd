@@ -1,0 +1,31 @@
+%% RF-08 Notificaciones - Diagrama de Clases
+classDiagram
+    direction LR
+    class Notificacion {
+        +UUID id_notificacion
+        +UUID id_cliente
+        +UUID id_tipo_notif
+        +UUID id_credito
+        +UUID id_solicitud
+        +string estado_envio
+        +datetime fecha
+    }
+    class TipoNotificacion {
+        +UUID id_tipo_notif
+        +string nombre
+        +string plantilla
+    }
+    class Cliente {
+        +UUID id_cliente
+        +string email
+        +string primer_nombre
+    }
+    class NotificacionService {
+        +notificar(tipo, idCliente, ctx)
+        +renderizar(plantilla, ctx)
+        +enviar()
+        +reintentar()
+    }
+    TipoNotificacion "1" --> "0..*" Notificacion
+    Cliente "1" --> "0..*" Notificacion
+    NotificacionService ..> Notificacion

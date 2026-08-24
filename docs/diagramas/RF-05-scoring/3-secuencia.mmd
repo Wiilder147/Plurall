@@ -1,0 +1,19 @@
+%% RF-05 Scoring - Secuencia (cálculo dentro de la solicitud)
+sequenceDiagram
+    autonumber
+    participant API as /api/creditos/solicitar
+    participant SC as lib/scoring.js
+    participant DB as Postgres
+
+    API->>DB: SELECT respuesta_cliente(id_solicitud)
+    API->>DB: SELECT modelo_score + opcion_pregunta + rango_puntaje_pregunta
+    DB-->>API: catálogo de ponderación
+    API->>SC: evaluar(respuestas, modelo)
+    activate SC
+    SC->>SC: sumar puntos por opción / rango
+    SC->>SC: calcular puntaje_total y máximo posible
+    SC-->>API: {puntaje_total, detalle}
+    deactivate SC
+    API->>DB: INSERT score
+    API->>DB: UPDATE solicitud_credito (estado según umbral)
+    DB-->>API: OK

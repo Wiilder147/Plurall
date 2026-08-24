@@ -1,0 +1,23 @@
+%% RF-11 Analítica - Secuencia (dashboard + drill-down + export)
+sequenceDiagram
+    autonumber
+    actor SUP as Supervisor/Admin
+    participant UI as Dashboard (Recharts)
+    participant API as /api/analitica
+    participant DB as Postgres (vistas KPI)
+    participant EXP as /api/reportes/export
+
+    SUP->>UI: Abrir dashboard
+    UI->>API: GET KPIs
+    API->>DB: SELECT vw_kpi_cartera, vw_cohortes_desembolso, evento_funnel
+    DB-->>API: agregados
+    API-->>UI: JSON métricas
+    UI-->>SUP: Gráficas
+    SUP->>UI: Click en una métrica
+    UI->>API: GET /api/analitica/detalle
+    API->>DB: SELECT detalle
+    DB-->>API: filas
+    API-->>UI: detalle
+    SUP->>EXP: Exportar reporte
+    EXP->>DB: SELECT dataset
+    EXP-->>SUP: archivo CSV/Excel
