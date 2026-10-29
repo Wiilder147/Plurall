@@ -104,6 +104,12 @@ export default async function MisCreditos() {
             <Search className="w-4 h-4" />
             En evaluación
           </div>
+        ) : solicitudRechazada && !ultimaSolicitud.puedeReintentar ? (
+          // M-07: durante el bloqueo de 90 días (RN-03) no se ofrece solicitar
+          <div className="inline-flex items-center gap-2 bg-orange-50 text-orange-700 px-4 py-2 rounded-lg font-medium border border-orange-200 select-none">
+            <CalendarClock className="w-4 h-4" />
+            Nueva solicitud desde el {fmtFecha(ultimaSolicitud.fechaReintento)}
+          </div>
         ) : (
           // BOTÓN "+ Solicitar Crédito" (cuando NO tiene crédito activo)
           // COLOR FONDO: bg-slate-900 (casi negro), hover:bg-slate-800 (un poco más claro)
@@ -282,7 +288,8 @@ export default async function MisCreditos() {
             <div className="flex items-center gap-3 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
               <CalendarClock className="w-5 h-5 text-orange-500 shrink-0" />
               <p className="text-sm text-slate-600">
-                Podrás volver a solicitar tu crédito a partir del{' '}
+                Por política de crédito, entre una solicitud y la siguiente deben pasar
+                90 días. Podrás volver a solicitar tu crédito a partir del{' '}
                 <strong className="text-slate-800">{fmtFecha(ultimaSolicitud.fechaReintento)}</strong>.
               </p>
             </div>
