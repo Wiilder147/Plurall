@@ -93,6 +93,12 @@ export async function POST(request) {
   const { cuotaId, modo, numCuotas, montoLibre } = await request.json()
 
   // ── Resolver el pago (valida propiedad + calcula montos + saldo a favor) ──
+  // Sin secreto de integridad la firma del checkout sería falsificable: no iniciar.
+  if (!process.env.WOMPI_INTEGRITY_SECRET) {
+    console.error('[Pagos] WOMPI_INTEGRITY_SECRET no configurado')
+    return NextResponse.json({ error: 'Pagos no disponibles en este momento.' }, { status: 503 })
+  }
+
   const resuelto = await resolverPago(supabase, { user, cuotaId, modo, numCuotas, montoLibre })
   if (resuelto.error) {
     return NextResponse.json({ error: resuelto.error }, { status: resuelto.status })
@@ -149,7 +155,7 @@ export async function POST(request) {
 
   // ── Generar firma de integridad del widget ──────────────────
   const moneda          = 'COP'
-  const integritySecret = process.env.WOMPI_INTEGRITY_SECRET || ''
+  const integritySecret = process.env.WOMPI_INTEGRITY_SECRET
 
   // SHA256(referencia + montoEnCentavos + moneda + integritySecret)
   const cadena = `${referencia}${montoEnCentavos}${moneda}${integritySecret}`

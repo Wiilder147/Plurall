@@ -11,7 +11,8 @@ function getServiceClient() {
 export async function GET(request) {
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // M5: sin CRON_SECRET se rechaza (antes el endpoint quedaba abierto)
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
