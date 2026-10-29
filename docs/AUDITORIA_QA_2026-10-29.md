@@ -79,11 +79,34 @@ Estados posibles:
 | W-05 | DN | Escala del score (sumas mayores que 1000) |
 | J-01, J-12 | DN (UX) | Navegación al detalle; umbral de urgencia de "próximo pago" |
 | C-01 | P | El servidor bloquea el duplicado; la UI puede mostrar un falso éxito (configuración de GoTrue) |
-| C-03, C-04 | P | Geocodificación de la dirección; radicado de PQR (requiere migración) |
+| C-04 | **C** | Migración 41 + 11ef19d: radicado visible y buscable |
+| C-03 | P | Geocodificación de la dirección |
 | J-04 | P | Mora dependiente del cron. `dias_mora_maximo` sigue desactualizado en las demás vistas (mora, cartera, cobranza, reportes) |
-| M4 (BD) | P (BD) | Confirmado en la BD desplegada: eliminar o restringir `registrar_pago_autenticado`. El código ya no confía en `pago` |
-| M2, M3, M6, M7, M8 | P (BD) | Políticas RLS, UNIQUE y CHECK. Requieren migraciones y autorización |
+| M4 (BD) | **Aplicado** | Migración 38: política eliminada |
+| M8, M2 (celular) | **Aplicado** | Migración 39: triggers de unicidad |
+| M3, M6, M7 | P (BD) | Columnas que el cliente puede editar; referencia de verificación; políticas `USING(true)` |
 | INF-01 | P | `@sentry/nextjs@8` no admite `next@16`: `npm ci` falla sin `--legacy-peer-deps` |
+
+## C2. Migraciones aplicadas en la BD (Plurall-Fants, 29-oct-2026, autorizadas)
+
+| Migración | Efecto | Verificación (transacción revertida) |
+|---|---|---|
+| `db/38` | Elimina la política `registrar_pago_autenticado` | Política ausente |
+| `db/39` | Triggers SECURITY DEFINER con advisory lock: un crédito por solicitud; celular único (rechaza `0000000000`) | Crédito duplicado y celular duplicado: bloqueados |
+| `db/40` | CHECK de monto, plazo y tasa en `credito` y `decision_solicitud` | Plazo −36: bloqueado |
+| `db/41` | `pqr.numero_radicado` (`PQR-AAAA-NNNNNN`), inmutable, UNIQUE; backfill de 13 PQR | 13/13 con radicado; no manipulable |
+
+Por qué triggers y `NOT VALID` en lugar de UNIQUE o CHECK validados: hay datos previos que violan las reglas y no se modificaron.
+- Semilla: 4 créditos en una misma solicitud.
+- 4 clientes con `0000000000` y 1 par con el mismo celular.
+- 1 crédito ACTIVO de prueba con −36 cuotas y su decisión. Esa fila ya no puede modificarse hasta corregirla.
+
+Cuando se depuren estos datos, conviene reemplazar los triggers por índices UNIQUE y validar los CHECK restantes.
+
+### Diagnóstico de datos históricos (solo lectura)
+- **Tasa nominal (NEW-05):** 0 créditos desembolsados con tasa inflada y 0 decisiones aprobadas pendientes con tasa nominal. Los 2 créditos detectados por el filtro son semilla, coherentes al 24 %. No hay que remediar nada.
+- **Créditos CANCELADO:** 29. No se puede distinguir automáticamente cuáles se pagaron normalmente; requiere revisión manual.
+- **Pagos en efectivo confirmados con la cuota aún sin pagar (J-06):** 3, por $3.200.000. Hay que aplicarlos manualmente con la regla nueva.
 
 ## C. Git
 
