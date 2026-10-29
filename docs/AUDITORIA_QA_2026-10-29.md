@@ -7,7 +7,7 @@ Rama: `fix/auditoria-qa-20261029` (base `origin/develop` @ `a52c090`).
 - **Fuentes:** 4 PDF del 29-oct (Camila Ávila 4, Jeferson Lugo 15, Juan Maurello 18, Wilder Feo 8 = **45 hallazgos**). También el documento de pruebas Vitest en `Estudio/evidencia`; los ejercicios PHP/Python de esa carpeta no son de Plurall.
 - **Auditoría adicional:** backend/financiero, seguridad (51 rutas API) y frontend. Encontró **8 defectos nuevos** (NEW-01..07, INF-01) y **13 de seguridad** (S-C1, S-C2, H1–H4, M1–M8).
 - **Corregidos:** 38 hallazgos, la mayoría con una prueba automatizada que fallaba antes del fix. Detalle en la sección B.
-- **Tests:** 22 → **116** (3 → 20 archivos), todos en verde.
+- **Tests:** 22 → **136** (3 → 23 archivos), todos en verde.
 - **Calidad:** el lint queda igual a la línea base (4 errores preexistentes, ninguno en código tocado) y el build de producción termina bien.
 - **Riesgos críticos encontrados y corregidos:**
   - Fuga de cartera a cualquier cliente autenticado (S-C1).
@@ -107,6 +107,21 @@ Cuando se depuren estos datos, conviene reemplazar los triggers por índices UNI
 - **Tasa nominal (NEW-05):** 0 créditos desembolsados con tasa inflada y 0 decisiones aprobadas pendientes con tasa nominal. Los 2 créditos detectados por el filtro son semilla, coherentes al 24 %. No hay que remediar nada.
 - **Créditos CANCELADO:** 29. No se puede distinguir automáticamente cuáles se pagaron normalmente; requiere revisión manual.
 - **Pagos en efectivo confirmados con la cuota aún sin pagar (J-06):** 3, por $3.200.000. Hay que aplicarlos manualmente con la regla nueva.
+
+
+## C3. Decisiones de negocio implementadas (29-oct-2026)
+
+| Decisión | Implementación | Verificación |
+|---|---|---|
+| Mora en pagos en efectivo, orden mora → interés → capital | `distribuirPagoEfectivo` + `asesor/gestion` (mismo cálculo que Wompi) | credito.efectivo, cobranza.pagoEfectivo |
+| Monto $400.000–$10.000.000; plazos 12/24/36 | `lib/producto.js` (aprobación, desembolso, UI) + migración 42 (RPC de solicitud) | producto.test; RPC verificado en BD |
+| Tasa máxima = usura de consumo Superfinanciera oct-2026 (28,59 % EA), configurable con `TASA_USURA_EA` | `validarCondicionesAprobacion` | producto.test |
+| **NEW-08:** mora de 0,1 %/día (~44 % EA) superaba la tasa máxima legal | Mora topada al equivalente diario de la usura | producto.test |
+| KYC rechazado → se rechaza la solicitud activa; se bloquea pre-aprobar, aprobar y desembolsar | `lib/kyc.js` en 5 rutas | kyc.test |
+| Longitud de motivos y notas (criterio delegado) | Nota del asesor 10–500; motivo del catálogo 5–150; al menos 3 letras | validacion.test |
+| Login en servidor (H3 completo) | `/api/auth/login` + migración 43; se eliminan `lockout` y `existe` | seguridad.login + E2E con build local y BD real |
+
+**Fuente de la tasa de usura:** [La República – Indicadores (fuente Superfinanciera)](https://www.larepublica.co/indicadores-economicos/bancos/tasa-de-usura), vigencia 01/10/2026–31/10/2026. **Se certifica mensualmente:** hay que actualizar `TASA_USURA_EA`.
 
 ## C. Git
 
