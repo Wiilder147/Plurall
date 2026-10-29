@@ -14,7 +14,7 @@ import { Plus, Loader2, Check, X } from 'lucide-react'
 export default function GestionMotivos({ motivosIniciales }) {
   const router = useRouter()
   const [descripcion, setDescripcion] = useState('')
-  const [visibleCliente, setVisibleCliente] = useState(true)
+  const [visibleCliente, setVisibleCliente] = useState(false)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
 

@@ -35,7 +35,7 @@ export async function POST(request) {
   const v = await validarRol()
   if (!v.ok) return NextResponse.json({ error: v.msg }, { status: v.status })
 
-  const { descripcion_motivo, visible_cliente = true } = await request.json()
+  const { descripcion_motivo, visible_cliente = false } = await request.json()
   if (!descripcion_motivo?.trim()) {
     return NextResponse.json({ error: 'La descripción es obligatoria' }, { status: 400 })
   }
