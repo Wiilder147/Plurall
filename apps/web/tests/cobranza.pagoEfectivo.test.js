@@ -76,6 +76,26 @@ describe('POST /api/asesor/gestion — pago en efectivo', () => {
     expect(db.tablas.pago.reduce((s, p) => s + p.monto_pagado, 0)).toBe(400_000)
   })
 
+  it('dos abonos parciales sucesivos completan la cuota (avance guardado en la cuota)', async () => {
+    await registrar({ monto_recibido: 100_000 })
+    expect(cuota('q1').estado_cuota).toBe('VENCIDA')
+    expect(cuota('q1').monto_pagado_real).toBe(100_000)
+    await registrar({ monto_recibido: 90_000 })
+    expect(cuota('q1').estado_cuota).toBe('PAGADA')
+    expect(cr1().saldo_pendiente).toBe(150_000)
+    expect(cr1().cuotas_pagadas).toBe(1)
+  })
+
+  it('un pago CONFIRMADO insertado por el cliente (RLS M4) no reduce lo que debe', async () => {
+    // El cliente puede insertar filas en pago para su crédito vía PostgREST.
+    db.tablas.pago.push({ id_cuota: 'q1', id_credito: 'cr1', monto_pagado: 190_000, monto_capital: 150_000,
+      monto_interes: 40_000, monto_mora: 0, metodo_pago: 'EFECTIVO', estado: 'CONFIRMADO', referencia_externa: 'EFE-FALSO-1' })
+    await registrar({ monto_recibido: 1_000 })
+    expect(cuota('q1').estado_cuota).toBe('VENCIDA')
+    expect(cr1().cuotas_pagadas).toBe(0)
+    expect(cr1().saldo_pendiente).toBe(300_000)
+  })
+
   it('no permite abonar a un crédito que no pertenece al cliente indicado', async () => {
     const res = await registrar({ creditoId: 'cr2', monto_recibido: 190_000 })
     expect(res.status).toBe(400)

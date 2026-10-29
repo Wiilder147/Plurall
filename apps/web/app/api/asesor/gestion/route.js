@@ -118,7 +118,7 @@ async function aplicarPagoEfectivo(db, { creditoId, idAsesor, monto }) {
 
   const { data: cuotas } = await db
     .from('cuota')
-    .select('id_cuota, numero_cuota, estado_cuota, fecha_vencimiento, monto_capital, monto_interes')
+    .select('id_cuota, numero_cuota, estado_cuota, fecha_vencimiento, monto_capital, monto_interes, monto_pagado_real')
     .eq('id_plan_pago', plan.id_plan_pago)
     .in('estado_cuota', ['VENCIDA', 'PENDIENTE'])
     .order('fecha_vencimiento', { ascending: true })
@@ -127,24 +127,22 @@ async function aplicarPagoEfectivo(db, { creditoId, idAsesor, monto }) {
   if (!abiertas.length) return { error: 'El crédito no tiene cuotas por pagar', status: 409 }
   const vencidas = abiertas.filter(c => c.estado_cuota === 'VENCIDA')
 
-  // Abonos parciales en efectivo previos a estas cuotas
-  const { data: previos } = await db
-    .from('pago')
-    .select('id_cuota, monto_capital, monto_interes')
-    .eq('id_credito', creditoId)
-    .eq('metodo_pago', 'EFECTIVO')
-    .eq('estado', 'CONFIRMADO')
+  // Abonos parciales previos: se leen de cuota.monto_pagado_real, que solo el
+  // servidor puede escribir (no hay política UPDATE/INSERT en cuota). NO se
+  // usa la tabla pago: el cliente puede insertar filas ahí vía RLS
+  // (registrar_pago_autenticado) y falsear un abono. Con la regla "interés
+  // primero", el reparto de lo ya abonado es determinista.
   const abonado = {}
-  for (const p of previos ?? []) {
-    const a = abonado[p.id_cuota] ??= { capital: 0, interes: 0 }
-    a.capital += Number(p.monto_capital)
-    a.interes += Number(p.monto_interes)
+  for (const c of vencidas) {
+    const pagado  = Number(c.monto_pagado_real ?? 0)
+    const interes = Math.min(pagado, Number(c.monto_interes))
+    abonado[c.id_cuota] = { interes, capital: Math.max(0, pagado - interes), total: pagado }
   }
 
   const { aplicaciones, excedente } = distribuirPagoEfectivo(monto, vencidas.map(c => ({
     ...c,
-    capital_pagado: abonado[c.id_cuota]?.capital ?? 0,
-    interes_pagado: abonado[c.id_cuota]?.interes ?? 0,
+    capital_pagado: abonado[c.id_cuota].capital,
+    interes_pagado: abonado[c.id_cuota].interes,
   })))
 
   // Un recibo por cuota tocada; el excedente se anota en el último (o, si no
@@ -176,27 +174,27 @@ async function aplicarPagoEfectivo(db, { creditoId, idAsesor, monto }) {
     }
   }
 
-  // Cuotas completadas → PAGADA (solo si siguen vencidas)
+  // Avance de cada cuota tocada; las completadas → PAGADA. Condicional a que
+  // sigan VENCIDA y a que el abono previo no haya cambiado (evita carreras).
   let completadas = 0
-  for (const a of aplicaciones.filter(x => x.completa)) {
-    const c = vencidas.find(v => v.id_cuota === a.id_cuota)
-    const previo = abonado[a.id_cuota] ?? { capital: 0, interes: 0 }
-    const { data: filas } = await db
-      .from('cuota')
-      .update({
-        estado_cuota:      'PAGADA',
-        monto_pagado_real: Math.round((Number(c.monto_capital) + Number(c.monto_interes)) * 100) / 100,
-        fecha_pago_real:   hoy,
-        updated_at:        ahora,
-      })
-      .eq('id_cuota', a.id_cuota)
-      .in('estado_cuota', ['VENCIDA'])
-      .select('id_cuota')
-    if (filas?.length) completadas++
-    else console.error(`[Pago efectivo] REVISION MANUAL: cuota ${a.id_cuota} ya no estaba vencida (abonado previo ${previo.capital + previo.interes})`)
+  let capitalAplicado = 0
+  for (const a of aplicaciones) {
+    const previo = abonado[a.id_cuota].total
+    const nuevoPagado = Math.round((previo + a.interes + a.capital) * 100) / 100
+    const cambios = a.completa
+      ? { estado_cuota: 'PAGADA', monto_pagado_real: nuevoPagado, fecha_pago_real: hoy, updated_at: ahora }
+      : { monto_pagado_real: nuevoPagado, updated_at: ahora }
+    let q = db.from('cuota').update(cambios).eq('id_cuota', a.id_cuota).in('estado_cuota', ['VENCIDA'])
+    q = previo > 0 ? q.eq('monto_pagado_real', previo) : q
+    const { data: filas } = await q.select('id_cuota')
+    if (!filas?.length) {
+      console.error(`[Pago efectivo] REVISION MANUAL: cuota ${a.id_cuota} cambió durante el registro`)
+    } else {
+      capitalAplicado += a.capital
+      if (a.completa) completadas++
+    }
   }
 
-  const capitalAplicado = aplicaciones.reduce((s, a) => s + a.capital, 0)
   const { data: credito } = await db
     .from('credito')
     .select('saldo_pendiente, cuotas_pagadas, cuotas_en_mora, estado_credito, saldo_a_favor')
