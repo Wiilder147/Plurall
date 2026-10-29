@@ -1,0 +1,42 @@
+%% RF-02 Perfil - Diagrama de Clases
+classDiagram
+    direction LR
+    class Cliente {
+        +UUID id_cliente
+        +string dni
+        +string email
+        +string telefono
+        +string primer_nombre
+        +string primer_apellido
+    }
+    class NegocioCliente {
+        +UUID id
+        +string nombre_negocio
+        +UUID id_tipo_negocio
+        +int antiguedad_meses
+    }
+    class Direccion {
+        +UUID id
+        +enum tipo
+        +string linea
+        +UUID id_municipio
+    }
+    class PerfilFinanciero {
+        +UUID id
+        +decimal ingresos_mensuales
+        +decimal egresos_mensuales
+        +int personas_cargo
+    }
+    class Municipio {
+        +UUID id_municipio
+        +string nombre
+    }
+    class PerfilService {
+        +obtenerPerfil(idCliente)
+        +actualizarPerfil(dto)
+    }
+    Cliente "1" --> "0..*" NegocioCliente
+    Cliente "1" --> "0..*" Direccion
+    Cliente "1" --> "0..1" PerfilFinanciero
+    Municipio "1" --> "0..*" Direccion
+    PerfilService ..> Cliente

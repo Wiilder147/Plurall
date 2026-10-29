@@ -1,0 +1,26 @@
+%% RF-01 Autenticación - Secuencia (recuperación con OTP)
+sequenceDiagram
+    autonumber
+    actor U as Usuario
+    participant UI as Pantalla /recuperar
+    participant API as /api/auth/otp
+    participant DB as Postgres (otp_recuperacion)
+    participant AUTH as Supabase Auth
+    participant MAIL as Resend
+
+    U->>UI: Solicita recuperar (celular/email)
+    UI->>API: POST generar OTP
+    API->>DB: INSERT otp (código, expira_at)
+    API->>MAIL: Enviar código
+    MAIL-->>U: Email con OTP
+    U->>UI: Ingresa OTP + nueva contraseña
+    UI->>API: POST validar OTP
+    API->>DB: SELECT otp vigente
+    alt OTP válido
+        API->>AUTH: updateUser(password)
+        AUTH-->>API: OK
+        API->>DB: Marcar OTP consumido
+        API-->>UI: 200 (contraseña actualizada)
+    else OTP inválido/expirado
+        API-->>UI: 400 (rechazado)
+    end

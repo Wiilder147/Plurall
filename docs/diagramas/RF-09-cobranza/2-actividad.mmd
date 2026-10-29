@@ -1,0 +1,15 @@
+%% RF-09 Cobranza - Diagrama de Actividad (registrar gestión)
+flowchart TD
+    A([Asesor abre /asesor/cobranza]) --> B[Cargar cola de créditos EN_MORA de su cartera]
+    B --> C{¿RLS: cliente asignado al asesor?}
+    C -- No --> C1[/No visible/] --> Z([Fin])
+    C -- Sí --> D[Abrir ficha del cliente en mora]
+    D --> E[Registrar gestion_cobranza: tipo, resultado]
+    E --> F{¿Tipo de resultado?}
+    F -- Promesa --> G[Guardar monto_prometido + fecha_promesa]
+    F -- Pago recibido --> H[Guardar monto_recibido]
+    F -- Sin acuerdo --> I[Guardar nota]
+    G --> J[INSERT gestion_cobranza]
+    H --> J
+    I --> J
+    J --> K[/Actualizar historial de gestiones/] --> Z

@@ -1,0 +1,27 @@
+%% RF-07 Pagos, plan de cuotas e integración Wompi - Casos de Uso
+flowchart LR
+    CLI(["👤 Cliente"])
+    WOMPI(["🏦 Wompi"])
+    REDIS(["⚡ Upstash Redis"])
+    subgraph SIS["RF-07 · Pagos"]
+        U1(["Consultar plan de pagos"])
+        U2(["Iniciar pago de cuota"])
+        U3(["Pagar con widget Wompi"])
+        U4(["Confirmar pago (webhook)"])
+        U5(["Validar firma HMAC SHA-256"])
+        U6(["Aplicar idempotencia"])
+        U7(["Actualizar saldo del crédito"])
+        U8(["Limitar tasa de peticiones"])
+        U9(["Notificar pago (RF-08)"])
+    end
+    CLI --- U1 & U2
+    U2 -. "«include»" .-> U8
+    U8 --- REDIS
+    U2 -. "«include»" .-> U3
+    U3 --- WOMPI
+    U3 -. "«include»" .-> U4
+    U4 --- WOMPI
+    U4 -. "«include»" .-> U5
+    U4 -. "«include»" .-> U6
+    U4 -. "«include»" .-> U7
+    U7 -. "«extend»(pago exitoso)" .-> U9

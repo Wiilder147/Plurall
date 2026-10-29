@@ -1,0 +1,43 @@
+%% RF-01 Autenticación - Diagrama de Clases
+classDiagram
+    direction LR
+    class AuthUser {
+        +UUID id
+        +string email
+        +string phone
+        +string encrypted_password
+    }
+    class PerfilUsuario {
+        +UUID id_usuario_cuenta
+        +UUID id_rol
+        +string primer_nombre
+        +string segundo_nombre
+    }
+    class Rol {
+        +UUID id_rol
+        +string nombre_rol
+    }
+    class OtpRecuperacion {
+        +UUID id_otp
+        +string destino
+        +string codigo
+        +datetime expira_at
+        +bool consumido
+    }
+    class ControlIntentos {
+        +string identificador
+        +int intentos
+        +datetime bloqueado_hasta
+    }
+    class AuthService {
+        +registrar(datos)
+        +login(cred)
+        +generarOtp(destino)
+        +validarOtp(codigo)
+        +bloquearSiExcede()
+    }
+    AuthUser "1" --> "1" PerfilUsuario : extiende
+    Rol "1" --> "0..*" PerfilUsuario
+    AuthService ..> OtpRecuperacion
+    AuthService ..> ControlIntentos
+    AuthService ..> AuthUser

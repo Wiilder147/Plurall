@@ -1,0 +1,12 @@
+%% RF-11 Analítica - Diagrama de Actividad
+flowchart TD
+    A([Supervisor/Admin abre dashboard]) --> B{¿RLS/rol autorizado?}
+    B -- No --> B1[/403/] --> Z([Fin])
+    B -- Sí --> C[GET /api/analitica]
+    C --> D[Consultar vistas: vw_kpi_cartera, vw_cohortes_desembolso, evento_funnel]
+    D --> E[Agregar métricas: cartera, mora, funnel, desembolsos]
+    E --> F[Renderizar gráficas Recharts]
+    F --> G{¿Acción del usuario?}
+    G -- Drill-down --> H[GET /api/analitica/detalle] --> F
+    G -- Exportar --> I[GET /api/reportes/export → CSV/Excel] --> Z
+    G -- Cerrar --> Z

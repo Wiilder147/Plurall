@@ -1,0 +1,45 @@
+%% RF-03 Solicitud + KYC - Diagrama de Clases
+classDiagram
+    direction LR
+    class SolicitudCredito {
+        +UUID id_solicitud
+        +UUID id_cliente
+        +UUID id_estado_solicitud
+        +decimal monto_solicitado
+        +datetime fecha_solicitud
+    }
+    class RespuestaCliente {
+        +UUID id_respuesta
+        +UUID id_pregunta
+        +UUID id_opcion
+        +decimal respuesta_numerica
+    }
+    class Pregunta {
+        +UUID id_pregunta
+        +string tipo_pregunta
+        +string tipo_input
+    }
+    class OpcionPregunta {
+        +UUID id_opcion
+        +int valor_puntos
+    }
+    class DocumentoCliente {
+        +UUID id_documento
+        +string tipo_documento
+        +string estado_verificacion
+    }
+    class EstadoSolicitud {
+        +UUID id_estado_solicitud
+        +string nombre
+    }
+    class SolicitudService {
+        +verificarElegibilidad()
+        +crearSolicitudAtomica()
+    }
+    SolicitudCredito "1" --> "0..*" RespuestaCliente
+    SolicitudCredito "1" --> "0..*" DocumentoCliente
+    Pregunta "1" --> "0..*" OpcionPregunta
+    Pregunta "1" --> "0..*" RespuestaCliente
+    OpcionPregunta "1" --> "0..*" RespuestaCliente
+    EstadoSolicitud "1" --> "0..*" SolicitudCredito
+    SolicitudService ..> SolicitudCredito

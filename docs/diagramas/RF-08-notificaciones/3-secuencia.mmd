@@ -1,0 +1,21 @@
+%% RF-08 Notificaciones - Secuencia (notificar decisión)
+sequenceDiagram
+    autonumber
+    participant EVT as Origen (decisión/pago)
+    participant NOT as lib/notificaciones.js
+    participant DB as Postgres (notificacion)
+    participant MAIL as Resend/SMTP
+    actor CLI as Cliente
+
+    EVT->>NOT: notificar(tipo, id_cliente, contexto)
+    NOT->>DB: SELECT cliente (email, nombre)
+    NOT->>NOT: renderizar plantilla HTML
+    NOT->>MAIL: enviar email
+    alt Enviado
+        MAIL-->>NOT: 202 Accepted
+        NOT->>DB: INSERT notificacion (ENVIADO)
+        MAIL-->>CLI: Email
+    else Fallo
+        MAIL-->>NOT: error
+        NOT->>DB: INSERT notificacion (PENDIENTE)
+    end

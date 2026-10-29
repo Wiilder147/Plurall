@@ -1,0 +1,19 @@
+%% RF-09 Módulo de cobranza para asesores - Casos de Uso
+flowchart LR
+    ASE(["👤 Asesor"])
+    SUP(["👤 Supervisor"])
+    subgraph SIS["RF-09 · Cobranza"]
+        U1(["Ver cola de cobranza"])
+        U2(["Abrir ficha de cliente en mora"])
+        U3(["Registrar gestión (llamada/visita)"])
+        U4(["Registrar promesa de pago"])
+        U5(["Registrar pago recibido"])
+        U6(["Consultar cartera asignada"])
+        U7(["Asignar asesor a cliente"])
+    end
+    ASE --- U1 & U2 & U3 & U6
+    SUP --- U7
+    U3 -. "«include»" .-> U2
+    U3 -. "«extend»(compromiso)" .-> U4
+    U3 -. "«extend»(abono)" .-> U5
+    U1 -. "«include»" .-> U6

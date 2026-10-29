@@ -1,0 +1,8 @@
+%% RF-13 Auditoría - Diagrama de Actividad
+flowchart TD
+    A([Acción sensible: decisión/pago/cambio de estado]) --> B[Capturar contexto: usuario, IP, entidad afectada]
+    B --> C[Serializar valor_anterior y valor_nuevo jsonb]
+    C --> D[INSERT auditoria]
+    D --> E{¿Cambio de estado de entidad?}
+    E -- Sí --> F[INSERT historial_estado] --> G([Fin])
+    E -- No --> G

@@ -1,0 +1,14 @@
+%% RF-02 Perfil - Diagrama de Actividad (editar perfil)
+flowchart TD
+    A([Cliente abre /dashboard/perfil]) --> B[Cargar datos: cliente + negocio_cliente + direccion + perfil_financiero]
+    B --> C[Editar formulario]
+    C --> D{¿Validación de campos OK?}
+    D -- No --> C
+    D -- Sí --> E[PATCH /api/perfil]
+    E --> F{¿RLS: dato pertenece al usuario?}
+    F -- No --> G[/403 Forbidden/] --> Z([Fin])
+    F -- Sí --> H[UPDATE cliente.telefono]
+    H --> I[UPSERT negocio_cliente]
+    I --> J[UPSERT direccion + lookup municipio]
+    J --> K[UPSERT perfil_financiero]
+    K --> L[/200 OK — perfil actualizado/] --> Z

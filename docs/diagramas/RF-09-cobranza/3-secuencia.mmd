@@ -1,0 +1,18 @@
+%% RF-09 Cobranza - Secuencia (registrar gestión)
+sequenceDiagram
+    autonumber
+    actor ASE as Asesor
+    participant UI as /asesor/cobranza/[clienteId]
+    participant API as /api/asesor/gestion
+    participant DB as Postgres (RLS)
+
+    ASE->>UI: Abrir ficha de cliente en mora
+    UI->>DB: SELECT credito+cuota vencidas (RLS asignación)
+    DB-->>UI: cartera en mora
+    ASE->>UI: Registrar gestión (tipo, promesa/pago)
+    UI->>API: POST gestión
+    API->>DB: Verificar asignacion_asesor vigente
+    API->>DB: INSERT gestion_cobranza
+    DB-->>API: OK
+    API-->>UI: 201 Created
+    UI-->>ASE: Gestión registrada

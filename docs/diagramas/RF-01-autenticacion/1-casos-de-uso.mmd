@@ -1,0 +1,22 @@
+%% RF-01 Autenticación segura - Casos de Uso (<<include>>/<<extend>>)
+flowchart LR
+    CLI(["👤 Usuario (Cliente/Staff)"])
+    MAIL(["✉️ Resend (email)"])
+    subgraph SIS["RF-01 · Autenticación"]
+        U1(["Registrarse"])
+        U2(["Iniciar sesión"])
+        U3(["Recuperar contraseña"])
+        U4(["Validar OTP"])
+        U5(["Validar celular único (RN-01)"])
+        U6(["Validar dominio de correo"])
+        U7(["Bloquear tras 3 intentos (RN-02)"])
+        U8(["Enviar OTP por email"])
+    end
+    CLI --- U1 & U2 & U3
+    U1 -. "«include»" .-> U5
+    U1 -. "«include»" .-> U6
+    U3 -. "«include»" .-> U4
+    U4 -. "«include»" .-> U8
+    U8 --- MAIL
+    U2 -. "«extend»(credenciales inválidas)" .-> U7
+    U3 -. "«extend»(intentos excedidos)" .-> U7

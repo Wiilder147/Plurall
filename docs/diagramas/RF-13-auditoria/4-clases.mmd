@@ -1,0 +1,33 @@
+%% RF-13 Auditoría - Diagrama de Clases
+classDiagram
+    direction LR
+    class Auditoria {
+        +UUID id_auditoria
+        +UUID id_usuario_responsable
+        +string id_registro_afectado
+        +jsonb valor_anterior
+        +jsonb valor_nuevo
+        +datetime fecha_evento
+    }
+    class HistorialEstado {
+        +UUID id
+        +string entidad
+        +UUID id_entidad
+        +string estado_anterior
+        +string estado_nuevo
+        +datetime fecha
+    }
+    class ConfigSistema {
+        +string clave
+        +string valor
+    }
+    class PerfilUsuario {
+        +UUID id_usuario_cuenta
+    }
+    class AuditoriaService {
+        +registrar(entidad, antes, despues)
+        +consultar(filtro)
+    }
+    PerfilUsuario "1" --> "0..*" Auditoria : responsable
+    AuditoriaService ..> Auditoria
+    AuditoriaService ..> HistorialEstado

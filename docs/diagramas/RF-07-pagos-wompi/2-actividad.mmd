@@ -1,0 +1,20 @@
+%% RF-07 Pagos Wompi - Diagrama de Actividad
+flowchart TD
+    A([Cliente en Plan de Pagos]) --> B[POST /api/pagos/iniciar]
+    B --> C{Rate limit Upstash OK?}
+    C -- No --> C1[/HTTP 429/] --> Z([Fin])
+    C -- Sí --> D[Generar referencia + firma integridad]
+    D --> E[[Cliente paga en widget Wompi]]
+    E --> F[Wompi → POST /api/webhooks/wompi]
+    F --> G{¿Firma HMAC válida?}
+    G -- No --> G1[/401 + Sentry/] --> Z
+    G -- Sí --> H{¿Evento ya procesado?}
+    H -- Sí --> H1[/200 no-op/] --> Z
+    H -- No --> I[INSERT pago]
+    I --> J[Aplicar a cuota: capital/interés/mora]
+    J --> K{¿Saldo crédito = 0?}
+    K -- Sí --> L[credito → PAGADO]
+    K -- No --> M[Actualizar saldo_pendiente]
+    L --> N[Notificar pago RF-08]
+    M --> N
+    N --> Z

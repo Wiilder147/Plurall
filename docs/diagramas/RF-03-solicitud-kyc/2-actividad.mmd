@@ -1,0 +1,17 @@
+%% RF-03 Solicitud + KYC - Diagrama de Actividad (stepper 4 pasos)
+flowchart TD
+    A([Inicio]) --> B{¿Cooldown 90 días? RN-03}
+    B -- No cumplido --> B1[/Mostrar fecha habilitación/] --> Z([Fin])
+    B -- Cumplido --> C[Paso 1: Cotizador monto/plazo]
+    C --> D[Paso 2: Cuestionario de perfil]
+    D --> E{¿Campos numéricos válidos?}
+    E -- No --> D
+    E -- Sí --> F[Paso 3: Cargar cédula frontal + trasera]
+    F --> G{¿KYC completo? RN-04}
+    G -- No --> F
+    G -- Sí --> H[Paso 4: Resumen y confirmación]
+    H --> I[POST /api/creditos/solicitar]
+    I --> J[Subir documentos a Storage]
+    J --> K[INSERT solicitud_credito + respuesta_cliente + documento_cliente]
+    K --> L[Invocar motor de scoring RF-05]
+    L --> M[/Mostrar estado de la solicitud/] --> Z

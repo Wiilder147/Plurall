@@ -1,0 +1,40 @@
+%% RF-05 Scoring - Diagrama de Clases
+classDiagram
+    direction LR
+    class ModeloScore {
+        +UUID id_modelo_score
+        +string nombre_modelo
+        +int puntaje_minimo
+        +int puntaje_maximo
+    }
+    class Score {
+        +UUID id_score
+        +UUID id_solicitud
+        +UUID id_modelo_score
+        +int puntaje_total
+        +int puntaje_maximo_posible
+        +datetime fecha_evaluacion
+    }
+    class Pregunta {
+        +UUID id_pregunta
+        +string tipo_input
+    }
+    class OpcionPregunta {
+        +UUID id_opcion
+        +int valor_puntos
+    }
+    class RangoPuntajePregunta {
+        +UUID id_rango
+        +decimal valor_min
+        +decimal valor_max
+        +int valor_puntos
+    }
+    class ScoringEngine {
+        +evaluar(respuestas, modelo)
+        +clasificar(puntaje)
+    }
+    ModeloScore "1" --> "0..*" Score
+    Pregunta "1" --> "0..*" OpcionPregunta
+    Pregunta "1" --> "0..*" RangoPuntajePregunta
+    ScoringEngine ..> Score
+    ScoringEngine ..> ModeloScore

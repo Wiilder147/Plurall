@@ -1,0 +1,12 @@
+%% RF-10 Mora - Diagrama de Actividad (batch diario)
+flowchart TD
+    A([Vercel Cron 06:00 COT]) --> B[GET /api/cron/mora + CRON_SECRET]
+    B --> C{¿Secreto válido?}
+    C -- No --> C1[/401 + Sentry/] --> Z([Fin])
+    C -- Sí --> D[SELECT cuota PENDIENTE con fecha_vencimiento < hoy]
+    D --> E[UPDATE cuota → VENCIDA + mora RN-08]
+    E --> F[UPDATE credito con cuota vencida → EN_MORA]
+    F --> G[UPDATE credito sin cuotas vencidas → ACTIVO]
+    G --> H[Refrescar KPIs / cola cobranza]
+    H --> I[Disparar recordatorios RF-08]
+    I --> Z

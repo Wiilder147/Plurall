@@ -1,0 +1,30 @@
+%% RF-14 PQR - Diagrama de Clases
+classDiagram
+    direction LR
+    class Pqr {
+        +UUID id_pqr
+        +UUID id_cliente
+        +string tipo
+        +string asunto
+        +string descripcion
+        +string estado
+        +UUID id_respondido_por
+        +datetime fecha_respuesta
+    }
+    class Cliente {
+        +UUID id_cliente
+        +string primer_nombre
+        +string email
+    }
+    class PerfilUsuario {
+        +UUID id_usuario_cuenta
+        +string rol
+    }
+    class PqrService {
+        +radicar(dto)
+        +responder(idPqr, respuesta)
+        +cerrar(idPqr)
+    }
+    Cliente "1" --> "0..*" Pqr
+    PerfilUsuario "1" --> "0..*" Pqr : responde
+    PqrService ..> Pqr

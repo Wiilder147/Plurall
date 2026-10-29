@@ -1,0 +1,35 @@
+%% RF-06 Decisión - Diagrama de Clases
+classDiagram
+    direction LR
+    class SolicitudCredito {
+        +UUID id_solicitud
+        +UUID id_estado_solicitud
+        +UUID id_usuario_evaluador
+        +datetime fecha_decision
+    }
+    class DecisionSolicitud {
+        +UUID id_decision
+        +UUID id_solicitud
+        +UUID id_analista
+        +UUID id_motivo_rechazo
+        +decimal monto_aprobado
+        +decimal tasa_interes_aprobada
+        +datetime fecha_decision
+    }
+    class MotivoRechazo {
+        +UUID id_motivo
+        +string nombre_publico
+        +string detalle_tecnico
+    }
+    class PerfilUsuario {
+        +UUID id_usuario_cuenta
+        +string rol
+    }
+    class DecisionService {
+        +aprobar(idSolicitud, monto, tasa)
+        +rechazar(idSolicitud, idMotivo)
+    }
+    SolicitudCredito "1" --> "0..1" DecisionSolicitud
+    MotivoRechazo "1" --> "0..*" DecisionSolicitud
+    PerfilUsuario "1" --> "0..*" DecisionSolicitud : analista
+    DecisionService ..> DecisionSolicitud

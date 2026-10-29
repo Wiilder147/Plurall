@@ -1,0 +1,21 @@
+%% RF-06 Decisión - Secuencia
+sequenceDiagram
+    autonumber
+    actor SUP as Supervisor/Analista
+    participant UI as /admin/solicitudes/[id]
+    participant API as /api/admin/solicitud/[id] (PATCH)
+    participant DB as Postgres
+    participant NOT as Notificaciones (RF-08)
+
+    SUP->>UI: Abre solicitud y revisa score
+    UI->>API: PATCH {accion, motivo?, monto?, tasa?}
+    API->>DB: SELECT decision_solicitud (¿existe?)
+    alt Ya decidida
+        API-->>UI: 409 (inmutable, RN-06)
+    else Sin decisión
+        API->>DB: INSERT decision_solicitud
+        API->>DB: UPDATE solicitud_credito (estado)
+        API->>DB: INSERT auditoria
+        API->>NOT: notificar cliente (aprobada/rechazada)
+        API-->>UI: 200 OK
+    end

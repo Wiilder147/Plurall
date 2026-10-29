@@ -1,0 +1,16 @@
+%% RF-02 Gestión de perfil - Casos de Uso
+flowchart LR
+    CLI(["👤 Cliente"])
+    subgraph SIS["RF-02 · Perfil del Cliente"]
+        U1(["Ver perfil"])
+        U2(["Editar datos de contacto"])
+        U3(["Editar datos de negocio"])
+        U4(["Editar ubicación"])
+        U5(["Cambiar contraseña"])
+        U6(["Validar propiedad del dato (RLS)"])
+    end
+    CLI --- U1 & U2 & U3 & U4 & U5
+    U2 -. "«include»" .-> U6
+    U3 -. "«include»" .-> U6
+    U4 -. "«include»" .-> U6
+    U1 -. "«extend»(sin datos aún)" .-> U2

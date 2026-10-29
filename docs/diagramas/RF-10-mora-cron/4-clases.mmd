@@ -1,0 +1,28 @@
+%% RF-10 Mora - Diagrama de Clases
+classDiagram
+    direction LR
+    class Cuota {
+        +UUID id_cuota
+        +UUID id_plan_pago
+        +date fecha_vencimiento
+        +string estado_cuota
+        +decimal monto_mora_cobrada
+    }
+    class Credito {
+        +UUID id_credito
+        +string estado_credito
+        +decimal saldo_pendiente
+    }
+    class PlanPago {
+        +UUID id_plan_pago
+        +decimal tasa_mora_diaria
+    }
+    class MoraJob {
+        +ejecutar()
+        +marcarVencidas()
+        +actualizarEstadoCreditos()
+    }
+    PlanPago "1" --> "1..*" Cuota
+    Credito "1" --> "1" PlanPago
+    MoraJob ..> Cuota
+    MoraJob ..> Credito

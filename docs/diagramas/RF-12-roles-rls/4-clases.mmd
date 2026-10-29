@@ -1,0 +1,26 @@
+%% RF-12 Roles y RLS - Diagrama de Clases
+classDiagram
+    direction LR
+    class Rol {
+        +UUID id_rol
+        +string nombre_rol
+    }
+    class PerfilUsuario {
+        +UUID id_usuario_cuenta
+        +UUID id_rol
+        +string primer_nombre
+    }
+    class Middleware {
+        +verificarSesion()
+        +resolverRol()
+        +autorizarRuta()
+    }
+    class RlsPolicy {
+        <<db-function>>
+        +es_admin() bool
+        +es_analista_o_admin() bool
+        +mi_id_cliente() uuid
+    }
+    Rol "1" --> "0..*" PerfilUsuario
+    Middleware ..> PerfilUsuario
+    Middleware ..> RlsPolicy

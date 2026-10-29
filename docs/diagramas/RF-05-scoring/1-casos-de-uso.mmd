@@ -1,0 +1,17 @@
+%% RF-05 Motor de scoring crediticio - Casos de Uso
+flowchart LR
+    SYS(["⚙️ Sistema (backend)"])
+    ANA(["👤 Analista/Supervisor"])
+    subgraph SIS["RF-05 · Scoring"]
+        U1(["Calcular score"])
+        U2(["Ponderar respuestas × factores"])
+        U3(["Persistir score y detalle"])
+        U4(["Determinar decisión automática"])
+        U5(["Exponer score al panel (RN-09)"])
+    end
+    SYS --- U1
+    U1 -. "«include»" .-> U2
+    U1 -. "«include»" .-> U3
+    U1 -. "«include»" .-> U4
+    U4 -. "«extend»(zona gris)" .-> U5
+    ANA --- U5

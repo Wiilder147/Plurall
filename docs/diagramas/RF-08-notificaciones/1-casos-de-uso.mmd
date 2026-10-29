@@ -1,0 +1,25 @@
+%% RF-08 Notificaciones transaccionales - Casos de Uso
+flowchart LR
+    SYS(["⚙️ Sistema"])
+    RESEND(["✉️ Resend/SMTP"])
+    CLI(["👤 Cliente"])
+    subgraph SIS["RF-08 · Notificaciones"]
+        U1(["Notificar aprobación"])
+        U2(["Notificar rechazo"])
+        U3(["Confirmar pago"])
+        U4(["Recordar vencimiento"])
+        U5(["Renderizar plantilla HTML"])
+        U6(["Enviar email"])
+        U7(["Registrar notificacion"])
+        U8(["Reintentar en fallo"])
+    end
+    SYS --- U1 & U2 & U3 & U4
+    U1 -. "«include»" .-> U5
+    U2 -. "«include»" .-> U5
+    U3 -. "«include»" .-> U5
+    U4 -. "«include»" .-> U5
+    U5 -. "«include»" .-> U6
+    U6 --- RESEND
+    U6 -. "«include»" .-> U7
+    U6 -. "«extend»(fallo de envío)" .-> U8
+    RESEND --- CLI

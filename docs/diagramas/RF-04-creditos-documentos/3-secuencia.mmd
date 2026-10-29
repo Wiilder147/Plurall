@@ -1,0 +1,18 @@
+%% RF-04 Créditos y Documentos - Secuencia (generar contrato PDF)
+sequenceDiagram
+    autonumber
+    actor CLI as Cliente
+    participant UI as /dashboard/documentos
+    participant API as /api/documentos/contrato
+    participant DB as Postgres
+    participant PDF as lib/pdf.js (Puppeteer)
+
+    CLI->>UI: "Descargar contrato"
+    UI->>API: GET contrato?id_credito
+    API->>DB: SELECT credito + plan_pago + cuota + cliente
+    DB-->>API: Datos del crédito
+    API->>PDF: Renderizar plantilla HTML → PDF
+    PDF-->>API: Buffer PDF
+    API->>DB: INSERT log_descarga_documento
+    API-->>UI: 200 (application/pdf)
+    UI-->>CLI: Descarga del archivo

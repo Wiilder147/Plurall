@@ -1,0 +1,154 @@
+%% PLURALL - Diagrama 7: MER (Modelo Entidad-Relación, normalizado 3FN)
+erDiagram
+    ROL ||--o{ PERFIL_USUARIO : tiene
+    PERFIL_USUARIO ||--o| CLIENTE : "cuenta de"
+    ESTADO_CLIENTE ||--o{ CLIENTE : clasifica
+    TIPO_DOCUMENTO_IDENTIDAD ||--o{ CLIENTE : identifica
+
+    CLIENTE ||--o{ DIRECCION : ubica
+    MUNICIPIO ||--o{ DIRECCION : localiza
+    DEPARTAMENTO ||--o{ MUNICIPIO : agrupa
+    CLIENTE ||--o{ NEGOCIO_CLIENTE : posee
+    TIPO_NEGOCIO ||--o{ NEGOCIO_CLIENTE : clasifica
+    CLIENTE ||--o| PERFIL_FINANCIERO : "1:1"
+    CLIENTE ||--o{ CUENTA_BANCARIA : registra
+    BANCO ||--o{ CUENTA_BANCARIA : emite
+
+    CLIENTE ||--o{ SOLICITUD_CREDITO : radica
+    ESTADO_SOLICITUD ||--o{ SOLICITUD_CREDITO : estado
+    MOTIVO_RECHAZO ||--o{ SOLICITUD_CREDITO : "motivo (opcional)"
+    SOLICITUD_CREDITO ||--o{ RESPUESTA_CLIENTE : contiene
+    PREGUNTA ||--o{ RESPUESTA_CLIENTE : responde
+    PREGUNTA ||--o{ OPCION_PREGUNTA : ofrece
+    PREGUNTA ||--o{ RANGO_PUNTAJE_PREGUNTA : pondera
+    OPCION_PREGUNTA ||--o{ RESPUESTA_CLIENTE : elegida
+    SOLICITUD_CREDITO ||--o{ SCORE : evalua
+    MODELO_SCORE ||--o{ SCORE : aplica
+    SOLICITUD_CREDITO ||--o| DECISION_SOLICITUD : decide
+    MOTIVO_RECHAZO ||--o{ DECISION_SOLICITUD : justifica
+
+    SOLICITUD_CREDITO ||--o| CREDITO : origina
+    CLIENTE ||--o{ CREDITO : titular
+    CREDITO ||--|| PLAN_PAGO : tiene
+    PLAN_PAGO ||--|{ CUOTA : compone
+    CUOTA ||--o{ PAGO : recibe
+    CREDITO ||--o{ PAGO : abona
+    CREDITO ||--o{ GESTION_COBRANZA : gestiona
+    CLIENTE ||--o{ ASIGNACION_ASESOR : asignado
+    CLIENTE ||--o{ DOCUMENTO_CLIENTE : aporta
+    CLIENTE ||--o{ DOCUMENTO_LEGAL : recibe
+    CREDITO ||--o{ DOCUMENTO_LEGAL : soporta
+    TIPO_DOCUMENTO_LEGAL ||--o{ DOCUMENTO_LEGAL : tipifica
+    CLIENTE ||--o{ NOTIFICACION : recibe
+    TIPO_NOTIFICACION ||--o{ NOTIFICACION : tipo
+    CLIENTE ||--o{ PQR : radica
+
+    CLIENTE {
+        uuid id_cliente PK
+        uuid id_usuario_cuenta FK
+        uuid id_estado_cliente FK
+        uuid id_tipo_doc FK
+        string dni UK
+        string email UK
+        string telefono
+        string primer_nombre
+        string primer_apellido
+    }
+    DIRECCION {
+        uuid id PK
+        uuid id_cliente FK
+        uuid id_municipio FK
+        enum tipo "CASA|NEGOCIO"
+        string linea
+        float lat
+        float lon
+    }
+    NEGOCIO_CLIENTE {
+        uuid id PK
+        uuid id_cliente FK
+        uuid id_tipo_negocio FK
+        string nombre_negocio
+        int antiguedad_meses
+        int empleados
+    }
+    PERFIL_FINANCIERO {
+        uuid id PK
+        uuid id_cliente FK "UNIQUE 1:1"
+        decimal ingresos_mensuales
+        decimal egresos_mensuales
+        decimal patrimonio_estimado
+        int personas_cargo
+    }
+    CUENTA_BANCARIA {
+        uuid id PK
+        uuid id_cliente FK
+        uuid id_banco FK
+        string tipo_cuenta
+        string numero
+    }
+    SOLICITUD_CREDITO {
+        uuid id_solicitud PK
+        uuid id_cliente FK
+        uuid id_estado_solicitud FK
+        decimal monto_solicitado
+        decimal tasa_interes_propuesta
+        timestamptz fecha_solicitud
+    }
+    SCORE {
+        uuid id_score PK
+        uuid id_solicitud FK
+        uuid id_modelo_score FK
+        int puntaje_total
+        int puntaje_maximo_posible
+    }
+    DECISION_SOLICITUD {
+        uuid id_decision PK
+        uuid id_solicitud FK
+        uuid id_analista FK
+        decimal monto_aprobado
+        decimal tasa_interes_aprobada
+    }
+    CREDITO {
+        uuid id_credito PK
+        uuid id_solicitud FK
+        uuid id_cliente FK
+        decimal monto_desembolsado
+        decimal tasa_interes_mensual
+        int numero_cuotas
+        string estado_credito
+        decimal saldo_pendiente
+    }
+    PLAN_PAGO {
+        uuid id_plan_pago PK
+        uuid id_credito FK
+        decimal tasa_mora_diaria
+    }
+    CUOTA {
+        uuid id_cuota PK
+        uuid id_plan_pago FK
+        int numero_cuota
+        decimal monto_total_cuota
+        date fecha_vencimiento
+        string estado_cuota
+    }
+    PAGO {
+        uuid id_recibo PK
+        uuid id_cuota FK
+        uuid id_credito FK
+        decimal monto_pagado
+        decimal monto_mora
+        string estado
+    }
+    GESTION_COBRANZA {
+        uuid id_gestion PK
+        uuid id_credito FK
+        uuid id_asesor FK
+        string tipo_gestion
+        decimal monto_prometido
+    }
+    ASIGNACION_ASESOR {
+        uuid id_asignacion PK
+        uuid id_asesor FK
+        uuid id_cliente FK
+        timestamptz fecha_asignacion
+    }

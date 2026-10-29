@@ -1,0 +1,20 @@
+%% RF-11 Analítica y KPIs de cartera - Casos de Uso
+flowchart LR
+    SUP(["👤 Supervisor"])
+    ADM(["👤 Admin"])
+    subgraph SIS["RF-11 · Analítica"]
+        U1(["Ver dashboard de KPIs"])
+        U2(["Ver funnel de originación"])
+        U3(["Ver cartera y mora"])
+        U4(["Ver cohortes de desembolso"])
+        U5(["Drill-down por métrica"])
+        U6(["Exportar reporte"])
+        U7(["Consultar vistas de reportería"])
+    end
+    SUP --- U1 & U2 & U3
+    ADM --- U1 & U3 & U4 & U6
+    U1 -. "«include»" .-> U7
+    U2 -. "«include»" .-> U7
+    U3 -. "«include»" .-> U7
+    U1 -. "«extend»(detalle)" .-> U5
+    U1 -. "«extend»(CSV/Excel)" .-> U6

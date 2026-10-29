@@ -1,0 +1,43 @@
+%% PLURALL - Diagrama 6: Despliegue
+flowchart TB
+    subgraph DEV["Entorno de desarrollo"]
+        GIT["Repositorio Git<br/>(monorepo apps/web + db/)"]
+    end
+
+    subgraph EDGE["Vercel Edge Network (CDN global)"]
+        CDN["Assets estáticos + caché SSR"]
+    end
+
+    subgraph VNODE["Vercel — Región serverless"]
+        FN["Funciones Serverless<br/>(Next.js Route Handlers)"]
+        CRONV["Vercel Cron<br/>(06:00 COT → /api/cron/mora)"]
+    end
+
+    subgraph SUPAINFRA["Supabase (infra gestionada)"]
+        DBNODE[("Postgres 15 primario<br/>RLS + pg_cron")]
+        AUTHNODE["GoTrue (Auth)"]
+        STONODE["Storage (S3-compatible)"]
+    end
+
+    subgraph THIRD["Terceros (SaaS)"]
+        WOMPINODE["Wompi API + Webhooks"]
+        REDISNODE["Upstash Redis (Edge)"]
+        MAILNODE["Resend (SMTP/API)"]
+        SENTRYNODE["Sentry"]
+    end
+
+    DEVICE["💻/📱 Navegador del usuario<br/>HTTPS/TLS"]
+
+    GIT -->|"git push → CI/CD"| VNODE
+    DEVICE -->|HTTPS| CDN
+    CDN --> FN
+    FN -->|"pooled conn (SSL)"| DBNODE
+    FN --> AUTHNODE
+    FN --> STONODE
+    FN -->|HMAC firmado| WOMPINODE
+    WOMPINODE -->|webhook HTTPS| FN
+    FN --> REDISNODE
+    FN --> MAILNODE
+    FN -.errores.-> SENTRYNODE
+    CRONV --> FN
+    DBNODE -. pg_cron alterno .-> DBNODE

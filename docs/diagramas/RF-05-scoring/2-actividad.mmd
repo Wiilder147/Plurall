@@ -1,0 +1,18 @@
+%% RF-05 Scoring - Diagrama de Actividad
+flowchart TD
+    A([Solicitud radicada]) --> B[Leer respuesta_cliente de la solicitud]
+    B --> C[Cargar modelo_score vigente + factores]
+    C --> D[Por cada respuesta: mapear a puntos]
+    D --> E{¿Respuesta cerrada u opción?}
+    E -- Opción --> F[Sumar opcion_pregunta.valor_puntos]
+    E -- Numérica --> G[Ubicar rango_puntaje_pregunta y sumar]
+    F --> H[Acumular puntaje_total]
+    G --> H
+    H --> I[Persistir score + puntaje_maximo_posible]
+    I --> J{Puntaje vs umbrales del modelo}
+    J -- "≥ aprobación" --> K[Estado: PREAPROBADA]
+    J -- "intermedio" --> L[Estado: EN_ESTUDIO]
+    J -- "< mínimo" --> M[Estado: RECHAZO_AUTO]
+    K --> Z([Fin])
+    L --> Z
+    M --> Z
