@@ -12,7 +12,7 @@
 import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Phone, Lock, ArrowLeft, KeyRound, CheckCircle2 } from 'lucide-react'
+import { Phone, Lock, ArrowLeft, KeyRound, CheckCircle2, Eye, EyeOff } from 'lucide-react'
 
 export default function RecuperarPage() {
   const router = useRouter()
@@ -21,6 +21,9 @@ export default function RecuperarPage() {
   const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  // C-02: mostrar/ocultar contraseña, igual que en /registro
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -253,14 +256,19 @@ export default function RecuperarPage() {
                     </div>
                     <input
                       id="newPassword"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="nueva contraseña"
                       required
                       minLength={6}
-                      className="input-field"
+                      className="input-field pr-12"
                     />
+                    <button type="button" onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-700 transition-colors"
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}>
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
 
                   {/* CAMPO CONFIRMAR CONTRASEÑA */}
@@ -270,7 +278,7 @@ export default function RecuperarPage() {
                     </div>
                     <input
                       id="confirmPassword"
-                      type="password"
+                      type={showConfirm ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       onPaste={(e) => e.preventDefault()}
@@ -281,8 +289,13 @@ export default function RecuperarPage() {
                       placeholder="confirmar contraseña"
                       required
                       minLength={6}
-                      className="input-field"
+                      className="input-field pr-12"
                     />
+                    <button type="button" onClick={() => setShowConfirm(v => !v)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-700 transition-colors"
+                      aria-label={showConfirm ? 'Ocultar contraseña' : 'Ver contraseña'}>
+                      {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </div>
               )}
