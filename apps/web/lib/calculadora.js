@@ -4,6 +4,8 @@
  * DESCRIPCIÓN: Módulo de utilidades y funciones compartidas.
  * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
  * ========================================================================== */
+import { MONTO_MIN, MONTO_MAX, PLAZOS, tasaUsuraEA } from './producto'
+
 /**
  * Calculadora de Amortización Francesa.
  * Se ejecuta 100% en el navegador, sin llamadas al servidor.
@@ -50,26 +52,26 @@ export function tasaEAaEM(tasaEA) {
   return Math.pow(1 + tasaEA / 100, 1 / 12) - 1
 }
 
-// Máximo representable en decision_solicitud.monto_aprobado numeric(14,2).
-const MONTO_MAX_BD = 999_999_999_999.99
-
 /**
- * Valida las condiciones de una aprobación antes de registrarla o desembolsarla.
- * Solo reglas objetivas (valores positivos, finitos y representables); los
- * rangos comerciales del producto no se aplican aquí.
+ * Valida las condiciones de una aprobación antes de registrarla o desembolsarla
+ * con las reglas del producto (lib/producto.js): monto, plazos y tasa ≤ usura.
  *
  * @returns {{campo: 'monto'|'plazo'|'tasa', mensaje: string}[]} vacío si es válido
  */
 export function validarCondicionesAprobacion({ monto, plazo, tasaEM }) {
   const errores = []
-  if (typeof monto !== 'number' || !Number.isFinite(monto) || monto <= 0 || monto > MONTO_MAX_BD) {
-    errores.push({ campo: 'monto', mensaje: 'El monto aprobado debe ser un valor mayor a $0.' })
+  if (typeof monto !== 'number' || !Number.isFinite(monto) || monto < MONTO_MIN || monto > MONTO_MAX) {
+    errores.push({ campo: 'monto', mensaje: `El monto aprobado debe estar entre ${formatCOP(MONTO_MIN)} y ${formatCOP(MONTO_MAX)}.` })
   }
-  if (!Number.isInteger(plazo) || plazo <= 0) {
-    errores.push({ campo: 'plazo', mensaje: 'El plazo aprobado debe ser un número entero de meses mayor a 0.' })
+  if (!PLAZOS.includes(plazo)) {
+    errores.push({ campo: 'plazo', mensaje: `El plazo aprobado debe ser de ${PLAZOS.join(', ')} meses.` })
   }
+  const usura = tasaUsuraEA()
+  const tasaEA = (Math.pow(1 + tasaEM, 12) - 1) * 100
   if (typeof tasaEM !== 'number' || !Number.isFinite(tasaEM) || tasaEM <= 0) {
     errores.push({ campo: 'tasa', mensaje: 'La tasa de interés aprobada debe ser mayor a 0%.' })
+  } else if (tasaEA > usura + 1e-9) {
+    errores.push({ campo: 'tasa', mensaje: `La tasa no puede superar la tasa de usura vigente (${usura}% EA).` })
   }
   return errores
 }

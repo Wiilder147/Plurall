@@ -8,9 +8,10 @@ describe('calcularMora (flujo de pago Wompi) — base capital (J-11)', () => {
 
   const cuota = { estado_cuota: 'VENCIDA', fecha_vencimiento: '2026-10-01', monto_capital: 100000, monto_interes: 20000, monto_total_cuota: 120000 }
 
-  it('10 días al 0,1% diario sobre capital 100.000 → 1.000 (no 1.200)', () => {
+  // Tasa 0,05 %/día (bajo el tope legal de NEW-08) para aislar la BASE del cálculo.
+  it('10 días al 0,05% diario sobre capital 100.000 → 500 (no 600 sobre la cuota)', () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 9, 11, 12))
-    expect(calcularMora(cuota, 0.001)).toBe(1000)
+    expect(calcularMora(cuota, 0.0005)).toBe(500)
   })
 
   it('una cuota no vencida no genera mora', () => {

@@ -11,10 +11,13 @@
  *                La usan /api/pagos/cotizar (preview) y /api/pagos/iniciar.
  * ========================================================================== */
 
+import { tasaMoraDiariaMaxima } from './producto'
+
 // Monto mínimo que acepta la pasarela (Wompi ~ $1.500 COP).
 export const MIN_COBRO_COP = 1500
 
 const round2 = (n) => Math.round(n * 100) / 100
+
 
 // ── Cálculo de intereses de mora de UNA cuota ───────────────────────────────
 // Mora = capital vencido × tasa_mora_diaria × días de atraso. Solo VENCIDA.
@@ -27,7 +30,8 @@ export function calcularMora(cuota, tasaMoraDiaria) {
   hoy.setHours(0, 0, 0, 0)
 
   const dias = Math.max(1, Math.floor((hoy - vencimiento) / 86400000))
-  const tasa = Number(tasaMoraDiaria ?? 0.001)
+  // NEW-08: nunca por encima de la tasa máxima legal (usura equivalente diaria)
+  const tasa = Math.min(Number(tasaMoraDiaria ?? 0.001), tasaMoraDiariaMaxima())
 
   return round2(Number(cuota.monto_capital) * tasa * dias)
 }
