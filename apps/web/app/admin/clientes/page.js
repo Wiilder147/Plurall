@@ -118,7 +118,7 @@ export default async function AdminClientesPage({ searchParams }) {
                       </td>
                       <td className="px-5 py-4 text-center text-slate-400">
                         {/* Supabase devuelve [{ count: N }] para columnas de count */}
-                        {typeof cli.solicitud_credito === 'number' ? cli.solicitud_credito : '—'}
+                        {cli.solicitud_credito?.[0]?.count ?? 0}
                       </td>
                       <td className="px-5 py-4 text-right font-semibold text-slate-300">
                         {creditoActivo ? formatCOP(creditoActivo.saldo_pendiente) : '—'}
