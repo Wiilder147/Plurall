@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { validarTextoLibre, REGLAS_TEXTO } from '@/lib/validacion'
 import { tieneKycRechazado, MENSAJE_KYC_RECHAZADO } from '@/lib/kyc'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
@@ -42,6 +43,8 @@ export async function PATCH(request, { params }) {
   if (!['PRE_APROBAR', 'RECHAZAR'].includes(accion)) {
     return NextResponse.json({ error: 'Acción inválida' }, { status: 400 })
   }
+  const errorNota = validarTextoLibre(notas, REGLAS_TEXTO.notaAsesor)
+  if (errorNota) return NextResponse.json({ error: errorNota }, { status: 400 })
 
   const service = getServiceClient()
 

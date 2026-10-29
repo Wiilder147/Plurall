@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, XCircle, Loader2, X } from 'lucide-react'
+import { validarTextoLibre, REGLAS_TEXTO } from '@/lib/validacion'
 
 export default function AccionesSolicitud({ solicitudId, nombreCliente }) {
   const router = useRouter()
@@ -24,7 +25,8 @@ export default function AccionesSolicitud({ solicitudId, nombreCliente }) {
   }
 
   async function confirmar() {
-    if (!notas.trim()) { setError('Escribe una nota antes de continuar.'); return }
+    const errorNota = validarTextoLibre(notas, REGLAS_TEXTO.notaAsesor)
+    if (errorNota) { setError(errorNota); return }
     setLoading(true)
     setError('')
 
@@ -98,6 +100,7 @@ export default function AccionesSolicitud({ solicitudId, nombreCliente }) {
               {esPreAprobar ? 'Notas de verificación *' : 'Motivo del rechazo *'}
             </label>
             <textarea
+              maxLength={REGLAS_TEXTO.notaAsesor.max}
               value={notas}
               onChange={e => setNotas(e.target.value)}
               placeholder={esPreAprobar

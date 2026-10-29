@@ -36,3 +36,24 @@ describe('esCelularValido', () => {
     expect(esCelularValido('')).toBe(false)
   })
 })
+
+// M-05 / M-14 / M-10 / M-13: textos libres con longitud mínima/máxima y contenido real
+import { validarTextoLibre, REGLAS_TEXTO } from '../lib/validacion'
+describe('validarTextoLibre', () => {
+  const { notaAsesor, motivoCatalogo } = REGLAS_TEXTO
+  it('rechaza "-" y textos sin letras (M-05, M-14)', () => {
+    expect(validarTextoLibre('-', notaAsesor)).toMatch(/al menos/i)
+    expect(validarTextoLibre('---------- ', notaAsesor)).toMatch(/letras/i)
+  })
+  it('rechaza textos que superan el máximo (M-05: 500+ caracteres, M-13: 1.000+)', () => {
+    expect(validarTextoLibre('a'.repeat(501), notaAsesor)).toMatch(/máximo/i)
+    expect(validarTextoLibre('Motivo '.repeat(200), motivoCatalogo)).toMatch(/máximo/i)
+  })
+  it('acepta textos razonables', () => {
+    expect(validarTextoLibre('Cliente verificado por llamada, datos consistentes.', notaAsesor)).toBeNull()
+    expect(validarTextoLibre('Documentación incompleta o ilegible', motivoCatalogo)).toBeNull()
+  })
+  it('motivo del catálogo: mínimo 5 caracteres', () => {
+    expect(validarTextoLibre('abc', motivoCatalogo)).toMatch(/al menos 5/i)
+  })
+})

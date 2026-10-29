@@ -6,6 +6,7 @@
  *                Solo ADMIN y SUPERVISOR. Usa service client tras validar rol.
  * ========================================================================== */
 import { NextResponse } from 'next/server'
+import { validarTextoLibre, REGLAS_TEXTO } from '@/lib/validacion'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
@@ -39,6 +40,8 @@ export async function POST(request) {
   if (!descripcion_motivo?.trim()) {
     return NextResponse.json({ error: 'La descripción es obligatoria' }, { status: 400 })
   }
+  const errorTexto = validarTextoLibre(descripcion_motivo, REGLAS_TEXTO.motivoCatalogo)
+  if (errorTexto) return NextResponse.json({ error: errorTexto }, { status: 400 })
 
   const service = getServiceClient()
 

@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Loader2, Check, X } from 'lucide-react'
+import { validarTextoLibre, REGLAS_TEXTO } from '@/lib/validacion'
 
 export default function GestionMotivos({ motivosIniciales }) {
   const router = useRouter()
@@ -21,6 +22,8 @@ export default function GestionMotivos({ motivosIniciales }) {
   const crear = async (e) => {
     e.preventDefault()
     if (!descripcion.trim()) return
+    const errorTexto = validarTextoLibre(descripcion, REGLAS_TEXTO.motivoCatalogo)
+    if (errorTexto) { setError(errorTexto); return }
     setCargando(true); setError('')
     try {
       const res = await fetch('/api/supervisor/motivos', {
@@ -55,6 +58,7 @@ export default function GestionMotivos({ motivosIniciales }) {
         <label className="text-sm font-semibold text-slate-200">Nuevo motivo de rechazo</label>
         <input
           type="text"
+          maxLength={REGLAS_TEXTO.motivoCatalogo.max}
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
           placeholder="Ej: Capacidad de pago insuficiente"
