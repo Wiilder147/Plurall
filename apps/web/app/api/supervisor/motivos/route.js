@@ -41,6 +41,14 @@ export async function POST(request) {
   }
 
   const service = getServiceClient()
+
+  // M-12: no duplicar un motivo existente (ignorando mayúsculas y espacios)
+  const normalizar = (t) => String(t ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('es')
+  const { data: existentes } = await service.from('motivo_rechazo').select('descripcion_motivo')
+  if ((existentes ?? []).some(m => normalizar(m.descripcion_motivo) === normalizar(descripcion_motivo))) {
+    return NextResponse.json({ error: 'Este motivo ya existe' }, { status: 409 })
+  }
+
   const { error } = await service.from('motivo_rechazo').insert({
     descripcion_motivo: descripcion_motivo.trim(),
     visible_cliente,
