@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { distribuirPagoEfectivo, nuevoEstadoCredito } from '@/lib/credito'
 
 /**
@@ -152,7 +153,9 @@ async function aplicarPagoEfectivo(db, { creditoId, idAsesor, monto }) {
     if (recibos.length) recibos[recibos.length - 1].delta = excedente
     else recibos.push({ id_cuota: abiertas[0].id_cuota, monto: 0, capital: 0, interes: 0, delta: excedente })
   }
-  const base = `EFE-${idAsesor.slice(0, 6).toUpperCase()}-${Date.now()}`
+  // Sufijo aleatorio: con solo Date.now() dos registros en el mismo ms chocaban
+  // con el UNIQUE de referencia_externa (500).
+  const base = `EFE-${idAsesor.slice(0, 6).toUpperCase()}-${Date.now()}-${randomUUID().slice(0, 8)}`
   for (const [i, r] of recibos.entries()) {
     const { error } = await db.from('pago').insert({
       id_cuota:            r.id_cuota,
