@@ -53,3 +53,16 @@ export function nuevoEstadoCredito(saldo, cuotasEnMora, estadoActual) {
   }
   return estadoActual
 }
+
+// J-10: fecha real de cierre = último fecha_pago_real de las cuotas de cada
+// crédito (solo el servidor escribe en cuota). Filas: { fecha_pago_real, plan_pago: { id_credito } }.
+export function fechaCierrePorCredito(cuotas) {
+  const cierre = {}
+  for (const c of cuotas ?? []) {
+    const id = c?.plan_pago?.id_credito
+    const f  = c?.fecha_pago_real
+    if (!id || !f) continue
+    if (!cierre[id] || String(f) > String(cierre[id])) cierre[id] = String(f)
+  }
+  return cierre
+}

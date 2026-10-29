@@ -8,6 +8,7 @@
 import Link from 'next/link'
 import { ArrowRight, CheckCircle2, AlertCircle, Clock, CreditCard, Lock, History, Award, Search, XCircle, CalendarClock } from 'lucide-react'
 import { formatCOP } from '@/lib/calculadora'
+import { fechaCierrePorCredito } from '@/lib/credito'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getSolicitudAprobadaPendiente, getUltimaSolicitudCliente } from '@/lib/solicitudCliente'
@@ -28,6 +29,7 @@ export default async function MisCreditos() {
   let creditosHistoricos = []
   let solicitudAprobada = null
   let ultimaSolicitud = null
+  let fechasCierre = {}
 
   if (clienteRow) {
     const { data: activo } = await supabase
@@ -39,6 +41,16 @@ export default async function MisCreditos() {
       .from('credito').select('*').eq('id_cliente', clienteRow.id_cliente)
       .in('estado_credito', ['PAGADO', 'CANCELADO', 'CASTIGADO']).order('created_at', { ascending: false })
     creditosHistoricos = historicos || []
+
+    // J-10: fecha de cierre real = último pago de las cuotas (no updated_at)
+    if (creditosHistoricos.length) {
+      const { data: cuotasPagadas } = await supabase
+        .from('cuota')
+        .select('fecha_pago_real, plan_pago!inner ( id_credito )')
+        .in('plan_pago.id_credito', creditosHistoricos.map(c => c.id_credito))
+        .not('fecha_pago_real', 'is', null)
+      fechasCierre = fechaCierrePorCredito(cuotasPagadas)
+    }
 
     if (!creditoActivo) {
       solicitudAprobada = await getSolicitudAprobadaPendiente(supabase, clienteRow.id_cliente)
@@ -354,7 +366,10 @@ export default async function MisCreditos() {
           <div className="grid gap-3">
             {creditosHistoricos.map((cred) => {
               const fechaDesembolso = new Date(cred.fecha_desembolso).toLocaleDateString('es-CO', { month: 'short', year: 'numeric' })
-              const fechaFin = new Date(cred.updated_at).toLocaleDateString('es-CO', { month: 'short', year: 'numeric' })
+              const cierre   = fechasCierre[cred.id_credito]
+              const fechaFin = cierre
+                ? new Date(`${cierre}T00:00:00`).toLocaleDateString('es-CO', { month: 'short', year: 'numeric' })
+                : '—'
 
               return (
                 // TARJETA DE CRÉDITO HISTÓRICO
