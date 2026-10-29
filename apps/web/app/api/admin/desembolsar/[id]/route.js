@@ -7,7 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { calcularAmortizacion } from '@/lib/calculadora'
+import { calcularAmortizacion, fechasVencimientoMensual } from '@/lib/calculadora'
 import { notificarDesembolso } from '@/lib/notificaciones'
 import { formatNombre } from '@/lib/nombre'
 
@@ -83,8 +83,10 @@ export async function POST(request, { params }) {
   // Fechas
   const ahora       = new Date()
   const fechaDesemb = ahora.toISOString()
-  const fechaPrimeraCuota = new Date(ahora.getFullYear(), ahora.getMonth() + 1, ahora.getDate())
-  const fechaUltimaCuota  = new Date(ahora.getFullYear(), ahora.getMonth() + plazo, ahora.getDate())
+  // J-03: una cuota por mes calendario (sin desbordar días 29-31)
+  const fechasVenc        = fechasVencimientoMensual(ahora, plazo)
+  const fechaPrimeraCuota = fechasVenc[0]
+  const fechaUltimaCuota  = fechasVenc[fechasVenc.length - 1]
 
   // 1. Crear crédito
   const { data: credito, error: creditoErr } = await service
@@ -98,8 +100,8 @@ export async function POST(request, { params }) {
       numero_cuotas:        plazo,
       cuota_fija:           sim.cuotaMensual,
       fecha_desembolso:     fechaDesemb,
-      fecha_primera_cuota:  fechaPrimeraCuota.toISOString().split('T')[0],
-      fecha_ultima_cuota:   fechaUltimaCuota.toISOString().split('T')[0],
+      fecha_primera_cuota:  fechaPrimeraCuota,
+      fecha_ultima_cuota:   fechaUltimaCuota,
       estado_credito:       'ACTIVO',
       saldo_pendiente:      monto,
       cuotas_pagadas:       0,
@@ -120,8 +122,8 @@ export async function POST(request, { params }) {
       id_credito:         credito.id_credito,
       num_cuotas_totales: plazo,
       frecuencia_pago:    'MENSUAL',
-      fecha_inicio_cobro: fechaPrimeraCuota.toISOString().split('T')[0],
-      fecha_fin_cobro:    fechaUltimaCuota.toISOString().split('T')[0],
+      fecha_inicio_cobro: fechaPrimeraCuota,
+      fecha_fin_cobro:    fechaUltimaCuota,
       tasa_mora_diaria:   0.001,
     })
     .select('id_plan_pago')
@@ -134,11 +136,6 @@ export async function POST(request, { params }) {
 
   // 3. Crear cuotas individuales
   const cuotasInsert = sim.tablaCuotas.map((c, idx) => {
-    const fechaVenc = new Date(
-      fechaPrimeraCuota.getFullYear(),
-      fechaPrimeraCuota.getMonth() + idx,
-      fechaPrimeraCuota.getDate()
-    )
     return {
       id_plan_pago:       planPago.id_plan_pago,
       numero_cuota:       c.numero,
@@ -146,7 +143,7 @@ export async function POST(request, { params }) {
       monto_interes:      c.interes,
       monto_total_cuota:  c.cuota,
       saldo_despues_pago: c.saldo,
-      fecha_vencimiento:  fechaVenc.toISOString().split('T')[0],
+      fecha_vencimiento:  fechasVenc[idx],
       estado_cuota:       'PENDIENTE',
     }
   })
@@ -189,7 +186,7 @@ export async function POST(request, { params }) {
       monto,
       cuotaFija:        sim.cuotaMensual,
       numeroCuotas:     plazo,
-      fechaPrimeraCuota: fechaPrimeraCuota.toISOString().split('T')[0],
+      fechaPrimeraCuota: fechaPrimeraCuota,
     }).catch(err => console.error('[Notif] Error email desembolso:', err))
   }
 

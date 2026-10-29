@@ -42,6 +42,28 @@ export function calcularAmortizacion(monto, tasaAnual, plazoMeses) {
 }
 
 /**
+ * Fechas de vencimiento (YYYY-MM-DD) de un plan mensual de n cuotas.
+ * La cuota k vence k meses después de fechaBase, el mismo día del mes; si ese
+ * día no existe en el mes destino (29-31) se usa el último día de ese mes, de
+ * modo que nunca se salta ni se repite un mes calendario.
+ *
+ * @param {Date}   fechaBase - fecha del desembolso (se usan sus componentes locales)
+ * @param {number} n         - número de cuotas
+ * @returns {string[]} fechas de vencimiento en orden
+ */
+export function fechasVencimientoMensual(fechaBase, n) {
+  const anio = fechaBase.getFullYear()
+  const mes  = fechaBase.getMonth()
+  const dia  = fechaBase.getDate()
+  return Array.from({ length: n }, (_, i) => {
+    // Día 0 del mes siguiente = último día del mes destino (sin desbordar).
+    const ultimoDia = new Date(anio, mes + i + 2, 0).getDate()
+    const fecha = new Date(anio, mes + i + 1, Math.min(dia, ultimoDia))
+    return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
+  })
+}
+
+/**
  * Días de mora transcurridos desde una fecha de vencimiento hasta hoy.
  * Devuelve 0 si aún no ha vencido. Trabaja a nivel de día (sin horas).
  *
