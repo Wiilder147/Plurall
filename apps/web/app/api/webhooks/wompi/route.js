@@ -8,7 +8,7 @@
  * ========================================================================== */
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
-import { createHash } from 'crypto'
+import { firmaEventoWompiValida } from '@/lib/wompi'
 import { notificarPagoConfirmado } from '@/lib/notificaciones'
 import { formatNombre } from '@/lib/nombre'
 
@@ -22,14 +22,25 @@ function getSupabase() {
   return supabase
 }
 
-// ── Verificación de firma ───────────────────────────────────────────────────
-// checksum = SHA256(transaction.id + status + amount_in_cents + events_secret)
-function firmaValida(evento, tx) {
-  const secret  = process.env.WOMPI_EVENTS_SECRET || ''
-  const checksum = evento?.signature?.checksum
-  const cadena   = `${tx.id}${tx.status}${tx.amount_in_cents}${secret}`
-  const esperado = createHash('sha256').update(cadena).digest('hex')
-  return checksum === esperado
+// Estados de cuota que todavía admiten un pago (H1: nunca re-aplicar una
+// cuota ya pagada por otro pago).
+const CUOTA_PAGABLE = ['PENDIENTE', 'VENCIDA']
+
+// H2d: reclamo atómico del pago pre-registrado. Solo una entrega del evento
+// logra la transición PROCESANDO → CONFIRMADO; las demás no aplican nada.
+async function reclamarPago(db, idRecibo, cambios) {
+  const { data } = await db
+    .from('pago')
+    .update({ ...cambios, estado: 'CONFIRMADO' })
+    .eq('id_recibo', idRecibo)
+    .eq('estado', 'PROCESANDO')
+    .select('id_recibo')
+  return Array.isArray(data) && data.length > 0
+}
+
+// H2c: el monto cobrado por Wompi debe ser exactamente el pre-registrado.
+function montoCoincide(pago, montoCentavos) {
+  return Math.round(Number(pago.monto_pagado) * 100) === Number(montoCentavos)
 }
 
 // ── Recalcular el estado del crédito tras un pago ───────────────────────────
@@ -70,28 +81,29 @@ async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
   const ahora = new Date().toISOString()
   const hoy   = ahora.split('T')[0]
 
-  const sumaCapital  = cubiertas.reduce((s, c) => s + Number(c.monto_capital), 0)
-  const enMora       = cubiertas.filter((c) => Number(c.monto_mora) > 0 || c.estado_previo === 'VENCIDA').length
+  if (!montoCoincide(pago, montoCentavos)) {
+    console.error(`[Wompi Webhook] REVISION MANUAL: monto ${montoCentavos} ≠ pre-registro ${pago.monto_pagado} — ref ${referencia}`)
+    return NextResponse.json({ ok: true, msg: 'Monto no coincide — revisión manual' })
+  }
 
   // 1. Confirmar el pago (los montos agregados ya venían del pre-registro).
   //    Se atribuye al asesor asignado para que el recaudo Wompi cuente en su
   //    gestión (igual que un pago manual en efectivo).
   const idAsesor = await asesorDeCredito(db, pago.id_credito)
-  await db
-    .from('pago')
-    .update({
-      estado: 'CONFIRMADO',
-      monto_pagado: montoPagado,
-      fecha_pago: ahora,
-      updated_at: ahora,
-      ...(idAsesor ? { id_usuario_receptor: idAsesor } : {}),
-    })
-    .eq('id_recibo', pago.id_recibo)
+  const reclamado = await reclamarPago(db, pago.id_recibo, {
+    monto_pagado: montoPagado,
+    fecha_pago: ahora,
+    updated_at: ahora,
+    ...(idAsesor ? { id_usuario_receptor: idAsesor } : {}),
+  })
+  if (!reclamado) return NextResponse.json({ ok: true, msg: 'Pago ya procesado' })
 
-  // 2. Marcar cada cuota cubierta como pagada (con o sin mora)
+  // 2. Marcar cada cuota cubierta como pagada (con o sin mora), solo si sigue
+  //    pendiente/vencida: otro pago pudo cubrirla entre el pre-registro y hoy.
+  const aplicadas = []
   for (const c of cubiertas) {
     const conMora = Number(c.monto_mora) > 0
-    await db
+    const { data: filas } = await db
       .from('cuota')
       .update({
         estado_cuota:       conMora ? 'PAGADA_MORA' : 'PAGADA',
@@ -101,7 +113,17 @@ async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
         updated_at:         ahora,
       })
       .eq('id_cuota', c.id_cuota)
+      .in('estado_cuota', CUOTA_PAGABLE)
+      .select('id_cuota')
+    if (filas?.length) aplicadas.push(c)
   }
+  const todasAplicadas = aplicadas.length === cubiertas.length
+  if (!todasAplicadas) {
+    console.error(`[Wompi Webhook] REVISION MANUAL: ${cubiertas.length - aplicadas.length} cuota(s) ya estaban pagadas — ref ${referencia}`)
+  }
+
+  const sumaCapital = aplicadas.reduce((s, c) => s + Number(c.monto_capital), 0)
+  const enMora      = aplicadas.filter((c) => Number(c.monto_mora) > 0 || c.estado_previo === 'VENCIDA').length
 
   // 3. Actualizar saldo, contadores y saldo a favor del crédito
   const { data: creditoActual } = await db
@@ -113,8 +135,10 @@ async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
   if (creditoActual) {
     const nuevoSaldo = Math.max(0, Number(creditoActual.saldo_pendiente) - sumaCapital)
     // saldo a favor: aplicar el delta calculado en el pre-registro (puede ser
-    // negativo si se consumió saldo previo). Nunca baja de 0.
-    const deltaSaldoFavor = Number(pago.saldo_a_favor_delta ?? 0)
+    // negativo si se consumió saldo previo). Nunca baja de 0. Si alguna cuota
+    // ya estaba pagada, el delta se calculó sobre un estado que ya no existe
+    // (H1: doble gasto del saldo a favor) → no se aplica; queda a revisión.
+    const deltaSaldoFavor = todasAplicadas ? Number(pago.saldo_a_favor_delta ?? 0) : 0
     const nuevoSaldoFavor = Math.max(0, Math.round((Number(creditoActual.saldo_a_favor ?? 0) + deltaSaldoFavor) * 100) / 100)
     const nuevoEnMora = Math.max(0, Number(creditoActual.cuotas_en_mora ?? 0) - enMora)
 
@@ -122,7 +146,7 @@ async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
       .from('credito')
       .update({
         saldo_pendiente: nuevoSaldo,
-        cuotas_pagadas:  Number(creditoActual.cuotas_pagadas ?? 0) + cubiertas.length,
+        cuotas_pagadas:  Number(creditoActual.cuotas_pagadas ?? 0) + aplicadas.length,
         cuotas_en_mora:  nuevoEnMora,
         saldo_a_favor:   nuevoSaldoFavor,
         estado_credito:  nuevoEstadoCredito(nuevoSaldo, nuevoEnMora, creditoActual.estado_credito),
@@ -132,7 +156,7 @@ async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
 
     // 4. Notificar al cliente (fire-and-forget) — solo si cubrió alguna cuota
     try {
-      if (cubiertas.length === 0) throw new Error('sin cuotas cubiertas — solo abono a saldo')
+      if (aplicadas.length === 0) throw new Error('sin cuotas cubiertas — solo abono a saldo')
       const { data: creditoCliente } = await db
         .from('credito')
         .select('cliente ( email, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido )')
@@ -140,7 +164,7 @@ async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
         .maybeSingle()
 
       if (creditoCliente?.cliente?.email) {
-        const nums = cubiertas.map((c) => c.numero_cuota)
+        const nums = aplicadas.map((c) => c.numero_cuota)
         const etiqueta = nums.length === 1
           ? `${nums[0]}`
           : `${nums[0]} a ${nums[nums.length - 1]} (${nums.length} cuotas)`
@@ -156,7 +180,7 @@ async function confirmarMultiCuota(db, { pago, referencia, montoCentavos }) {
     } catch { /* No bloquear el webhook si el email falla */ }
   }
 
-  console.log(`[Wompi Webhook] Pago multi-cuota CONFIRMADO — ${cubiertas.length} cuotas, ref ${referencia}`)
+  console.log(`[Wompi Webhook] Pago multi-cuota CONFIRMADO — ${aplicadas.length} cuotas, ref ${referencia}`)
   return NextResponse.json({ ok: true })
 }
 
@@ -194,8 +218,13 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Evento sin transacción' }, { status: 400 })
   }
 
-  // ── Verificar firma HMAC de Wompi (prevención de spoofing) ──
-  if (!firmaValida(evento, tx)) {
+  // ── Verificar firma de Wompi (prevención de spoofing) ──
+  // Sin secreto configurado se rechaza todo (antes se validaba contra '').
+  if (!process.env.WOMPI_EVENTS_SECRET) {
+    console.error('[Wompi Webhook] WOMPI_EVENTS_SECRET no configurado: evento rechazado')
+    return NextResponse.json({ error: 'Webhook no configurado' }, { status: 500 })
+  }
+  if (!firmaEventoWompiValida(evento, process.env.WOMPI_EVENTS_SECRET)) {
     console.warn('[Wompi Webhook] Firma inválida. Posible intento de spoofing.')
     return NextResponse.json({ error: 'Firma inválida' }, { status: 401 })
   }
@@ -267,12 +296,13 @@ export async function POST(request) {
       return NextResponse.json({ ok: true, msg: 'Crédito no encontrado — revisar manualmente' })
     }
 
-    // ── Validación de monto ────────────────────────────────────
+    // ── Validación de monto (H2c: un monto distinto no se aplica) ──
     const montoEsperadoCentavos = Math.round(Number(pago?.monto_pagado ?? cuota.monto_total_cuota) * 100)
-    if (Math.abs(tx.amount_in_cents - montoEsperadoCentavos) > 0) {
-      console.warn(
-        `[Wompi Webhook] Monto inesperado: esperado ${montoEsperadoCentavos}, recibido ${tx.amount_in_cents}. Referencia: ${referencia}`
+    if (Number(tx.amount_in_cents) !== montoEsperadoCentavos) {
+      console.error(
+        `[Wompi Webhook] REVISION MANUAL: monto esperado ${montoEsperadoCentavos}, recibido ${tx.amount_in_cents}. Referencia: ${referencia}`
       )
+      return NextResponse.json({ ok: true, msg: 'Monto no coincide — revisión manual' })
     }
 
     const montoPagado = monto / 100
@@ -283,21 +313,19 @@ export async function POST(request) {
 
     // 1. Confirmar el pago (upsert: existe por pre-registro o se inserta)
     if (pago) {
-      await db
-        .from('pago')
-        .update({
-          estado:        'CONFIRMADO',
-          monto_pagado:  montoPagado,
-          monto_capital: cuota.monto_capital,
-          monto_interes: cuota.monto_interes,
-          monto_mora:    Number(pago.monto_mora ?? 0),
-          fecha_pago:    new Date().toISOString(),
-          updated_at:    new Date().toISOString(),
-          ...(idAsesor ? { id_usuario_receptor: idAsesor } : {}),
-        })
-        .eq('id_recibo', pago.id_recibo)
+      const reclamado = await reclamarPago(db, pago.id_recibo, {
+        monto_pagado:  montoPagado,
+        monto_capital: cuota.monto_capital,
+        monto_interes: cuota.monto_interes,
+        monto_mora:    Number(pago.monto_mora ?? 0),
+        fecha_pago:    new Date().toISOString(),
+        updated_at:    new Date().toISOString(),
+        ...(idAsesor ? { id_usuario_receptor: idAsesor } : {}),
+      })
+      if (!reclamado) return NextResponse.json({ ok: true, msg: 'Pago ya procesado' })
     } else {
-      await db.from('pago').insert({
+      // Sin pre-registro: el UNIQUE de referencia_externa hace de candado.
+      const { error: insErr } = await db.from('pago').insert({
         id_cuota:           cuota.id_cuota,
         id_credito:         idCredito,
         monto_pagado:       montoPagado,
@@ -309,11 +337,12 @@ export async function POST(request) {
         estado:             'CONFIRMADO',
         ...(idAsesor ? { id_usuario_receptor: idAsesor } : {}),
       })
+      if (insErr) return NextResponse.json({ ok: true, msg: 'Pago ya procesado' })
     }
 
     // 2. Actualizar estado de la cuota (PAGADA o PAGADA_MORA)
     //    El trigger trg_historial_cuota registra el cambio en historial_estado.
-    await db
+    const { data: cuotaAplicada } = await db
       .from('cuota')
       .update({
         estado_cuota:       tieneMora ? 'PAGADA_MORA' : 'PAGADA',
@@ -323,6 +352,13 @@ export async function POST(request) {
         updated_at:         new Date().toISOString(),
       })
       .eq('id_cuota', cuota.id_cuota)
+      .in('estado_cuota', CUOTA_PAGABLE)
+      .select('id_cuota')
+
+    if (!cuotaAplicada?.length) {
+      console.error(`[Wompi Webhook] REVISION MANUAL: cuota ${cuota.id_cuota} ya estaba pagada — ref ${referencia}`)
+      return NextResponse.json({ ok: true, msg: 'Cuota ya pagada — revisión manual' })
+    }
 
     // 3. Actualizar saldo y cuotas_pagadas del crédito
     const { data: creditoActual } = await db
@@ -374,7 +410,8 @@ export async function POST(request) {
     console.log(`[Wompi Webhook] Pago ${estado} — referencia: ${referencia}`)
 
     if (pago) {
-      // Actualizar el pre-registro (auditoría sin violar NOT NULL)
+      // Actualizar el pre-registro (auditoría sin violar NOT NULL). Solo si
+      // sigue PROCESANDO: un evento tardío no revierte un pago CONFIRMADO (H2e).
       await db
         .from('pago')
         .update({
@@ -383,23 +420,30 @@ export async function POST(request) {
           updated_at: new Date().toISOString(),
         })
         .eq('id_recibo', pago.id_recibo)
+        .eq('estado', 'PROCESANDO')
     } else {
-      // Fallback: sin pre-registro, intentar localizar la cuota para no perder la auditoría
+      // Fallback: sin pre-registro, intentar localizar la cuota para no perder
+      // la auditoría. id_cuota e id_credito son NOT NULL: sin ellos no se inserta.
       const cuota = await localizarCuotaPorReferencia(referencia)
-      await db
-        .from('pago')
-        .insert({
-          id_cuota:           cuota?.id_cuota ?? null,
-          id_credito:         null,
-          monto_pagado:       monto / 100,
-          monto_capital:      0,
-          monto_interes:      0,
-          monto_mora:         0,
-          metodo_pago:        'WOMPI',
-          referencia_externa: referencia,
-          estado:             'FALLIDO',
-        })
-        .catch(() => null)
+      const { data: plan } = cuota?.id_plan_pago
+        ? await db.from('plan_pago').select('id_credito').eq('id_plan_pago', cuota.id_plan_pago).maybeSingle()
+        : { data: null }
+      if (cuota && plan?.id_credito) {
+        const { error: insErr } = await db
+          .from('pago')
+          .insert({
+            id_cuota:           cuota.id_cuota,
+            id_credito:         plan.id_credito,
+            monto_pagado:       monto / 100,
+            monto_capital:      0,
+            monto_interes:      0,
+            monto_mora:         0,
+            metodo_pago:        'WOMPI',
+            referencia_externa: referencia,
+            estado:             'FALLIDO',
+          })
+        if (insErr) console.error('[Wompi Webhook] No se pudo auditar pago fallido:', insErr.message)
+      }
     }
   }
 
