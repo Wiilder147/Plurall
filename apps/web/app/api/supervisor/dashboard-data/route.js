@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
+import { exigirRol } from '@/lib/autorizacion'
 
 /**
  * GET /api/supervisor/dashboard-data
@@ -18,8 +19,9 @@ import { NextResponse } from 'next/server'
  */
 export async function GET(request) {
   const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  // S-C1: datos de toda la cartera vía service-role → solo ADMIN/SUPERVISOR
+  const auth = await exigirRol(supabase, ['ADMIN', 'SUPERVISOR'])
+  if (auth.respuesta) return auth.respuesta
 
   const { searchParams } = new URL(request.url)
   const meses      = parseInt(searchParams.get('meses') ?? '12')

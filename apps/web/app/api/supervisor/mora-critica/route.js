@@ -7,12 +7,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
+import { exigirRol } from '@/lib/autorizacion'
 import { formatNombre } from '@/lib/nombre'
 
 export async function GET() {
   const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (error || !user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  // S-C1: datos de toda la cartera vía service-role → solo ADMIN/SUPERVISOR
+  const auth = await exigirRol(supabase, ['ADMIN', 'SUPERVISOR'])
+  if (auth.respuesta) return auth.respuesta
 
   const db = createServiceClient()
   const { data } = await db
