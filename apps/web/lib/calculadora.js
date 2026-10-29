@@ -42,6 +42,39 @@ export function calcularAmortizacion(monto, tasaAnual, plazoMeses) {
 }
 
 /**
+ * Convierte una tasa efectiva anual en porcentaje (28 = 28% EA) a la tasa
+ * efectiva mensual en fracción que se guarda en decision_solicitud.
+ * Es la inversa exacta de (1 + EM)^12 - 1 que usa el desembolso.
+ */
+export function tasaEAaEM(tasaEA) {
+  return Math.pow(1 + tasaEA / 100, 1 / 12) - 1
+}
+
+// Máximo representable en decision_solicitud.monto_aprobado numeric(14,2).
+const MONTO_MAX_BD = 999_999_999_999.99
+
+/**
+ * Valida las condiciones de una aprobación antes de registrarla o desembolsarla.
+ * Solo reglas objetivas (valores positivos, finitos y representables); los
+ * rangos comerciales del producto no se aplican aquí.
+ *
+ * @returns {{campo: 'monto'|'plazo'|'tasa', mensaje: string}[]} vacío si es válido
+ */
+export function validarCondicionesAprobacion({ monto, plazo, tasaEM }) {
+  const errores = []
+  if (typeof monto !== 'number' || !Number.isFinite(monto) || monto <= 0 || monto > MONTO_MAX_BD) {
+    errores.push({ campo: 'monto', mensaje: 'El monto aprobado debe ser un valor mayor a $0.' })
+  }
+  if (!Number.isInteger(plazo) || plazo <= 0) {
+    errores.push({ campo: 'plazo', mensaje: 'El plazo aprobado debe ser un número entero de meses mayor a 0.' })
+  }
+  if (typeof tasaEM !== 'number' || !Number.isFinite(tasaEM) || tasaEM <= 0) {
+    errores.push({ campo: 'tasa', mensaje: 'La tasa de interés aprobada debe ser mayor a 0%.' })
+  }
+  return errores
+}
+
+/**
  * Fechas de vencimiento (YYYY-MM-DD) de un plan mensual de n cuotas.
  * La cuota k vence k meses después de fechaBase, el mismo día del mes; si ese
  * día no existe en el mes destino (29-31) se usa el último día de ese mes, de

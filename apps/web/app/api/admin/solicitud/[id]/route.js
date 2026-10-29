@@ -7,7 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { calcularAmortizacion } from '@/lib/calculadora'
+import { calcularAmortizacion, validarCondicionesAprobacion } from '@/lib/calculadora'
 import { formatNombre } from '@/lib/nombre'
 import {
   notificarSolicitudAprobada,
@@ -49,6 +49,16 @@ export async function PATCH(request, { params }) {
 
   if (!['APROBAR', 'RECHAZAR'].includes(accion)) {
     return NextResponse.json({ error: 'Acción inválida' }, { status: 400 })
+  }
+
+  // M-17: no registrar aprobaciones con condiciones imposibles (plazo negativo, NaN…)
+  if (accion === 'APROBAR') {
+    const errores = validarCondicionesAprobacion({
+      monto: monto_aprobado, plazo: plazo_aprobado, tasaEM: tasa_interes_aprobada,
+    })
+    if (errores.length) {
+      return NextResponse.json({ error: errores.map(e => e.mensaje).join(' '), errores }, { status: 400 })
+    }
   }
 
   const service = getServiceClient()

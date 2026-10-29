@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { calcularAmortizacion, formatCOP } from '@/lib/calculadora'
+import { calcularAmortizacion, formatCOP, tasaEAaEM, validarCondicionesAprobacion } from '@/lib/calculadora'
 import { emailVisible } from '@/lib/email'
 import {
   ArrowLeft, CheckCircle2, XCircle, Loader2, AlertCircle,
@@ -91,7 +91,7 @@ export default function SupervisorDetalleSolicitudPage() {
         accion:                'APROBAR',
         monto_aprobado:        parseFloat(montoAprobado),
         plazo_aprobado:        parseInt(plazoAprobado),
-        tasa_interes_aprobada: parseFloat(tasaAprobada) / 100 / 12,
+        tasa_interes_aprobada: tasaEAaEM(parseFloat(tasaAprobada)),
         comentarios_cliente:   comentCliente,
         comentarios_tecnicos:  comentTecnico,
       }),
@@ -162,7 +162,9 @@ export default function SupervisorDetalleSolicitudPage() {
   const montoSim  = parseFloat(montoAprobado) || sol.monto_solicitado
   const plazoSim  = parseInt(plazoAprobado)   || sol.plazo_meses
   const tasaSim   = parseFloat(tasaAprobada)  || 28
-  const simResult = calcularAmortizacion(montoSim, tasaSim, plazoSim)
+  // M-15: con condiciones inválidas no se simula (evita "$ NaN" y cuotas negativas)
+  const erroresSim = validarCondicionesAprobacion({ monto: montoSim, plazo: plazoSim, tasaEM: tasaEAaEM(tasaSim) })
+  const simResult  = erroresSim.length ? null : calcularAmortizacion(montoSim, tasaSim, plazoSim)
 
   // Color del score
   const scoreColor = !scoreData ? 'text-slate-400'
@@ -251,8 +253,8 @@ export default function SupervisorDetalleSolicitudPage() {
             ) : null)}
             <div className="mt-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3">
               <p className="text-indigo-400 text-xs font-medium">Cuota estimada (TEA {tasaSim}%)</p>
-              <p className="text-white text-xl font-extrabold mt-0.5">{formatCOP(simResult.cuotaMensual)}</p>
-              <p className="text-indigo-300 text-xs">Total intereses: {formatCOP(simResult.totalIntereses)}</p>
+              <p className="text-white text-xl font-extrabold mt-0.5">{simResult ? formatCOP(simResult.cuotaMensual) : '—'}</p>
+              <p className="text-indigo-300 text-xs">{simResult ? `Total intereses: ${formatCOP(simResult.totalIntereses)}` : erroresSim.map(e => e.mensaje).join(' ')}</p>
             </div>
           </div>
         </div>
@@ -315,7 +317,7 @@ export default function SupervisorDetalleSolicitudPage() {
           className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-slate-700/40 transition-colors">
           <span className="font-semibold text-slate-300 text-sm flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-indigo-400" />
-            Tabla de amortización ({plazoSim} cuotas · {formatCOP(simResult.cuotaMensual)}/mes)
+            Tabla de amortización {simResult ? `(${plazoSim} cuotas · ${formatCOP(simResult.cuotaMensual)}/mes)` : '(condiciones inválidas)'}
           </span>
           {mostrarTabla ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </button>
@@ -330,7 +332,7 @@ export default function SupervisorDetalleSolicitudPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/30">
-                {simResult.tablaCuotas.map((c) => (
+                {(simResult?.tablaCuotas ?? []).map((c) => (
                   <tr key={c.numero} className="hover:bg-slate-700/20">
                     <td className="px-4 py-2 text-slate-400">{c.numero}</td>
                     <td className="px-4 py-2 text-right text-slate-300">{formatCOP(c.capital)}</td>

@@ -7,7 +7,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { calcularAmortizacion, fechasVencimientoMensual } from '@/lib/calculadora'
+import { calcularAmortizacion, fechasVencimientoMensual, validarCondicionesAprobacion } from '@/lib/calculadora'
 import { notificarDesembolso } from '@/lib/notificaciones'
 import { formatNombre } from '@/lib/nombre'
 
@@ -75,6 +75,12 @@ export async function POST(request, { params }) {
   const monto  = decision.monto_aprobado
   const plazo  = decision.plazo_aprobado
   const tasaEM = decision.tasa_interes_aprobada            // tasa efectiva mensual (decimal)
+
+  // M-18: no desembolsar decisiones con condiciones inválidas (p. ej. plazo -36)
+  const erroresCond = validarCondicionesAprobacion({ monto: Number(monto), plazo, tasaEM: Number(tasaEM) })
+  if (erroresCond.length) {
+    return NextResponse.json({ error: erroresCond.map(e => e.mensaje).join(' '), errores: erroresCond }, { status: 422 })
+  }
   const tasaEA = (Math.pow(1 + tasaEM, 12) - 1) * 100     // convertir a EA%
 
   // Calcular amortización
