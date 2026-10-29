@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { calcularAmortizacion, formatCOP } from '@/lib/calculadora'
+import { MONTO_MIN, MONTO_MAX, PLAZOS } from '@/lib/producto'
 import { esEmailValido } from '@/lib/validacion'
 import {
   X, ArrowRight, ArrowLeft, CheckCircle,
@@ -13,7 +14,6 @@ import {
 
 const TASA_ANUAL = 28
 
-const PLAZOS = [12, 24, 30]
 
 const PRE_PREGUNTAS = [
   {
@@ -368,12 +368,12 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
                     <span className="font-bold text-navy-900 text-xl sm:text-2xl tracking-tight">{formatCOP(monto)}</span>
                   </div>
                   <input
-                    type="range" min="100000" max="10000000" step="50000" value={monto}
+                    type="range" min={MONTO_MIN} max={MONTO_MAX} step="50000" value={monto}
                     onChange={e => setMonto(Number(e.target.value))}
                     className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
                   />
                   <div className="flex justify-between text-base font-semibold text-slate-500 mt-2">
-                    <span>$100.000</span><span>$10.000.000</span>
+                    <span>{formatCOP(MONTO_MIN)}</span><span>{formatCOP(MONTO_MAX)}</span>
                   </div>
                 </div>
 

@@ -21,6 +21,7 @@ import {
   Loader2, AlertTriangle, ChevronDown, XCircle, Clock,
 } from 'lucide-react'
 import { calcularAmortizacion, formatCOP } from '@/lib/calculadora'
+import { MONTO_MIN, MONTO_MAX, PLAZOS } from '@/lib/producto'
 import { createClient } from '@/lib/supabase/client'
 
 // LocationPicker carga solo en el cliente (ssr: false) para evitar errores con Leaflet
@@ -128,8 +129,8 @@ export default function SolicitarCredito() {
       if (!raw) return
       const { monto: m, plazo: p, prequalificado, ts } = JSON.parse(raw)
       if (Date.now() - ts < 1_800_000) {
-        if (Number.isFinite(m) && m >= 100000 && m <= 10000000) setMonto(m)
-        if ([12, 24, 30].includes(p)) setPlazo(p)
+        if (Number.isFinite(m) && m >= MONTO_MIN && m <= MONTO_MAX) setMonto(m)
+        if (PLAZOS.includes(p)) setPlazo(p)
         if (prequalificado === true) setFromFunnel(true)
       }
     } catch { } finally {
@@ -557,12 +558,12 @@ export default function SolicitarCredito() {
                     ALTURA: h-2 (8px), FONDO: bg-slate-200 (gris)
                     BORDES: rounded-lg
                     COLOR DEL THUMB: accent-orange-500 (naranja — para cambiar: accent-blue-500)
-                    RANGO: 100.000 a 10.000.000 en pasos de 50.000 */}
-                <input type="range" min="100000" max="10000000" step="50000" value={monto}
+                    RANGO: lib/producto.js (MONTO_MIN–MONTO_MAX) en pasos de 50.000 */}
+                <input type="range" min={MONTO_MIN} max={MONTO_MAX} step="50000" value={monto}
                   onChange={e => { setMonto(Number(e.target.value)); trackEvent('AJUSTO_MONTO', { monto: Number(e.target.value) }) }}
                   className="w-full h-2 mt-20 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500" />
                 <div className="flex justify-between text-base font-semibold text-slate-500 mt-2">
-                  <span>$100.000</span><span>$10.000.000</span>
+                  <span>{formatCOP(MONTO_MIN)}</span><span>{formatCOP(MONTO_MAX)}</span>
                 </div>
               </div>
 
@@ -574,7 +575,7 @@ export default function SolicitarCredito() {
               <div>
                 <label className="font-semibold text-slate-700 block mb-3">Plazo</label>
                 <div className="flex gap-3">
-                  {[12, 24, 30].map(m => (
+                  {PLAZOS.map(m => (
                     <button key={m} type="button" onClick={() => setPlazo(m)}
                       className={`flex-1 py-3 rounded-xl border-2 font-bold text-sm transition-all ${
                         plazo === m
