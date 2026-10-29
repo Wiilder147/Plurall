@@ -139,7 +139,7 @@ export default async function DetalleCredito({ params }) {
           <p className="text-xl font-bold text-slate-900 mt-1">{cuotasPagadas} / {credito.numero_cuotas}</p>
           <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
             <div
-              className="bg-emerald-500 h-1.5 rounded-full"
+              className={`${enMora ? 'bg-red-500' : 'bg-emerald-500'} h-1.5 rounded-full`}
               style={{ width: `${Math.round((cuotasPagadas / credito.numero_cuotas) * 100)}%` }}
             />
           </div>
