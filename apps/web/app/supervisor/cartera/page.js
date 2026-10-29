@@ -29,7 +29,7 @@ export default async function SupervisorCarteraPage() {
         fecha_desembolso,
         cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono )
       `)
-      .in('estado_credito', ['ACTIVO', 'EN_MORA', 'CANCELADO'])
+      .in('estado_credito', ['ACTIVO', 'EN_MORA', 'PAGADO', 'CANCELADO'])
       .order('fecha_desembolso', { ascending: false }),
     db.from('pago').select('monto_pagado, fecha_pago').eq('estado', 'CONFIRMADO'),
     db.from('credito').select('fecha_desembolso, monto_desembolsado, estado_credito'),
@@ -37,7 +37,7 @@ export default async function SupervisorCarteraPage() {
 
   const activos    = creditos?.filter(c => c.estado_credito === 'ACTIVO')    ?? []
   const enMora     = creditos?.filter(c => c.estado_credito === 'EN_MORA')   ?? []
-  const cancelados = creditos?.filter(c => c.estado_credito === 'CANCELADO') ?? []
+  const cancelados = creditos?.filter(c => ['PAGADO', 'CANCELADO'].includes(c.estado_credito)) ?? []
 
   const carteraTotal   = [...activos, ...enMora].reduce((s, c) => s + (c.saldo_pendiente || 0), 0)
   const desembolsado   = [...activos, ...enMora].reduce((s, c) => s + (c.monto_desembolsado || 0), 0)
@@ -50,7 +50,7 @@ export default async function SupervisorCarteraPage() {
     if (!cohortesMap[mes]) cohortesMap[mes] = { otorgados: 0, monto: 0, cancelados: 0, mora: 0 }
     cohortesMap[mes].otorgados++
     cohortesMap[mes].monto += c.monto_desembolsado || 0
-    if (c.estado_credito === 'CANCELADO') cohortesMap[mes].cancelados++
+    if (['PAGADO', 'CANCELADO'].includes(c.estado_credito)) cohortesMap[mes].cancelados++
     if (c.estado_credito === 'EN_MORA')   cohortesMap[mes].mora++
   })
   const cohortesArr = Object.entries(cohortesMap)

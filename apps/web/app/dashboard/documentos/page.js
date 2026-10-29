@@ -36,7 +36,7 @@ const DOCUMENTOS = [
     label:   'Contrato de Crédito',
     desc:    'Documento oficial con términos, condiciones y obligaciones del crédito.',
     icon:    FileText,
-    estados: ['ACTIVO', 'EN_MORA', 'CANCELADO'],
+    estados: ['ACTIVO', 'EN_MORA', 'PAGADO', 'CANCELADO'],
     accent:  'text-blue-600 bg-blue-50',
   },
   {
@@ -44,7 +44,7 @@ const DOCUMENTOS = [
     label:   'Plan de Pagos',
     desc:    'Tabla de amortización completa con capital, interés y saldo por cuota.',
     icon:    Receipt,
-    estados: ['ACTIVO', 'EN_MORA', 'CANCELADO'],
+    estados: ['ACTIVO', 'EN_MORA', 'PAGADO', 'CANCELADO'],
     accent:  'text-orange-600 bg-orange-50',
   },
   {
@@ -52,7 +52,7 @@ const DOCUMENTOS = [
     label:   'Estado de Cuenta',
     desc:    'Resumen actualizado de pagos realizados, saldo y cuotas pendientes.',
     icon:    BarChart3,
-    estados: ['ACTIVO', 'EN_MORA', 'CANCELADO'],
+    estados: ['ACTIVO', 'EN_MORA', 'PAGADO', 'CANCELADO'],
     accent:  'text-purple-600 bg-purple-50',
   },
   {

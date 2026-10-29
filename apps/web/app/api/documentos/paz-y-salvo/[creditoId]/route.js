@@ -1,6 +1,7 @@
 import { procesarDocumento, boxDeudor, boxAcreedor, firmasDoc, fmtFechaDoc, formatCOP } from '@/lib/documentosHandler'
 import { formatNombre } from '@/lib/nombre'
 import { escaparHtml } from '@/lib/documentosLegal'
+import { CREDITO_SALDADO } from '@/lib/credito'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,7 @@ export async function GET(request, { params }) {
     tipoSlug: 'paz-y-salvo',
     titulo: 'Paz y Salvo',
     extraValidate: (credito) =>
-      credito.estado_credito !== 'CANCELADO' ? 'El paz y salvo solo está disponible para créditos cancelados.' : null,
+      !CREDITO_SALDADO.includes(credito.estado_credito) ? 'El paz y salvo solo está disponible para créditos pagados o cancelados.' : null,
     buildCuerpo: async ({ credito, titular, supabase }) => {
       const { data: plan } = await supabase.from('plan_pago').select('id_plan_pago').eq('id_credito', credito.id_credito).single()
       let totalPagado = 0

@@ -61,7 +61,7 @@ export default async function DashboardPerfil() {
     if (creds) {
       totalCreditos    = creds.length
       creditosActivos  = creds.filter(c => ['ACTIVO', 'EN_MORA'].includes(c.estado_credito)).length
-      creditosPagados  = creds.filter(c => c.estado_credito === 'PAGADO').length
+      creditosPagados  = creds.filter(c => ['PAGADO', 'CANCELADO'].includes(c.estado_credito)).length
       totalDesembolsado = creds.reduce((acc, c) => acc + c.monto_desembolsado, 0)
     }
   }

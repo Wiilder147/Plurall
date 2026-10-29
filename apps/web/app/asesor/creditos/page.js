@@ -17,6 +17,7 @@ const ESTADO = {
   AL_DIA:    'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   EN_MORA:   'bg-red-500/10 text-red-400 border-red-500/20',
   PAGADO:    'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  PAGADO:    'bg-blue-500/10 text-blue-400 border-blue-500/20',
   CANCELADO: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
 }
 

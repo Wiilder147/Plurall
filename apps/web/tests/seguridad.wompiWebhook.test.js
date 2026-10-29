@@ -132,6 +132,14 @@ describe('POST /api/webhooks/wompi', () => {
     expect(pago('PLR-A').estado).toBe('CONFIRMADO')
   })
 
+  it('pagar la última cuota deja el crédito en PAGADO, no CANCELADO (J-13)', async () => {
+    db.tablas.credito[0].saldo_pendiente = 100_000
+    preRegistro('PLR-A', { monto: 120000 })
+    await enviar(evento({ referencia: 'PLR-A', centavos: 12_000_000 }))
+    expect(credito().saldo_pendiente).toBe(0)
+    expect(credito().estado_credito).toBe('PAGADO')
+  })
+
   it('DECLINED sin pre-registro no rompe el webhook (H2g)', async () => {
     const res = await enviar(evento({ referencia: 'PLR-ZZZZ-1', status: 'DECLINED', centavos: 100 }))
     expect(res.status).toBe(200)

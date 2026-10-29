@@ -17,6 +17,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { formatNombre } from '@/lib/nombre'
 import { emailVisible } from '@/lib/email'
 import { labelEstadoCredito } from '@/lib/estados'
+import { CREDITO_SALDADO } from '@/lib/credito'
 import {
   ArrowLeft, User, Phone, Mail, Hash, MapPin, Store,
   CreditCard, CheckCircle2, XCircle, Clock, AlertTriangle,
@@ -260,7 +261,7 @@ export default async function FichaClienteStaff({ clienteId, backHref = '/', pue
                 { label: 'Contrato',        key: 'contrato' },
                 { label: 'Plan de pagos',   key: 'plan-pagos' },
                 { label: 'Estado de cuenta', key: 'estado-cuenta' },
-                ...(c.estado_credito === 'CANCELADO' ? [{ label: 'Paz y salvo', key: 'paz-y-salvo' }] : []),
+                ...(CREDITO_SALDADO.includes(c.estado_credito) ? [{ label: 'Paz y salvo', key: 'paz-y-salvo' }] : []),
               ]
               return (
                 <div key={c.id_credito} className="px-5 py-4">

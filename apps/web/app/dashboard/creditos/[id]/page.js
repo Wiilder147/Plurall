@@ -82,6 +82,7 @@ export default async function DetalleCredito({ params }) {
   const estadoBadge = {
     ACTIVO:    { label: 'ACTIVO',    cls: 'bg-emerald-100 text-emerald-700' },
     EN_MORA:   { label: 'EN MORA',   cls: 'bg-red-100 text-red-700' },
+    PAGADO:    { label: 'PAGADO',    cls: 'bg-blue-100 text-blue-700' },
     CANCELADO: { label: 'CANCELADO', cls: 'bg-slate-100 text-slate-600' },
     CASTIGADO: { label: 'CASTIGADO', cls: 'bg-gray-100 text-gray-600' },
   }[credito.estado_credito] ?? { label: credito.estado_credito, cls: 'bg-slate-100 text-slate-600' }

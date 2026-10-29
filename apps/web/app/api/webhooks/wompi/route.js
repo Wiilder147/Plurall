@@ -9,6 +9,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import { firmaEventoWompiValida } from '@/lib/wompi'
+import { nuevoEstadoCredito } from '@/lib/credito'
 import { notificarPagoConfirmado } from '@/lib/notificaciones'
 import { formatNombre } from '@/lib/nombre'
 
@@ -43,18 +44,8 @@ function montoCoincide(pago, montoCentavos) {
   return Math.round(Number(pago.monto_pagado) * 100) === Number(montoCentavos)
 }
 
-// ── Recalcular el estado del crédito tras un pago ───────────────────────────
-// - saldo <= 0            → CANCELADO (crédito saldado)
-// - sin cuotas en mora    → ACTIVO   (sale de mora automáticamente)
-// - con cuotas en mora    → EN_MORA
-// Estados especiales (CASTIGADO, etc.) no se tocan salvo saldo 0.
-function nuevoEstadoCredito(saldo, cuotasEnMora, estadoActual) {
-  if (saldo <= 0) return 'CANCELADO'
-  if (estadoActual === 'ACTIVO' || estadoActual === 'EN_MORA') {
-    return cuotasEnMora <= 0 ? 'ACTIVO' : 'EN_MORA'
-  }
-  return estadoActual
-}
+// El estado del crédito tras un pago se recalcula con nuevoEstadoCredito()
+// (lib/credito.js): saldo 0 → PAGADO (J-13).
 
 // ── Asesor activo asignado al crédito (para atribuir el recaudo Wompi) ──────
 // Así el pago por Wompi también "cuenta" en las métricas del asesor/cobranza.
