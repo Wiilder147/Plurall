@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { rechazarSolicitudesPorKyc } from '@/lib/kyc'
 
 const STAFF = ['ADMIN', 'SUPERVISOR', 'ASESOR']
 const ESTADOS = ['PENDIENTE', 'APROBADO', 'RECHAZADO']
@@ -48,5 +49,18 @@ export async function PATCH(request, { params }) {
     console.error('[Verificar doc]', error)
     return NextResponse.json({ error: 'No se pudo actualizar el documento' }, { status: 500 })
   }
-  return NextResponse.json({ ok: true, estado: estadoFinal })
+
+  // M-01 (decisión de negocio 29-oct-2026): documento rechazado → la solicitud
+  // de crédito activa del cliente se rechaza automáticamente.
+  let solicitudesRechazadas = 0
+  if (estadoFinal === 'RECHAZADO') {
+    const { data: doc } = await service
+      .from('documento_cliente').select('id_cliente').eq('id_documento', id).maybeSingle()
+    if (doc?.id_cliente) {
+      solicitudesRechazadas = await rechazarSolicitudesPorKyc(service, {
+        idCliente: doc.id_cliente, idUsuario: user.id, motivo: motivo.trim(),
+      })
+    }
+  }
+  return NextResponse.json({ ok: true, estado: estadoFinal, solicitudesRechazadas })
 }

@@ -9,6 +9,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { calcularAmortizacion, validarCondicionesAprobacion } from '@/lib/calculadora'
 import { formatNombre } from '@/lib/nombre'
+import { tieneKycRechazado, MENSAJE_KYC_RECHAZADO } from '@/lib/kyc'
 import {
   notificarSolicitudAprobada,
   notificarSolicitudRechazada,
@@ -79,6 +80,9 @@ export async function PATCH(request, { params }) {
   const estadoActual = sol.estado_solicitud?.nombre?.toUpperCase()
   if (!['PENDIENTE', 'EN_ESTUDIO'].includes(estadoActual)) {
     return NextResponse.json({ error: 'La solicitud ya fue procesada' }, { status: 409 })
+  }
+  if (accion === 'APROBAR' && await tieneKycRechazado(service, sol.id_cliente)) {
+    return NextResponse.json({ error: MENSAJE_KYC_RECHAZADO }, { status: 409 })
   }
 
   // Obtener el estado destino

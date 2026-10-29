@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { tieneKycRechazado, MENSAJE_KYC_RECHAZADO } from '@/lib/kyc'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
@@ -47,7 +48,7 @@ export async function PATCH(request, { params }) {
   // Verificar que la solicitud existe y está en PENDIENTE
   const { data: sol } = await service
     .from('solicitud_credito')
-    .select('id_solicitud, estado_solicitud ( nombre )')
+    .select('id_solicitud, id_cliente, estado_solicitud ( nombre )')
     .eq('id_solicitud', id)
     .single()
 
@@ -56,6 +57,10 @@ export async function PATCH(request, { params }) {
   const estadoActual = sol.estado_solicitud?.nombre?.toUpperCase()
   if (estadoActual !== 'PENDIENTE') {
     return NextResponse.json({ error: 'Solo se pueden gestionar solicitudes en estado PENDIENTE' }, { status: 409 })
+  }
+
+  if (accion === 'PRE_APROBAR' && await tieneKycRechazado(service, sol.id_cliente)) {
+    return NextResponse.json({ error: MENSAJE_KYC_RECHAZADO }, { status: 409 })
   }
 
   // Determinar estado destino
