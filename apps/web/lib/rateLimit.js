@@ -28,7 +28,8 @@ export async function rateLimit(key, { limit = 10, windowSec = 60 } = {}) {
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify([
           ['INCR', key],
-          ['PEXPIRE', key, windowSec, 'NX'],
+          // PEXPIRE recibe milisegundos (antes se pasaban segundos: ventana 1000× más corta)
+          ['PEXPIRE', key, windowMs, 'NX'],
         ]),
       })
       const data = await res.json()

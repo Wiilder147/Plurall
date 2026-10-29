@@ -6,6 +6,19 @@
  * ========================================================================== */
 import { NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { timingSafeEqual } from 'node:crypto'
+import { rateLimit, getClientIp } from '@/lib/rateLimit'
+
+// S-C2: intentos de verificación permitidos por celular y por IP en la ventana.
+const MAX_INTENTOS_CELULAR = 5
+const MAX_INTENTOS_IP      = 20
+const VENTANA_SEG          = 15 * 60
+
+function codigoIgual(a, b) {
+  const x = Buffer.from(String(a))
+  const y = Buffer.from(String(b))
+  return x.length === y.length && timingSafeEqual(x, y)
+}
 
 function getServiceClient() {
   return createServiceClient(
@@ -29,6 +42,19 @@ export async function POST(request) {
 
     const service = getServiceClient()
 
+    // S-C2: frenar la fuerza bruta del código de 6 dígitos. Al agotar los
+    // intentos se invalidan en BD los OTP activos del celular, de modo que el
+    // bloqueo persiste aunque el contador se pierda (p. ej. fallback en memoria).
+    const porCelular = await rateLimit(`otp-verificar:cel:${celular}`, { limit: MAX_INTENTOS_CELULAR, windowSec: VENTANA_SEG })
+    const porIp      = await rateLimit(`otp-verificar:ip:${getClientIp(request)}`, { limit: MAX_INTENTOS_IP, windowSec: VENTANA_SEG })
+    if (!porCelular.success || !porIp.success) {
+      await service.from('otp_recuperacion').update({ usado: true }).eq('celular', celular).eq('usado', false)
+      return NextResponse.json(
+        { error: 'Demasiados intentos. Solicita un nuevo código en unos minutos.' },
+        { status: 429 }
+      )
+    }
+
     // 1. Buscar el OTP válido más reciente
     const { data: otps, error: otpErr } = await service
       .from('otp_recuperacion')
@@ -41,7 +67,7 @@ export async function POST(request) {
 
     if (otpErr) throw otpErr
 
-    if (!otps || otps.length === 0 || otps[0].otp_code !== otp) {
+    if (!otps || otps.length === 0 || !codigoIgual(otps[0].otp_code, otp)) {
       return NextResponse.json({ error: 'Código inválido o expirado' }, { status: 400 })
     }
 

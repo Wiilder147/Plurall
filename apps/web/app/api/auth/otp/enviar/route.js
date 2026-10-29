@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
 import { formatNombre } from '@/lib/nombre'
+import { randomInt } from 'node:crypto'
+import { rateLimit, getClientIp } from '@/lib/rateLimit'
 
 const GMAIL_USER = process.env.GMAIL_FROM_EMAIL || 'wfeoorjuela@gmail.com'
 
@@ -31,6 +33,13 @@ export async function POST(request) {
     const { celular } = await request.json()
     if (!celular) return NextResponse.json({ error: 'Celular es requerido' }, { status: 400 })
 
+    // S-C2: cada envío abre una nueva ventana de 10 min para adivinar el código
+    const porCelular = await rateLimit(`otp-enviar:cel:${celular}`, { limit: 3, windowSec: 15 * 60 })
+    const porIp      = await rateLimit(`otp-enviar:ip:${getClientIp(request)}`, { limit: 10, windowSec: 15 * 60 })
+    if (!porCelular.success || !porIp.success) {
+      return NextResponse.json({ error: 'Demasiadas solicitudes. Intenta de nuevo en unos minutos.' }, { status: 429 })
+    }
+
     const service = getServiceClient()
 
     // Buscar cliente por teléfono para obtener su email
@@ -49,7 +58,7 @@ export async function POST(request) {
     }
 
     if (!emailReal) {
-      console.warn('[OTP] Cliente no encontrado para el celular:', celular)
+      console.warn('[OTP] Cliente no encontrado para el celular solicitado')
       // Informar claramente que el número no está registrado (no enviar código
       // "porque sí"). Nota: revela existencia de usuarios — decisión de negocio.
       return NextResponse.json(
@@ -59,7 +68,8 @@ export async function POST(request) {
     }
 
     // Generar OTP de 6 dígitos
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
+    // Generador criptográfico (Math.random no es apto para secretos)
+    const otpCode = randomInt(100000, 1000000).toString()
 
     // Guardar en DB con expiración de 10 minutos
     const expiracion = new Date()
@@ -90,7 +100,7 @@ export async function POST(request) {
       `,
     })
 
-    console.log(`[OTP] Código enviado a ${emailReal} para celular ${celular}`)
+    console.log('[OTP] Código de recuperación enviado')
 
     // Enmascarar el correo antes de enviarlo al frontend
     const [namePart, domainPart] = emailReal.split('@')
