@@ -3,6 +3,7 @@
  * RUTA: apps/web/lib/credito.js
  * DESCRIPCIÓN: Reglas de estado del crédito compartidas (Wompi y efectivo).
  * ========================================================================== */
+import { diasMoraDesde } from './calculadora'
 
 // Estados que significan "crédito sin deuda": PAGADO (todas las cuotas
 // pagadas) y CANCELADO (prepago/anulación). Paz y salvo y métricas usan ambos.
@@ -65,4 +66,18 @@ export function fechaCierrePorCredito(cuotas) {
     if (!cierre[id] || String(f) > String(cierre[id])) cierre[id] = String(f)
   }
   return cierre
+}
+
+const ESTADOS_PAGADA = ['PAGADA', 'PAGADA_MORA', 'CONDONADA']
+
+// M-04: situación de mora a una fecha. Cuota en atraso según RN-08
+// (docs/requerimientos.md:216): fecha_vencimiento < hoy y no pagada, aunque el
+// cron no la haya marcado VENCIDA. "Días mora máx." = mayor entre el máximo
+// histórico guardado y el atraso de la cuota más antigua.
+export function resumenMora(cuotas, diasMoraGuardado = 0, hoy = new Date()) {
+  const enAtraso = (cuotas ?? []).filter(c =>
+    !ESTADOS_PAGADA.includes(c.estado_cuota) && diasMoraDesde(c.fecha_vencimiento, hoy) > 0
+  )
+  const actual = enAtraso.reduce((m, c) => Math.max(m, diasMoraDesde(c.fecha_vencimiento, hoy)), 0)
+  return { enAtraso, diasMoraMax: Math.max(Number(diasMoraGuardado) || 0, actual) }
 }

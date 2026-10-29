@@ -1,4 +1,5 @@
 import { labelEstadoCredito } from '@/lib/estados'
+import { resumenMora } from '@/lib/credito'
 import { procesarDocumento, boxDeudor, boxAcreedor, fmtFechaDoc, formatCOP } from '@/lib/documentosHandler'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +18,9 @@ export async function GET(request, { params }) {
         cuotas = data || []
       }
       const pagadas = cuotas.filter(c => ['PAGADA', 'PAGADA_MORA', 'CONDONADA'].includes(c.estado_cuota))
-      const vencidas = cuotas.filter(c => c.estado_cuota === 'VENCIDA')
+      // M-04: atraso y días de mora calculados al generar (RN-08), no el valor
+      // guardado que el cron deja de actualizar.
+      const { enAtraso: vencidas, diasMoraMax } = resumenMora(cuotas, credito.dias_mora_maximo)
       const totalPagado = pagadas.reduce((s, c) => s + (c.monto_total_cuota || 0), 0)
       const totalVencido = vencidas.reduce((s, c) => s + (c.monto_total_cuota || 0), 0)
 
@@ -31,7 +34,7 @@ export async function GET(request, { params }) {
             <div class="row"><span class="lbl">Total pagado</span><span class="val">${formatCOP(totalPagado)}</span></div>
             <div class="row"><span class="lbl">Cuotas vencidas</span><span class="val">${vencidas.length} (${formatCOP(totalVencido)})</span></div>
             <div class="row"><span class="lbl">Cuotas pagadas</span><span class="val">${pagadas.length} / ${cuotas.length}</span></div>
-            <div class="row"><span class="lbl">Días mora máx.</span><span class="val">${credito.dias_mora_maximo || 0}</span></div>
+            <div class="row"><span class="lbl">Días mora máx.</span><span class="val">${diasMoraMax}</span></div>
           </div>
         </div>`
     },
