@@ -5,7 +5,9 @@
  * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
+import { distribuirPagoEfectivo, nuevoEstadoCredito } from '@/lib/credito'
 
 /**
  * POST /api/asesor/gestion
@@ -38,6 +40,21 @@ export async function POST(request) {
 
   if (!clienteId || !creditoId || !tipo_gestion || !resultado) {
     return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+  }
+
+  // Un pago recibido exige un monto válido (antes se aceptaba cualquier valor)
+  const esPago = resultado === 'PAGO_RECIBIDO'
+  const montoEfectivo = Number(monto_recibido)
+  if (esPago && (monto_recibido == null || !Number.isFinite(montoEfectivo) || montoEfectivo <= 0)) {
+    return NextResponse.json({ error: 'Indica el monto recibido (mayor a $0).' }, { status: 400 })
+  }
+
+  // El crédito debe pertenecer al cliente indicado (la asignación se valida por cliente)
+  const service = createServiceClient()
+  const { data: creditoCli } = await service
+    .from('credito').select('id_cliente').eq('id_credito', creditoId).maybeSingle()
+  if (!creditoCli || creditoCli.id_cliente !== clienteId) {
+    return NextResponse.json({ error: 'El crédito no corresponde al cliente' }, { status: 400 })
   }
 
   // Verificar que el cliente esté asignado a este asesor (solo para rol ASESOR)
@@ -76,42 +93,130 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Error al registrar la gestión' }, { status: 500 })
   }
 
-  // 2. Si es pago en efectivo, registrar en tabla pago
-  if (resultado === 'PAGO_RECIBIDO' && monto_recibido > 0) {
-    // Buscar la cuota más antigua vencida para aplicar el pago
-    const { data: plan } = await supabase
-      .from('plan_pago')
-      .select('id_plan_pago')
-      .eq('id_credito', creditoId)
-      .single()
-
-    if (plan) {
-      const { data: cuotaVencida } = await supabase
-        .from('cuota')
-        .select('id_cuota, monto_capital, monto_interes, monto_total_cuota')
-        .eq('id_plan_pago', plan.id_plan_pago)
-        .eq('estado_cuota', 'VENCIDA')
-        .order('fecha_vencimiento', { ascending: true })
-        .limit(1)
-        .single()
-
-      if (cuotaVencida) {
-        await supabase.from('pago').insert({
-          id_cuota:           cuotaVencida.id_cuota,
-          id_credito:         creditoId,
-          id_usuario_receptor: user.id,
-          monto_pagado:       monto_recibido,
-          monto_capital:      Math.min(monto_recibido, cuotaVencida.monto_capital),
-          monto_interes:      cuotaVencida.monto_interes,
-          monto_mora:         Math.max(0, monto_recibido - cuotaVencida.monto_total_cuota),
-          metodo_pago:        'EFECTIVO',
-          referencia_externa: `EFE-${user.id.slice(0,6).toUpperCase()}-${Date.now()}`,
-          estado:             'CONFIRMADO',
-          fecha_pago:         new Date().toISOString(),
-        })
-      }
+  // 2. Pago en efectivo (J-06/J-07, decisión de negocio 29-oct-2026): se aplica
+  //    a las cuotas VENCIDAS de la más antigua a la más reciente; en cada una
+  //    primero interés y luego capital; el excedente queda como saldo a favor.
+  //    Antes solo se insertaba el pago: cuota y crédito nunca se actualizaban.
+  if (esPago) {
+    const resultadoPago = await aplicarPagoEfectivo(service, { creditoId, idAsesor: user.id, monto: montoEfectivo })
+    if (resultadoPago.error) {
+      return NextResponse.json({ error: resultadoPago.error }, { status: resultadoPago.status })
     }
+    return NextResponse.json({ ok: true, pago: resultadoPago })
   }
 
   return NextResponse.json({ ok: true })
+}
+
+async function aplicarPagoEfectivo(db, { creditoId, idAsesor, monto }) {
+  const ahora = new Date().toISOString()
+  const hoy   = ahora.split('T')[0]
+
+  const { data: plan } = await db
+    .from('plan_pago').select('id_plan_pago').eq('id_credito', creditoId).maybeSingle()
+  if (!plan) return { error: 'El crédito no tiene plan de pagos', status: 409 }
+
+  const { data: cuotas } = await db
+    .from('cuota')
+    .select('id_cuota, numero_cuota, estado_cuota, fecha_vencimiento, monto_capital, monto_interes')
+    .eq('id_plan_pago', plan.id_plan_pago)
+    .in('estado_cuota', ['VENCIDA', 'PENDIENTE'])
+    .order('fecha_vencimiento', { ascending: true })
+  const abiertas = (cuotas ?? []).slice()
+    .sort((a, b) => String(a.fecha_vencimiento).localeCompare(String(b.fecha_vencimiento)))
+  if (!abiertas.length) return { error: 'El crédito no tiene cuotas por pagar', status: 409 }
+  const vencidas = abiertas.filter(c => c.estado_cuota === 'VENCIDA')
+
+  // Abonos parciales en efectivo previos a estas cuotas
+  const { data: previos } = await db
+    .from('pago')
+    .select('id_cuota, monto_capital, monto_interes')
+    .eq('id_credito', creditoId)
+    .eq('metodo_pago', 'EFECTIVO')
+    .eq('estado', 'CONFIRMADO')
+  const abonado = {}
+  for (const p of previos ?? []) {
+    const a = abonado[p.id_cuota] ??= { capital: 0, interes: 0 }
+    a.capital += Number(p.monto_capital)
+    a.interes += Number(p.monto_interes)
+  }
+
+  const { aplicaciones, excedente } = distribuirPagoEfectivo(monto, vencidas.map(c => ({
+    ...c,
+    capital_pagado: abonado[c.id_cuota]?.capital ?? 0,
+    interes_pagado: abonado[c.id_cuota]?.interes ?? 0,
+  })))
+
+  // Un recibo por cuota tocada; el excedente se anota en el último (o, si no
+  // hubo cuotas vencidas, en la próxima cuota pendiente como ancla).
+  const recibos = aplicaciones.map(a => ({ id_cuota: a.id_cuota, monto: a.interes + a.capital, capital: a.capital, interes: a.interes, delta: 0 }))
+  if (excedente > 0) {
+    if (recibos.length) recibos[recibos.length - 1].delta = excedente
+    else recibos.push({ id_cuota: abiertas[0].id_cuota, monto: 0, capital: 0, interes: 0, delta: excedente })
+  }
+  const base = `EFE-${idAsesor.slice(0, 6).toUpperCase()}-${Date.now()}`
+  for (const [i, r] of recibos.entries()) {
+    const { error } = await db.from('pago').insert({
+      id_cuota:            r.id_cuota,
+      id_credito:          creditoId,
+      id_usuario_receptor: idAsesor,
+      monto_pagado:        Math.round((r.monto + r.delta) * 100) / 100,
+      monto_capital:       r.capital,
+      monto_interes:       r.interes,
+      monto_mora:          0,
+      metodo_pago:         'EFECTIVO',
+      referencia_externa:  `${base}-${i + 1}`,
+      estado:              'CONFIRMADO',
+      fecha_pago:          ahora,
+      saldo_a_favor_delta: r.delta || null,
+    })
+    if (error) {
+      console.error('[Pago efectivo] Error registrando recibo:', error.message)
+      return { error: 'No se pudo registrar el pago', status: 500 }
+    }
+  }
+
+  // Cuotas completadas → PAGADA (solo si siguen vencidas)
+  let completadas = 0
+  for (const a of aplicaciones.filter(x => x.completa)) {
+    const c = vencidas.find(v => v.id_cuota === a.id_cuota)
+    const previo = abonado[a.id_cuota] ?? { capital: 0, interes: 0 }
+    const { data: filas } = await db
+      .from('cuota')
+      .update({
+        estado_cuota:      'PAGADA',
+        monto_pagado_real: Math.round((Number(c.monto_capital) + Number(c.monto_interes)) * 100) / 100,
+        fecha_pago_real:   hoy,
+        updated_at:        ahora,
+      })
+      .eq('id_cuota', a.id_cuota)
+      .in('estado_cuota', ['VENCIDA'])
+      .select('id_cuota')
+    if (filas?.length) completadas++
+    else console.error(`[Pago efectivo] REVISION MANUAL: cuota ${a.id_cuota} ya no estaba vencida (abonado previo ${previo.capital + previo.interes})`)
+  }
+
+  const capitalAplicado = aplicaciones.reduce((s, a) => s + a.capital, 0)
+  const { data: credito } = await db
+    .from('credito')
+    .select('saldo_pendiente, cuotas_pagadas, cuotas_en_mora, estado_credito, saldo_a_favor')
+    .eq('id_credito', creditoId)
+    .maybeSingle()
+  if (credito) {
+    const nuevoSaldo  = Math.max(0, Math.round((Number(credito.saldo_pendiente) - capitalAplicado) * 100) / 100)
+    const nuevoEnMora = Math.max(0, Number(credito.cuotas_en_mora ?? 0) - completadas)
+    await db
+      .from('credito')
+      .update({
+        saldo_pendiente: nuevoSaldo,
+        cuotas_pagadas:  Number(credito.cuotas_pagadas ?? 0) + completadas,
+        cuotas_en_mora:  nuevoEnMora,
+        saldo_a_favor:   Math.round((Number(credito.saldo_a_favor ?? 0) + excedente) * 100) / 100,
+        estado_credito:  nuevoEstadoCredito(nuevoSaldo, nuevoEnMora, credito.estado_credito),
+        updated_at:      ahora,
+      })
+      .eq('id_credito', creditoId)
+  }
+
+  return { cuotasCompletadas: completadas, capitalAplicado, saldoAFavor: excedente }
 }
