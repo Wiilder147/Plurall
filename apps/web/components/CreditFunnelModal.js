@@ -272,49 +272,24 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
 
     setAuthLoading(true)
 
-    // Check lockout before attempting login
+    // Login en el servidor (H3): bloqueo por intentos aplicado antes de autenticar
     try {
-      const lockRes = await fetch(`/api/auth/lockout?celular=${telLimpio}`)
-      if (lockRes.ok) {
-        const lockData = await lockRes.json()
-        if (lockData.bloqueado) {
-          setAuthError(`Cuenta bloqueada. Intenta en ${lockData.minutosRestantes} minuto${lockData.minutosRestantes > 1 ? 's' : ''}.`)
-          setAuthLoading(false)
-          return
-        }
+      const res  = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ celular: telLimpio, password: loginForm.password }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setAuthError(data.error || 'Celular o contraseña incorrectos.')
+        setAuthLoading(false)
+        return
       }
-    } catch { /* Si el endpoint falla, continuamos */ }
-
-    const fakeEmail = `${telLimpio}@plurall.app`
-    const { error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password: loginForm.password })
-
-    if (error) {
-      try {
-        const res  = await fetch('/api/auth/lockout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ celular: telLimpio }),
-        })
-        const data = await res.json()
-        if (data.bloqueado) {
-          setAuthError('Demasiados intentos fallidos. Tu cuenta ha sido bloqueada por 30 minutos.')
-        } else {
-          const restantes = Math.max(0, 3 - (data.intentos || 0))
-          setAuthError(`Celular o contraseña incorrectos.${restantes > 0 ? ` Intentos restantes: ${restantes}.` : ''}`)
-        }
-      } catch {
-        setAuthError('Celular o contraseña incorrectos.')
-      }
+    } catch {
+      setAuthError('No pudimos conectar con el servidor. Intenta de nuevo.')
       setAuthLoading(false)
       return
     }
-
-    // Login successful — reset lockout counter
-    fetch('/api/auth/lockout', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ celular: telLimpio }),
-    }).catch(() => null)
 
     fireEvent('LOGIN_DESDE_FUNNEL', { monto, plazo })
     saveAndRedirect()

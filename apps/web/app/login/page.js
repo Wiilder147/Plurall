@@ -11,7 +11,6 @@
 import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Lock, Phone, Globe, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
@@ -44,67 +43,25 @@ export default function LoginPage() {
 
     setLoading(true)
 
-    // ── Verificar bloqueo antes de intentar login ─────────────────────────────
-    // Antes de llamar a Supabase, verificamos si este celular ya superó los 3 intentos.
+    // ── Login en el servidor (H3): el servidor verifica el bloqueo por intentos
+    //    ANTES de autenticar y deja la sesión en cookies.
     try {
-      const lockRes = await fetch(`/api/auth/lockout?celular=${telLimpio}`)
-      if (lockRes.ok) {
-        const lockData = await lockRes.json()
-        if (lockData.bloqueado) {
-          setError(`Cuenta bloqueada por intentos fallidos. Intenta en ${lockData.minutosRestantes} minuto${lockData.minutosRestantes > 1 ? 's' : ''}.`)
-          setLoading(false)
-          return
-        }
-      }
-    } catch { /* Si el endpoint falla, continuamos sin bloqueo */ }
-
-    // ── Verificar que el celular esté registrado ──────────────────────────────
-    // Diferencia "número no registrado" de "contraseña incorrecta" y evita
-    // que el contador de bloqueo se mueva con números que no existen.
-    try {
-      const exRes  = await fetch(`/api/auth/existe?celular=${telLimpio}`)
-      const exData = await exRes.json()
-      if (exData.existe === false) {
-        setError('Este número no está registrado. Verifica el número o crea una cuenta.')
+      const res  = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ celular: telLimpio, password }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'No pudimos iniciar sesión. Intenta de nuevo.')
         setLoading(false)
         return
       }
-    } catch { /* si el chequeo falla, continuamos con el login normal */ }
-
-    // ── El Truco del Correo Virtual ───────────────────────────────────────────
-    // Supabase Auth requiere un email. Creamos uno virtual: 3001234567@plurall.app
-    const fakeEmail = `${telLimpio}@plurall.app`.toLowerCase()
-    const supabase  = createClient()
-    const { error: authError } = await supabase.auth.signInWithPassword({ email: fakeEmail, password })
-
-    if (authError) {
-      // Aquí ya sabemos que el número existe → el fallo es de contraseña.
-      try {
-        const res = await fetch('/api/auth/lockout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ celular: telLimpio }),
-        })
-        const data = await res.json()
-        if (data.bloqueado) {
-          setError('Demasiados intentos fallidos. Tu cuenta ha sido bloqueada por 30 minutos.')
-        } else {
-          const restantes = Math.max(0, 3 - (data.intentos || 0))
-          setError(`Contraseña incorrecta.${restantes > 0 ? ` Intentos restantes: ${restantes}.` : ''}`)
-        }
-      } catch {
-        setError('Contraseña incorrecta.')
-      }
+    } catch {
+      setError('No pudimos conectar con el servidor. Intenta de nuevo.')
       setLoading(false)
       return
     }
-
-    // ── Login exitoso: resetear contador de intentos ──────────────────────────
-    fetch('/api/auth/lockout', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ celular: telLimpio }),
-    }).catch(() => null)
 
     // ── Redirigir al portal según el rol del usuario ──────────────────────────
     try {

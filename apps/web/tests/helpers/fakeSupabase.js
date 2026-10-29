@@ -4,6 +4,14 @@
 export function crearFakeDb(tablas = {}) {
   const db = { tablas, uniques: { pago: ['referencia_externa'] } }
 
+  // RPCs simuladas: db.rpcs[nombre] = (args, db) => data
+  db.rpcs = {}
+  db.rpc = async (nombre, args) => {
+    const fn = db.rpcs[nombre]
+    if (!fn) return { data: null, error: { message: `rpc ${nombre} no simulada` } }
+    return { data: fn(args, db), error: null }
+  }
+
   db.from = (nombre) => {
     if (!db.tablas[nombre]) db.tablas[nombre] = []
     const filas = db.tablas[nombre]
