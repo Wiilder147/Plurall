@@ -6,6 +6,7 @@
  * ========================================================================== */
 import { NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createClient as createSessionClient } from '@/lib/supabase/server'
 
 function getServiceClient() {
   return createServiceClient(
@@ -121,30 +122,19 @@ export async function POST(request) {
   })
 }
 
-// DELETE /api/auth/lockout  body: { celular }
-// → resetea intentos tras login exitoso
-export async function DELETE(request) {
-  const { celular: rawCelular } = await request.json()
-  const celular = rawCelular?.replace(/\D/g, '')
+// DELETE /api/auth/lockout
+// → resetea intentos tras login exitoso. H3: solo el propio usuario con
+//   sesión activa (se ignora el celular del body: antes cualquiera podía
+//   desbloquear cualquier cuenta).
+export async function DELETE() {
+  const sesion = await createSessionClient()
+  const { data: { user } } = await sesion.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  if (!celular || celular.length !== 10) {
-    return NextResponse.json({ ok: false })
-  }
-
-  const supabase = getServiceClient()
-
-  const { data: clienteRow } = await supabase
-    .from('cliente')
-    .select('id_usuario_cuenta')
-    .eq('telefono', celular)
-    .single()
-
-  if (!clienteRow) return NextResponse.json({ ok: true })
-
-  await supabase
+  await getServiceClient()
     .from('perfil_usuario')
     .update({ intentos_fallidos: 0, bloqueado_hasta: null })
-    .eq('id', clienteRow.id_usuario_cuenta)
+    .eq('id', user.id)
 
   return NextResponse.json({ ok: true })
 }
