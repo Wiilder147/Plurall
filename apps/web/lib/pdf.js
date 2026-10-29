@@ -44,6 +44,9 @@ export async function responderDocumento(request, html, { filename, creditoId })
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
+      // H4: el HTML se sirve en el origen de la app; sin scripts permitidos.
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src https: data:; base-uri 'none'; form-action 'none'",
+      'X-Content-Type-Options': 'nosniff',
       'Content-Disposition': format === 'download' ? `attachment; filename="${filename?.replace('.pdf', '.html')}"` : 'inline',
     },
   })

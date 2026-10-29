@@ -1,5 +1,6 @@
 import { procesarDocumento, boxDeudor, boxAcreedor, firmasDoc, fmtFechaDoc, formatCOP } from '@/lib/documentosHandler'
 import { formatNombre } from '@/lib/nombre'
+import { escaparHtml } from '@/lib/documentosLegal'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,7 @@ export async function GET(request, { params }) {
         <div class="section">
           <div class="legal" style="text-align:center;padding:32px">
             <p style="font-size:18px;font-weight:800;color:#166534;margin-bottom:16px">PAZ Y SALVO</p>
-            <p>PLURALL certifica que <strong>${formatNombre(titular)}</strong>, identificado con C.C. <strong>${titular.dni}</strong>,
+            <p>PLURALL certifica que <strong>${escaparHtml(formatNombre(titular))}</strong>, identificado con C.C. <strong>${escaparHtml(titular.dni)}</strong>,
             ha cancelado en su totalidad el crédito N.° ${credito.id_credito.slice(-8).toUpperCase()} por valor de
             <strong>${formatCOP(credito.monto_desembolsado)}</strong>, con un total pagado de <strong>${formatCOP(totalPagado)}</strong>.</p>
             <p style="margin-top:16px">Fecha de expedición: ${fmtFechaDoc(new Date().toISOString())}</p>

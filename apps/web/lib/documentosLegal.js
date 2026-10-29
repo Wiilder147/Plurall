@@ -108,12 +108,22 @@ export function wrapDocumentHtml({ titulo, tipoDoc, ref, creditoId, cuerpo }) {
 </html>`
 }
 
+// H4: los datos del titular los escribe el propio cliente → escapar siempre.
+export function escaparHtml(valor) {
+  return String(valor ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export function boxDeudor(titular) {
   return `<div class="box">
     <h3>Deudor</h3>
-    <div class="row"><span class="lbl">Nombre</span><span class="val">${formatNombre(titular) || '—'}</span></div>
-    <div class="row"><span class="lbl">C.C.</span><span class="val">${titular.dni || '—'}</span></div>
-    <div class="row"><span class="lbl">Email</span><span class="val">${titular.email || '—'}</span></div>
+    <div class="row"><span class="lbl">Nombre</span><span class="val">${escaparHtml(formatNombre(titular)) || '—'}</span></div>
+    <div class="row"><span class="lbl">C.C.</span><span class="val">${escaparHtml(titular.dni) || '—'}</span></div>
+    <div class="row"><span class="lbl">Email</span><span class="val">${escaparHtml(titular.email) || '—'}</span></div>
   </div>`
 }
 
@@ -128,7 +138,7 @@ export function boxAcreedor() {
 
 export function firmasDoc(titular) {
   return `<div class="sigs">
-    <div><div class="sig-line">Firma del Deudor<br/>${formatNombre(titular) || '—'}<br/>C.C. ${titular.dni || '—'}</div></div>
+    <div><div class="sig-line">Firma del Deudor<br/>${escaparHtml(formatNombre(titular)) || '—'}<br/>C.C. ${escaparHtml(titular.dni) || '—'}</div></div>
     <div><div class="sig-line">Representante Legal<br/>${EMPRESA.razonSocial}<br/>NIT: ${EMPRESA.nit}</div></div>
   </div>`
 }
