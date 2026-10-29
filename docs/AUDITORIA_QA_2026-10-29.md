@@ -6,8 +6,8 @@ Rama: `fix/auditoria-qa-20261029` (base `origin/develop` @ `a52c090`).
 
 - **Fuentes:** 4 PDF del 29-oct (Camila Ávila 4, Jeferson Lugo 15, Juan Maurello 18, Wilder Feo 8 = **45 hallazgos**). También el documento de pruebas Vitest en `Estudio/evidencia`; los ejercicios PHP/Python de esa carpeta no son de Plurall.
 - **Auditoría adicional:** backend/financiero, seguridad (51 rutas API) y frontend. Encontró **8 defectos nuevos** (NEW-01..07, INF-01) y **13 de seguridad** (S-C1, S-C2, H1–H4, M1–M8).
-- **Corregidos:** 36 hallazgos, la mayoría con una prueba automatizada que fallaba antes del fix. Detalle en la sección B.
-- **Tests:** 22 → **111** (3 → 19 archivos), todos en verde.
+- **Corregidos:** 38 hallazgos, la mayoría con una prueba automatizada que fallaba antes del fix. Detalle en la sección B.
+- **Tests:** 22 → **116** (3 → 20 archivos), todos en verde.
 - **Calidad:** el lint queda igual a la línea base (4 errores preexistentes, ninguno en código tocado) y el build de producción termina bien.
 - **Riesgos críticos encontrados y corregidos:**
   - Fuga de cartera a cualquier cliente autenticado (S-C1).
@@ -58,6 +58,8 @@ Estados posibles:
 | M-07 | Baja | Bloqueo de 90 días sin explicar; botón de solicitar visible | C | a94c873 |
 | C-02 | Baja | Sin botón para ver la contraseña en /recuperar | C | 4b2657c |
 | W-07 | Baja | El buscador solo funcionaba con Enter | C | 3bc734f |
+| M-04 | Media | El estado de cuenta usaba `dias_mora_maximo` guardado y sin actualizar (75 en vez de 239) | C+T | credito.mora / bea2876 |
+| W-08 | Baja | Etiquetas del gráfico superpuestas; colores desalineados con los datos filtrados | C | ver log |
 | J-02 | Baja | Barra de avance siempre verde | C | fdc3cee |
 | M-11 | Media | `visible_cliente` marcado por defecto, contra BD y documentación | C | b9e6bdd |
 
@@ -77,8 +79,8 @@ Estados posibles:
 | W-05 | DN | Escala del score (sumas mayores que 1000) |
 | J-01, J-12 | DN (UX) | Navegación al detalle; umbral de urgencia de "próximo pago" |
 | C-01 | P | El servidor bloquea el duplicado; la UI puede mostrar un falso éxito (configuración de GoTrue) |
-| C-03, C-04, W-08 | P | UX y funcionalidad. C-04 requiere migración |
-| J-04, M-04 | P | Mora dependiente del cron; `dias_mora_maximo` desactualizado |
+| C-03, C-04 | P | Geocodificación de la dirección; radicado de PQR (requiere migración) |
+| J-04 | P | Mora dependiente del cron. `dias_mora_maximo` sigue desactualizado en las demás vistas (mora, cartera, cobranza, reportes) |
 | M4 (BD) | P (BD) | Confirmado en la BD desplegada: eliminar o restringir `registrar_pago_autenticado`. El código ya no confía en `pago` |
 | M2, M3, M6, M7, M8 | P (BD) | Políticas RLS, UNIQUE y CHECK. Requieren migraciones y autorización |
 | INF-01 | P | `@sentry/nextjs@8` no admite `next@16`: `npm ci` falla sin `--legacy-peer-deps` |
