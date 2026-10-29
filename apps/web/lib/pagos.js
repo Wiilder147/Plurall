@@ -17,7 +17,8 @@ export const MIN_COBRO_COP = 1500
 const round2 = (n) => Math.round(n * 100) / 100
 
 // ── Cálculo de intereses de mora de UNA cuota ───────────────────────────────
-// Mora = monto_total_cuota × tasa_mora_diaria × días de atraso. Solo VENCIDA.
+// Mora = capital vencido × tasa_mora_diaria × días de atraso. Solo VENCIDA.
+// J-11 (decisión de negocio 29-oct-2026): base = capital, no la cuota total.
 export function calcularMora(cuota, tasaMoraDiaria) {
   if (cuota.estado_cuota !== 'VENCIDA') return 0
 
@@ -28,7 +29,7 @@ export function calcularMora(cuota, tasaMoraDiaria) {
   const dias = Math.max(1, Math.floor((hoy - vencimiento) / 86400000))
   const tasa = Number(tasaMoraDiaria ?? 0.001)
 
-  return round2(Number(cuota.monto_total_cuota) * tasa * dias)
+  return round2(Number(cuota.monto_capital) * tasa * dias)
 }
 
 // Construye el elemento de cuotas_cubiertas a partir de una fila de cuota
