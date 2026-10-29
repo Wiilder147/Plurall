@@ -1,3 +1,4 @@
+import { labelEstadoCredito } from '@/lib/estados'
 import { procesarDocumento, boxDeudor, boxAcreedor, fmtFechaDoc, formatCOP } from '@/lib/documentosHandler'
 
 export const dynamic = 'force-dynamic'
@@ -25,7 +26,7 @@ export async function GET(request, { params }) {
         <div class="section">
           <div class="section-title">Situación actual — ${fmtFechaDoc(new Date().toISOString())}</div>
           <div class="box">
-            <div class="row"><span class="lbl">Estado crédito</span><span class="val">${credito.estado_credito}</span></div>
+            <div class="row"><span class="lbl">Estado crédito</span><span class="val">${labelEstadoCredito(credito.estado_credito)}</span></div>
             <div class="row"><span class="lbl">Saldo pendiente</span><span class="val">${formatCOP(credito.saldo_pendiente)}</span></div>
             <div class="row"><span class="lbl">Total pagado</span><span class="val">${formatCOP(totalPagado)}</span></div>
             <div class="row"><span class="lbl">Cuotas vencidas</span><span class="val">${vencidas.length} (${formatCOP(totalVencido)})</span></div>

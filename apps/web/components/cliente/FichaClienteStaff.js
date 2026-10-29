@@ -16,6 +16,7 @@ import GestionAsesorCliente from '@/components/GestionAsesorCliente'
 import { createServiceClient } from '@/lib/supabase/service'
 import { formatNombre } from '@/lib/nombre'
 import { emailVisible } from '@/lib/email'
+import { labelEstadoCredito } from '@/lib/estados'
 import {
   ArrowLeft, User, Phone, Mail, Hash, MapPin, Store,
   CreditCard, CheckCircle2, XCircle, Clock, AlertTriangle,
@@ -214,7 +215,7 @@ export default async function FichaClienteStaff({ clienteId, backHref = '/', pue
         <div className={`border rounded-2xl p-5 ${creditoActivo.estado_credito === 'EN_MORA' ? 'bg-red-500/5 border-red-500/20' : 'bg-emerald-500/5 border-emerald-500/20'}`}>
           <h2 className="font-semibold text-slate-300 mb-4 flex items-center gap-2 text-sm">
             {creditoActivo.estado_credito === 'EN_MORA' ? <AlertTriangle className="w-4 h-4 text-red-400" /> : <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-            Crédito activo — {creditoActivo.estado_credito}
+            Crédito activo — {labelEstadoCredito(creditoActivo.estado_credito)}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             {[
@@ -265,7 +266,7 @@ export default async function FichaClienteStaff({ clienteId, backHref = '/', pue
                 <div key={c.id_credito} className="px-5 py-4">
                   <div className="flex items-center justify-between gap-3 mb-2.5">
                     <p className="text-slate-300 text-sm font-semibold">Crédito #{ref} <span className="text-slate-500 font-normal">· {formatCOP(c.monto_desembolsado)}</span></p>
-                    <span className="text-xs text-slate-500">{c.estado_credito}</span>
+                    <span className="text-xs text-slate-500">{labelEstadoCredito(c.estado_credito)}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {docs.map((d) => (

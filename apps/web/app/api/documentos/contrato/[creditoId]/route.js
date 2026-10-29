@@ -1,3 +1,4 @@
+import { labelEstadoCredito } from '@/lib/estados'
 import {
   procesarDocumento, boxDeudor, boxAcreedor, firmasDoc, fmtFechaDoc, formatCOP,
 } from '@/lib/documentosHandler'
@@ -28,7 +29,7 @@ export async function GET(request, { params }) {
             <div class="row"><span class="lbl">Tasa E.M.</span><span class="val">${tasaMensual}%</span></div>
             <div class="row"><span class="lbl">Desembolso</span><span class="val">${fmtFechaDoc(credito.fecha_desembolso)}</span></div>
             <div class="row"><span class="lbl">Primera cuota</span><span class="val">${fmtFechaDoc(credito.fecha_primera_cuota)}</span></div>
-            <div class="row"><span class="lbl">Estado</span><span class="val">${credito.estado_credito}</span></div>
+            <div class="row"><span class="lbl">Estado</span><span class="val">${labelEstadoCredito(credito.estado_credito)}</span></div>
           </div>
         </div>
         <div class="section">
