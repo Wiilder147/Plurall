@@ -160,11 +160,14 @@ export default function AnalyticsDashboard({ accent = 'indigo' }) {
           <ChartTitle icon={Users} accent={accentText}>Clientes por estado del proceso</ChartTitle>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={data.solicitudesPorEstado.filter(e => e.count > 0)} dataKey="count" nameKey="estado" cx="50%" cy="50%" outerRadius={90} label={(e) => e.estado}
+              {/* W-08: leyenda en vez de etiquetas sobre porciones pequeñas
+                  (se superponían); Cell recorre los MISMOS datos filtrados del Pie. */}
+              <Pie data={data.solicitudesPorEstado.filter(e => e.count > 0)} dataKey="count" nameKey="estado" cx="50%" cy="45%" outerRadius={80}
                 cursor="pointer" onClick={(d) => openDrill('estado', pick(d, 'estado'), 'Estado del proceso')}>
-                {data.solicitudesPorEstado.map((e, i) => <Cell key={i} fill={ESTADO_COLORS[e.estado] || BAR_COLORS[i]} />)}
+                {data.solicitudesPorEstado.filter(e => e.count > 0).map((e, i) => <Cell key={e.estado} fill={ESTADO_COLORS[e.estado] || BAR_COLORS[i]} />)}
               </Pie>
               <Tooltip content={<TooltipDark />} />
+              <Legend verticalAlign="bottom" iconSize={10} formatter={(v) => String(v).replace(/_/g, ' ')} />
             </PieChart>
           </ResponsiveContainer>
         </Card>
