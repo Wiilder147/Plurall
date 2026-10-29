@@ -128,6 +128,11 @@ export function calcularMora({ capitalBase = 0, tasaMoraDiaria = 0, diasMora = 0
   return Math.round(capitalBase * tasaMoraDiaria * diasMora)
 }
 
+// Fracción → porcentaje legible (0.001 → "0.1%"). Para tasas guardadas como fracción.
+export function formatPorcentaje(fraccion) {
+  return `${Number((Number(fraccion ?? 0) * 100).toFixed(4))}%`
+}
+
 // Formatea valores numéricos a moneda COP sin decimales.
 export function formatCOP(valor) {
   return new Intl.NumberFormat('es-CO', {

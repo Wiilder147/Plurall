@@ -44,3 +44,14 @@ describe('formatCOP', () => {
     expect(formatCOP(0).replace(/\s/g, '')).toBe('$0')
   })
 })
+
+// J-14: tasa_mora_diaria se guarda como fracción (0.001 = 0,1 % diario)
+import { formatPorcentaje } from '../lib/calculadora'
+describe('formatPorcentaje (J-14)', () => {
+  it('convierte la fracción almacenada a porcentaje legible', () => {
+    expect(formatPorcentaje(0.001)).toBe('0.1%')
+    expect(formatPorcentaje(0.0015)).toBe('0.15%')
+    expect(formatPorcentaje(0)).toBe('0%')
+    expect(formatPorcentaje(null)).toBe('0%')
+  })
+})

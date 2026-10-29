@@ -10,7 +10,7 @@
  * ========================================================================== */
 import { useState } from 'react'
 import { User, ChevronDown, ChevronUp } from 'lucide-react'
-import { formatCOP } from '@/lib/calculadora'
+import { formatCOP, formatPorcentaje } from '@/lib/calculadora'
 import { formatNombre } from '@/lib/nombre'
 
 const ESTADO_CUOTA = {
@@ -52,7 +52,7 @@ export default function AmortizacionExpandible({ plan, accent = 'indigo' }) {
             <div><p className="text-xs text-slate-500">Inicio cobro</p><p className="text-sm font-semibold text-slate-200">{fmtFecha(plan.fecha_inicio_cobro)}</p></div>
             <div><p className="text-xs text-slate-500">Fin cobro</p><p className="text-sm font-semibold text-slate-200">{fmtFecha(plan.fecha_fin_cobro)}</p></div>
           </div>
-          <p className="text-xs text-slate-500 mt-2">Tasa de mora diaria: <span className="text-slate-300 font-medium">{Number(plan.tasa_mora_diaria ?? 0)}%</span></p>
+          <p className="text-xs text-slate-500 mt-2">Tasa de mora diaria: <span className="text-slate-300 font-medium">{formatPorcentaje(plan.tasa_mora_diaria)}</span></p>
 
           {cuotas.length > 0 && (
             <button
