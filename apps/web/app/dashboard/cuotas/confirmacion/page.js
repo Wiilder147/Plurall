@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { formatCOP } from '@/lib/calculadora'
 import { createClient } from '@/lib/supabase/client'
+import { estadoTrasVerificacion } from '@/lib/pagoConfirmacion'
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 
 // ─── Tipos de estado del pago ────────────────────────────────────────────────
@@ -123,6 +124,7 @@ function ConfirmacionContent() {
         clearInterval(intervalo)
         return
       }
+      setEstado(actual => estadoTrasVerificacion(actual, terminado))
       intentosRef.current += 1
       if (intentosRef.current >= POLL_MAX_ATTEMPTS) {
         clearInterval(intervalo)
