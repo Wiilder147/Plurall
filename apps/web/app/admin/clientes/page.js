@@ -63,15 +63,24 @@ export default async function AdminClientesPage({ searchParams }) {
       </header>
 
       {/* Buscador */}
-      <form method="GET" className="relative max-w-md">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-        <input
-          name="q"
-          type="text"
-          defaultValue={buscar}
-          placeholder="Buscar por nombre, cédula o celular…"
-          className="w-full bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-500 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-        />
+      {/* W-07: botón visible; antes solo filtraba con Enter, sin indicación */}
+      <form method="GET" className="flex gap-2 max-w-md">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input
+            name="q"
+            type="text"
+            defaultValue={buscar}
+            placeholder="Buscar por nombre, cédula o celular…"
+            className="w-full bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-500 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+        </div>
+        <button
+          type="submit"
+          className="px-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors"
+        >
+          Buscar
+        </button>
       </form>
 
       {/* Tabla / lista */}
