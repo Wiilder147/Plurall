@@ -13,19 +13,23 @@ const aCentavos = (v) => Math.round(Number(v ?? 0) * 100)
 
 /**
  * Distribuye un pago en efectivo (J-06/J-07, decisión de negocio 29-oct-2026):
- * cuotas en el orden recibido (más antigua primero); en cada una primero el
- * interés pendiente y luego el capital pendiente; lo que sobra es saldo a favor.
+ * cuotas en el orden recibido (más antigua primero); en cada una primero la
+ * mora pendiente, luego el interés y por último el capital (imputación del
+ * art. 1653 C.C.; mora confirmada 29-oct-2026); lo que sobra es saldo a favor.
  * Se trabaja en centavos enteros: aplicado + excedente = monto, exacto.
  *
  * @param {number} monto
- * @param {{id_cuota, monto_capital, monto_interes, capital_pagado?, interes_pagado?}[]} cuotas
- * @returns {{ aplicaciones: {id_cuota, interes, capital, completa}[], excedente: number }}
+ * @param {{id_cuota, monto_capital, monto_interes, capital_pagado?, interes_pagado?, mora_pendiente?}[]} cuotas
+ * @returns {{ aplicaciones: {id_cuota, mora, interes, capital, completa}[], excedente: number }}
  */
 export function distribuirPagoEfectivo(monto, cuotas) {
   let resto = aCentavos(monto)
   const aplicaciones = []
   for (const c of cuotas) {
     if (resto <= 0) break
+    const moraPend = Math.max(0, aCentavos(c.mora_pendiente))
+    const mora = Math.min(resto, moraPend)
+    resto -= mora
     const intPend = Math.max(0, aCentavos(c.monto_interes) - aCentavos(c.interes_pagado))
     const capPend = Math.max(0, aCentavos(c.monto_capital) - aCentavos(c.capital_pagado))
     const interes = Math.min(resto, intPend)
@@ -34,9 +38,10 @@ export function distribuirPagoEfectivo(monto, cuotas) {
     resto -= capital
     aplicaciones.push({
       id_cuota: c.id_cuota,
+      mora:     mora / 100,
       interes:  interes / 100,
       capital:  capital / 100,
-      completa: interes === intPend && capital === capPend,
+      completa: mora === moraPend && interes === intPend && capital === capPend,
     })
   }
   return { aplicaciones, excedente: resto / 100 }

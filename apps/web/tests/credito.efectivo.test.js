@@ -12,7 +12,7 @@ const c = (id, capital, interes, pagado = {}) => ({
 describe('distribuirPagoEfectivo', () => {
   it('pago parcial (caso J-07): primero interés, luego capital; suma = monto pagado', () => {
     const r = distribuirPagoEfectivo(100_000, [c('a', 150_000, 40_000)])
-    expect(r.aplicaciones).toEqual([{ id_cuota: 'a', interes: 40_000, capital: 60_000, completa: false }])
+    expect(r.aplicaciones).toEqual([{ id_cuota: 'a', mora: 0, interes: 40_000, capital: 60_000, completa: false }])
     expect(r.excedente).toBe(0)
   })
 
@@ -25,14 +25,14 @@ describe('distribuirPagoEfectivo', () => {
   it('recorre las cuotas vencidas en orden y deja la última parcial', () => {
     const r = distribuirPagoEfectivo(250_000, [c('a', 150_000, 40_000), c('b', 150_000, 40_000)])
     expect(r.aplicaciones).toEqual([
-      { id_cuota: 'a', interes: 40_000, capital: 150_000, completa: true },
-      { id_cuota: 'b', interes: 40_000, capital: 20_000, completa: false },
+      { id_cuota: 'a', mora: 0, interes: 40_000, capital: 150_000, completa: true },
+      { id_cuota: 'b', mora: 0, interes: 40_000, capital: 20_000, completa: false },
     ])
   })
 
   it('tiene en cuenta lo ya abonado antes a la cuota', () => {
     const r = distribuirPagoEfectivo(90_000, [c('a', 150_000, 40_000, { interes: 40_000, capital: 60_000 })])
-    expect(r.aplicaciones).toEqual([{ id_cuota: 'a', interes: 0, capital: 90_000, completa: true }])
+    expect(r.aplicaciones).toEqual([{ id_cuota: 'a', mora: 0, interes: 0, capital: 90_000, completa: true }])
   })
 
   it('el excedente sobre todas las cuotas vencidas queda como saldo a favor', () => {
@@ -48,7 +48,7 @@ describe('distribuirPagoEfectivo', () => {
     const cuotas = [c('a', 148_462.4, 41_569.6), c('b', 151_543.1, 38_488.9)]
     for (const monto of [1, 1_500, 41_569.6, 99_999.99, 190_032, 300_000, 500_000.55]) {
       const r = distribuirPagoEfectivo(monto, cuotas)
-      const aplicado = r.aplicaciones.reduce((s, a) => s + a.interes + a.capital, 0)
+      const aplicado = r.aplicaciones.reduce((s, a) => s + a.mora + a.interes + a.capital, 0)
       expect(Math.round((aplicado + r.excedente) * 100)).toBe(Math.round(monto * 100))
       for (const a of r.aplicaciones) {
         const cu = cuotas.find(x => x.id_cuota === a.id_cuota)
@@ -58,5 +58,22 @@ describe('distribuirPagoEfectivo', () => {
         if (a.capital > 0) expect(a.interes).toBe(cu.monto_interes)
       }
     }
+  })
+
+  // Mora en efectivo (decisión 29-oct-2026): orden mora → interés → capital.
+  it('cobra primero la mora pendiente, luego interés y capital', () => {
+    const r = distribuirPagoEfectivo(50_000, [{ ...c('a', 150_000, 40_000), mora_pendiente: 3_000 }])
+    expect(r.aplicaciones).toEqual([{ id_cuota: 'a', mora: 3_000, interes: 40_000, capital: 7_000, completa: false }])
+  })
+
+  it('un pago menor que la mora solo abona mora', () => {
+    const r = distribuirPagoEfectivo(2_000, [{ ...c('a', 150_000, 40_000), mora_pendiente: 3_000 }])
+    expect(r.aplicaciones[0]).toMatchObject({ mora: 2_000, interes: 0, capital: 0, completa: false })
+  })
+
+  it('la cuota solo queda completa al cubrir mora + interés + capital', () => {
+    const r = distribuirPagoEfectivo(193_000, [{ ...c('a', 150_000, 40_000), mora_pendiente: 3_000 }])
+    expect(r.aplicaciones[0]).toMatchObject({ mora: 3_000, interes: 40_000, capital: 150_000, completa: true })
+    expect(r.excedente).toBe(0)
   })
 })

@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { tasaMoraDiariaMaxima } from '../lib/producto'
 import { crearFakeDb } from './helpers/fakeSupabase.js'
 
 // J-06/J-07: un pago en efectivo registrado por el asesor debe reflejarse en
@@ -22,7 +23,8 @@ function sembrar() {
       { id_credito: 'cr1', id_cliente: 'cl1', saldo_pendiente: 300_000, cuotas_pagadas: 0, cuotas_en_mora: 2, estado_credito: 'EN_MORA', saldo_a_favor: 0 },
       { id_credito: 'cr2', id_cliente: 'cl2', saldo_pendiente: 300_000, cuotas_pagadas: 0, cuotas_en_mora: 0, estado_credito: 'ACTIVO', saldo_a_favor: 0 },
     ],
-    plan_pago: [{ id_plan_pago: 'p1', id_credito: 'cr1' }, { id_plan_pago: 'p2', id_credito: 'cr2' }],
+    // tasa 0 en p1: los casos de reparto (J-06/J-07) se aíslan de la mora; la mora tiene su propio caso
+    plan_pago: [{ id_plan_pago: 'p1', id_credito: 'cr1', tasa_mora_diaria: 0 }, { id_plan_pago: 'p2', id_credito: 'cr2', tasa_mora_diaria: 0 }],
     cuota: [
       { id_cuota: 'q1', id_plan_pago: 'p1', numero_cuota: 1, estado_cuota: 'VENCIDA', fecha_vencimiento: '2026-08-01', monto_capital: 150_000, monto_interes: 40_000, monto_total_cuota: 190_000 },
       { id_cuota: 'q2', id_plan_pago: 'p1', numero_cuota: 2, estado_cuota: 'VENCIDA', fecha_vencimiento: '2026-09-01', monto_capital: 150_000, monto_interes: 40_000, monto_total_cuota: 190_000 },
@@ -94,6 +96,31 @@ describe('POST /api/asesor/gestion — pago en efectivo', () => {
     expect(cuota('q1').estado_cuota).toBe('VENCIDA')
     expect(cr1().cuotas_pagadas).toBe(0)
     expect(cr1().saldo_pendiente).toBe(300_000)
+  })
+
+  describe('con mora (decisión 29-oct-2026: mora → interés → capital)', () => {
+    afterEach(() => vi.useRealTimers())
+
+    it('cobra la mora de la cuota vencida, la registra y deja la cuota PAGADA_MORA', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 9, 11, 12))
+      db.tablas.plan_pago[0].tasa_mora_diaria = 0.001
+      // q1 venció el 2026-08-01 → 71 días; tasa topada a la usura (NEW-08)
+      const mora = Math.round(150_000 * tasaMoraDiariaMaxima() * 71 * 100) / 100
+      await registrar({ monto_recibido: 190_000 + mora })
+      expect(cuota('q1').estado_cuota).toBe('PAGADA_MORA')
+      expect(cuota('q1').monto_mora_cobrada).toBe(mora)
+      expect(db.tablas.pago[0].monto_mora).toBe(mora)
+      expect(cr1().saldo_pendiente).toBe(150_000)
+    })
+
+    it('si el pago no cubre la mora, la cuota sigue vencida y no baja el capital', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 9, 11, 12))
+      db.tablas.plan_pago[0].tasa_mora_diaria = 0.001
+      await registrar({ monto_recibido: 1_000 })
+      expect(cuota('q1').estado_cuota).toBe('VENCIDA')
+      expect(db.tablas.pago[0]).toMatchObject({ monto_mora: 1_000, monto_interes: 0, monto_capital: 0 })
+      expect(cr1().saldo_pendiente).toBe(300_000)
+    })
   })
 
   it('no permite abonar a un crédito que no pertenece al cliente indicado', async () => {

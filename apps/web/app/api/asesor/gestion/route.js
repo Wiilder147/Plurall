@@ -9,6 +9,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'node:crypto'
 import { distribuirPagoEfectivo, nuevoEstadoCredito } from '@/lib/credito'
+import { calcularMora } from '@/lib/pagos'
 
 /**
  * POST /api/asesor/gestion
@@ -94,9 +95,9 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Error al registrar la gestión' }, { status: 500 })
   }
 
-  // 2. Pago en efectivo (J-06/J-07, decisión de negocio 29-oct-2026): se aplica
+  // 2. Pago en efectivo (J-06/J-07, decisiones de negocio 29-oct-2026): se aplica
   //    a las cuotas VENCIDAS de la más antigua a la más reciente; en cada una
-  //    primero interés y luego capital; el excedente queda como saldo a favor.
+  //    mora → interés → capital; el excedente queda como saldo a favor.
   //    Antes solo se insertaba el pago: cuota y crédito nunca se actualizaban.
   if (esPago) {
     const resultadoPago = await aplicarPagoEfectivo(service, { creditoId, idAsesor: user.id, monto: montoEfectivo })
@@ -114,12 +115,12 @@ async function aplicarPagoEfectivo(db, { creditoId, idAsesor, monto }) {
   const hoy   = ahora.split('T')[0]
 
   const { data: plan } = await db
-    .from('plan_pago').select('id_plan_pago').eq('id_credito', creditoId).maybeSingle()
+    .from('plan_pago').select('id_plan_pago, tasa_mora_diaria').eq('id_credito', creditoId).maybeSingle()
   if (!plan) return { error: 'El crédito no tiene plan de pagos', status: 409 }
 
   const { data: cuotas } = await db
     .from('cuota')
-    .select('id_cuota, numero_cuota, estado_cuota, fecha_vencimiento, monto_capital, monto_interes, monto_pagado_real')
+    .select('id_cuota, numero_cuota, estado_cuota, fecha_vencimiento, monto_capital, monto_interes, monto_pagado_real, monto_mora_cobrada')
     .eq('id_plan_pago', plan.id_plan_pago)
     .in('estado_cuota', ['VENCIDA', 'PENDIENTE'])
     .order('fecha_vencimiento', { ascending: true })
@@ -133,25 +134,37 @@ async function aplicarPagoEfectivo(db, { creditoId, idAsesor, monto }) {
   // usa la tabla pago: el cliente puede insertar filas ahí vía RLS
   // (registrar_pago_autenticado) y falsear un abono. Con la regla "interés
   // primero", el reparto de lo ya abonado es determinista.
+  // Mora: mismo cálculo que el flujo Wompi (base capital, topada a la usura);
+  // la ya cobrada se lleva en cuota.monto_mora_cobrada (también solo servidor).
   const abonado = {}
   for (const c of vencidas) {
-    const pagado  = Number(c.monto_pagado_real ?? 0)
-    const interes = Math.min(pagado, Number(c.monto_interes))
-    abonado[c.id_cuota] = { interes, capital: Math.max(0, pagado - interes), total: pagado }
+    const pagado    = Number(c.monto_pagado_real ?? 0)
+    const moraPaga  = Number(c.monto_mora_cobrada ?? 0)
+    const sinMora   = Math.max(0, pagado - moraPaga)
+    const interes   = Math.min(sinMora, Number(c.monto_interes))
+    const moraTotal = calcularMora(c, plan.tasa_mora_diaria)
+    abonado[c.id_cuota] = {
+      interes,
+      capital: Math.max(0, sinMora - interes),
+      total: pagado,
+      mora: moraPaga,
+      moraPendiente: Math.max(0, Math.round((moraTotal - moraPaga) * 100) / 100),
+    }
   }
 
   const { aplicaciones, excedente } = distribuirPagoEfectivo(monto, vencidas.map(c => ({
     ...c,
     capital_pagado: abonado[c.id_cuota].capital,
     interes_pagado: abonado[c.id_cuota].interes,
+    mora_pendiente: abonado[c.id_cuota].moraPendiente,
   })))
 
   // Un recibo por cuota tocada; el excedente se anota en el último (o, si no
   // hubo cuotas vencidas, en la próxima cuota pendiente como ancla).
-  const recibos = aplicaciones.map(a => ({ id_cuota: a.id_cuota, monto: a.interes + a.capital, capital: a.capital, interes: a.interes, delta: 0 }))
+  const recibos = aplicaciones.map(a => ({ id_cuota: a.id_cuota, monto: a.mora + a.interes + a.capital, mora: a.mora, capital: a.capital, interes: a.interes, delta: 0 }))
   if (excedente > 0) {
     if (recibos.length) recibos[recibos.length - 1].delta = excedente
-    else recibos.push({ id_cuota: abiertas[0].id_cuota, monto: 0, capital: 0, interes: 0, delta: excedente })
+    else recibos.push({ id_cuota: abiertas[0].id_cuota, monto: 0, mora: 0, capital: 0, interes: 0, delta: excedente })
   }
   // Sufijo aleatorio: con solo Date.now() dos registros en el mismo ms chocaban
   // con el UNIQUE de referencia_externa (500).
@@ -164,7 +177,7 @@ async function aplicarPagoEfectivo(db, { creditoId, idAsesor, monto }) {
       monto_pagado:        Math.round((r.monto + r.delta) * 100) / 100,
       monto_capital:       r.capital,
       monto_interes:       r.interes,
-      monto_mora:          0,
+      monto_mora:          r.mora,
       metodo_pago:         'EFECTIVO',
       referencia_externa:  `${base}-${i + 1}`,
       estado:              'CONFIRMADO',
@@ -183,10 +196,11 @@ async function aplicarPagoEfectivo(db, { creditoId, idAsesor, monto }) {
   let capitalAplicado = 0
   for (const a of aplicaciones) {
     const previo = abonado[a.id_cuota].total
-    const nuevoPagado = Math.round((previo + a.interes + a.capital) * 100) / 100
+    const nuevoPagado = Math.round((previo + a.mora + a.interes + a.capital) * 100) / 100
+    const moraCobrada = Math.round((abonado[a.id_cuota].mora + a.mora) * 100) / 100
     const cambios = a.completa
-      ? { estado_cuota: 'PAGADA', monto_pagado_real: nuevoPagado, fecha_pago_real: hoy, updated_at: ahora }
-      : { monto_pagado_real: nuevoPagado, updated_at: ahora }
+      ? { estado_cuota: moraCobrada > 0 ? 'PAGADA_MORA' : 'PAGADA', monto_pagado_real: nuevoPagado, monto_mora_cobrada: moraCobrada, fecha_pago_real: hoy, updated_at: ahora }
+      : { monto_pagado_real: nuevoPagado, monto_mora_cobrada: moraCobrada, updated_at: ahora }
     let q = db.from('cuota').update(cambios).eq('id_cuota', a.id_cuota).in('estado_cuota', ['VENCIDA'])
     q = previo > 0 ? q.eq('monto_pagado_real', previo) : q
     const { data: filas } = await q.select('id_cuota')
