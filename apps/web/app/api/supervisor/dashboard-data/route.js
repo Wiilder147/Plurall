@@ -115,6 +115,8 @@ export async function GET(request) {
     } else if (agrupacion === 'semana') {
       cursor.setDate(cursor.getDate() + 7)
     } else {
+      // Anclar al día 1: desde un 29-31, setMonth desbordaría y saltaría un mes
+      cursor.setDate(1)
       cursor.setMonth(cursor.getMonth() + 1)
     }
   }
