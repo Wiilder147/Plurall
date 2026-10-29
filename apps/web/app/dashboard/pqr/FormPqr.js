@@ -25,6 +25,7 @@ export default function FormPqr() {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
   const [ok, setOk] = useState(false)
+  const [radicado, setRadicado] = useState('')
 
   const enviar = async (e) => {
     e.preventDefault()
@@ -38,7 +39,7 @@ export default function FormPqr() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'Error al enviar')
-      setAsunto(''); setDescripcion(''); setTipo('PETICION'); setOk(true)
+      setAsunto(''); setDescripcion(''); setTipo('PETICION'); setRadicado(data?.numero_radicado || ''); setOk(true)
       router.refresh()
     } catch (err) {
       setError(err.message)
@@ -74,7 +75,12 @@ export default function FormPqr() {
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}
-      {ok && <p className="text-xs text-emerald-600">Tu PQR se registró correctamente.</p>}
+      {ok && (
+        <p className="text-xs text-emerald-600">
+          Tu PQR se registró correctamente.
+          {radicado && <> Número de radicado: <strong className="font-mono">{radicado}</strong>. Guárdalo para hacerle seguimiento.</>}
+        </p>
+      )}
 
       <button type="submit" disabled={cargando}
         className="self-start inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">

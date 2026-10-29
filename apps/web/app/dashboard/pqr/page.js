@@ -19,7 +19,7 @@ const ESTADO = {
   CERRADO:    'bg-slate-100 text-slate-600',
 }
 
-export default async function PqrUsuarioPage() {
+export default async function PqrUsuarioPage({ searchParams }) {
   const supabase = await createClient()
 
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -32,10 +32,16 @@ export default async function PqrUsuarioPage() {
   if (cliente?.id_cliente) {
     const { data } = await supabase
       .from('pqr')
-      .select('id_pqr, tipo, asunto, descripcion, estado, respuesta, fecha_respuesta, created_at')
+      .select('id_pqr, numero_radicado, tipo, asunto, descripcion, estado, respuesta, fecha_respuesta, created_at')
       .eq('id_cliente', cliente.id_cliente)
       .order('created_at', { ascending: false })
     pqrs = data ?? []
+  }
+
+  // C-04: búsqueda por número de radicado (sobre las PQR propias ya cargadas)
+  const buscar = String((await searchParams)?.radicado ?? '').trim().toUpperCase()
+  if (buscar) {
+    pqrs = pqrs.filter(p => String(p.numero_radicado ?? '').toUpperCase().includes(buscar))
   }
 
   return (
@@ -50,11 +56,22 @@ export default async function PqrUsuarioPage() {
       <FormPqr />
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-bold text-slate-900">Mis solicitudes</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-bold text-slate-900">Mis solicitudes</h2>
+          <form method="GET" className="flex gap-2">
+            <input
+              name="radicado"
+              defaultValue={buscar}
+              placeholder="Buscar por radicado (PQR-2026-…)"
+              className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 w-56"
+            />
+            <button type="submit" className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-orange-500 text-white">Buscar</button>
+          </form>
+        </div>
         {pqrs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-2xl border border-slate-100">
             <MessageSquare className="w-10 h-10 text-slate-300 mb-3" />
-            <p className="text-slate-500 text-sm">Aún no has creado ninguna PQR.</p>
+            <p className="text-slate-500 text-sm">{buscar ? `No hay PQR con el radicado ${buscar}.` : 'Aún no has creado ninguna PQR.'}</p>
           </div>
         ) : (
           pqrs.map((p) => {
@@ -64,6 +81,7 @@ export default async function PqrUsuarioPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 capitalize">{p.tipo.toLowerCase()}</span>
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${ESTADO[p.estado] || ESTADO.ABIERTO}`}>{p.estado.replace('_', ' ')}</span>
+                  {p.numero_radicado && <span className="text-xs font-mono font-semibold text-slate-600">{p.numero_radicado}</span>}
                   <span className="text-xs text-slate-400 ml-auto">{fecha}</span>
                 </div>
                 <p className="font-semibold text-slate-900 text-sm mt-2">{p.asunto}</p>

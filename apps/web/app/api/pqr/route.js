@@ -29,16 +29,17 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Solo los clientes pueden crear PQR' }, { status: 403 })
   }
 
-  const { error } = await supabase.from('pqr').insert({
+  const { data: creada, error } = await supabase.from('pqr').insert({
     id_cliente: cliente.id_cliente,
     tipo: tipoFinal,
     asunto: asunto.trim(),
     descripcion: descripcion.trim(),
     estado: 'ABIERTO',
-  })
+  }).select('numero_radicado').single()
   if (error) {
     console.error('[PQR POST]', error)
     return NextResponse.json({ error: 'No se pudo crear la PQR' }, { status: 500 })
   }
-  return NextResponse.json({ ok: true })
+  // C-04: número de radicado asignado por la BD (trigger trg_pqr_radicado)
+  return NextResponse.json({ ok: true, numero_radicado: creada?.numero_radicado ?? null })
 }
