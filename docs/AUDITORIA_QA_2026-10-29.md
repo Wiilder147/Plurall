@@ -6,8 +6,8 @@ Rama: `fix/auditoria-qa-20261029` (base `origin/develop` @ `a52c090`).
 
 - **Fuentes:** 4 PDF del 29-oct (Camila Ávila 4, Jeferson Lugo 15, Juan Maurello 18, Wilder Feo 8 = **45 hallazgos**). También el documento de pruebas Vitest en `Estudio/evidencia`; los ejercicios PHP/Python de esa carpeta no son de Plurall.
 - **Auditoría adicional:** backend/financiero, seguridad (51 rutas API) y frontend. Encontró **8 defectos nuevos** (NEW-01..07, INF-01) y **13 de seguridad** (S-C1, S-C2, H1–H4, M1–M8).
-- **Corregidos con prueba automatizada que fallaba antes:** 30 hallazgos. Detalle en la sección B.
-- **Tests:** 22 → **101** (3 → 16 archivos), todos en verde.
+- **Corregidos:** 36 hallazgos, la mayoría con una prueba automatizada que fallaba antes del fix. Detalle en la sección B.
+- **Tests:** 22 → **111** (3 → 19 archivos), todos en verde.
 - **Calidad:** el lint queda igual a la línea base (4 errores preexistentes, ninguno en código tocado) y el build de producción termina bien.
 - **Riesgos críticos encontrados y corregidos:**
   - Fuga de cartera a cualquier cliente autenticado (S-C1).
@@ -51,6 +51,13 @@ Estados posibles:
 | M-02, M-03 | Baja | Estado "EN_MORA" sin traducir en la ficha y en los PDF | C+T | estados / 95e7cb9 |
 | J-14 | Media | Tasa de mora mostrada 100 veces menor | C+T | calculadora / 1885efe |
 | W-06 | Baja | Columna SOLICITUDES leída con la forma de dato equivocada | C | 4123d02 |
+| J-06 (seguimiento) / M4 | Crítica | La política RLS desplegada `registrar_pago_autenticado` permite al cliente insertar pagos con cualquier estado: un abono falso hacía que un pago real de $1.000 completara la cuota | C+T | cobranza.pagoEfectivo / 2831c28 |
+| J-09 | Media | La pantalla nunca pasaba a 'procesando': spinner infinito | C+T | pagoConfirmacion / 6d976e5 |
+| J-10 | Baja | Fecha de cierre tomada de `updated_at` | C+T | credito.fechaCierre / 78b8eb2 |
+| M-12 | Media | El catálogo de motivos aceptaba duplicados | C+T | motivos.duplicados / 61158ad |
+| M-07 | Baja | Bloqueo de 90 días sin explicar; botón de solicitar visible | C | a94c873 |
+| C-02 | Baja | Sin botón para ver la contraseña en /recuperar | C | 4b2657c |
+| W-07 | Baja | El buscador solo funcionaba con Enter | C | 3bc734f |
 | J-02 | Baja | Barra de avance siempre verde | C | fdc3cee |
 | M-11 | Media | `visible_cliente` marcado por defecto, contra BD y documentación | C | b9e6bdd |
 
@@ -66,13 +73,14 @@ Estados posibles:
 | M1 | DN | La originación del asesor es un pool abierto por diseño |
 | M-01 | DN | Bloquear o solo alertar un desembolso con KYC rechazado |
 | M-05, M-14 | DN | Longitud mínima de motivos y notas |
-| M-08, M-09, M-10, M-12, M-13 | P | Conectar el catálogo de motivos (funcionalidad); unicidad y longitud |
+| M-08, M-09, M-10, M-13 | P | Conectar el catálogo de motivos (funcionalidad); longitud máxima (DN) |
 | W-05 | DN | Escala del score (sumas mayores que 1000) |
 | J-01, J-12 | DN (UX) | Navegación al detalle; umbral de urgencia de "próximo pago" |
 | C-01 | P | El servidor bloquea el duplicado; la UI puede mostrar un falso éxito (configuración de GoTrue) |
-| C-02, C-03, C-04, J-09, J-10, M-07, W-07, W-08 | P | UX y funcionalidad. C-04 requiere migración |
+| C-03, C-04, W-08 | P | UX y funcionalidad. C-04 requiere migración |
 | J-04, M-04 | P | Mora dependiente del cron; `dias_mora_maximo` desactualizado |
-| M2, M3, M4, M6, M7, M8 | P (BD) | Políticas RLS, UNIQUE y CHECK. Requieren migraciones y autorización |
+| M4 (BD) | P (BD) | Confirmado en la BD desplegada: eliminar o restringir `registrar_pago_autenticado`. El código ya no confía en `pago` |
+| M2, M3, M6, M7, M8 | P (BD) | Políticas RLS, UNIQUE y CHECK. Requieren migraciones y autorización |
 | INF-01 | P | `@sentry/nextjs@8` no admite `next@16`: `npm ci` falla sin `--legacy-peer-deps` |
 
 ## C. Git
@@ -92,6 +100,8 @@ Estados posibles:
 - Las consultas a la BD desplegada fueron **solo de catálogo** (triggers, CHECK, columnas), sin leer filas de clientes.
 
 ## E. Riesgos residuales
+
+- Un cliente puede insertar filas en `pago` (M4, verificado en la BD desplegada). Los reportes de recaudo que sumen la tabla `pago` pueden incluir registros falsos hasta que se cierre la política.
 
 - Confirmación de pagos (Wompi y efectivo) sin transacción. Recomendado: mover a una función SQL.
 - Doble desembolso concurrente: no hay UNIQUE en `credito.id_solicitud`.
