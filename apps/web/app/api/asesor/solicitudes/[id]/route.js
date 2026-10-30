@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { validarTextoLibre, REGLAS_TEXTO } from '@/lib/validacion'
+import { resolverMotivoRechazo } from '@/lib/motivos'
 import { tieneKycRechazado, MENSAJE_KYC_RECHAZADO } from '@/lib/kyc'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
@@ -38,7 +39,7 @@ export async function PATCH(request, { params }) {
 
   const { id } = await params
   const body   = await request.json()
-  const { accion, notas = '' } = body
+  const { accion, notas = '', id_motivo_rechazo } = body
 
   if (!['PRE_APROBAR', 'RECHAZAR'].includes(accion)) {
     return NextResponse.json({ error: 'Acción inválida' }, { status: 400 })
@@ -60,6 +61,14 @@ export async function PATCH(request, { params }) {
   const estadoActual = sol.estado_solicitud?.nombre?.toUpperCase()
   if (estadoActual !== 'PENDIENTE') {
     return NextResponse.json({ error: 'Solo se pueden gestionar solicitudes en estado PENDIENTE' }, { status: 409 })
+  }
+
+  // M-08: el rechazo del asesor usa un motivo ACTIVO del catálogo (antes texto libre)
+  let motivo = null
+  if (accion === 'RECHAZAR') {
+    const r = await resolverMotivoRechazo(service, id_motivo_rechazo)
+    if (r.error) return NextResponse.json({ error: r.error }, { status: 400 })
+    motivo = r.motivo
   }
 
   if (accion === 'PRE_APROBAR' && await tieneKycRechazado(service, sol.id_cliente)) {
@@ -85,6 +94,7 @@ export async function PATCH(request, { params }) {
       id_estado_solicitud:  estadoRow.id_estado_solicitud,
       id_usuario_evaluador: user.id,
       comentarios_analista: notas || null,
+      ...(motivo ? { id_motivo_rechazo: motivo.id_motivo } : {}),
       updated_at:           new Date().toISOString(),
     })
     .eq('id_solicitud', id)

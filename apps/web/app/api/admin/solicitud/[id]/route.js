@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server'
 import { calcularAmortizacion, validarCondicionesAprobacion } from '@/lib/calculadora'
 import { formatNombre } from '@/lib/nombre'
 import { tieneKycRechazado, MENSAJE_KYC_RECHAZADO } from '@/lib/kyc'
+import { resolverMotivoRechazo, textoMotivoCliente } from '@/lib/motivos'
 import {
   notificarSolicitudAprobada,
   notificarSolicitudRechazada,
@@ -85,6 +86,15 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ error: MENSAJE_KYC_RECHAZADO }, { status: 409 })
   }
 
+  // M-09: el rechazo usa un motivo ACTIVO del catálogo (antes una lista fija)
+  let motivo = null
+  if (accion === 'RECHAZAR') {
+    const r = await resolverMotivoRechazo(service, body.id_motivo_rechazo)
+    if (r.error) return NextResponse.json({ error: r.error }, { status: 400 })
+    motivo = r.motivo
+  }
+  const comentarioCliente = accion === 'RECHAZAR' ? textoMotivoCliente(motivo) : comentarios_cliente
+
   // Obtener el estado destino
   const nuevoEstadoNombre = accion === 'APROBAR' ? 'APROBADA' : 'RECHAZADA'
   const { data: estadoRow } = await service
@@ -103,8 +113,9 @@ export async function PATCH(request, { params }) {
     monto_aprobado:       accion === 'APROBAR' ? monto_aprobado : null,
     plazo_aprobado:       accion === 'APROBAR' ? plazo_aprobado : null,
     tasa_interes_aprobada: accion === 'APROBAR' ? tasa_interes_aprobada : null,
-    comentarios_cliente,
+    comentarios_cliente:  comentarioCliente,
     comentarios_tecnicos,
+    id_motivo_rechazo:    motivo?.id_motivo ?? null,
     fecha_decision:       new Date().toISOString(),
   })
 
@@ -121,6 +132,7 @@ export async function PATCH(request, { params }) {
       id_usuario_evaluador: user.id,
       fecha_decision:       new Date().toISOString(),
       comentarios_analista: comentarios_tecnicos,
+      ...(motivo ? { id_motivo_rechazo: motivo.id_motivo } : {}),
       updated_at:           new Date().toISOString(),
     })
     .eq('id_solicitud', id)
@@ -154,7 +166,7 @@ export async function PATCH(request, { params }) {
         email:             clienteEmail,
         nombre:            clienteNombre,
         solicitudId:       id,
-        comentariosCliente: comentarios_cliente,
+        comentariosCliente: comentarioCliente,
       }).catch(err => console.error('[Notif] Error email rechazo:', err))
     }
   }

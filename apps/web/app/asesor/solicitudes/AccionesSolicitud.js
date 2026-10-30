@@ -5,16 +5,18 @@ import { useRouter } from 'next/navigation'
 import { CheckCircle, XCircle, Loader2, X } from 'lucide-react'
 import { validarTextoLibre, REGLAS_TEXTO } from '@/lib/validacion'
 
-export default function AccionesSolicitud({ solicitudId, nombreCliente }) {
+export default function AccionesSolicitud({ solicitudId, nombreCliente, motivos = [] }) {
   const router = useRouter()
   const [modal,   setModal]   = useState(null) // 'PRE_APROBAR' | 'RECHAZAR' | null
   const [notas,   setNotas]   = useState('')
+  const [idMotivo, setIdMotivo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
 
   function abrirModal(accion) {
     setModal(accion)
     setNotas('')
+    setIdMotivo(motivos[0]?.id_motivo ?? '')
     setError('')
   }
 
@@ -25,6 +27,7 @@ export default function AccionesSolicitud({ solicitudId, nombreCliente }) {
   }
 
   async function confirmar() {
+    if (modal === 'RECHAZAR' && !idMotivo) { setError('Selecciona un motivo de rechazo del catálogo.'); return }
     const errorNota = validarTextoLibre(notas, REGLAS_TEXTO.notaAsesor)
     if (errorNota) { setError(errorNota); return }
     setLoading(true)
@@ -34,7 +37,7 @@ export default function AccionesSolicitud({ solicitudId, nombreCliente }) {
       const res  = await fetch(`/api/asesor/solicitudes/${solicitudId}`, {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ accion: modal, notas: notas.trim() }),
+        body:    JSON.stringify({ accion: modal, notas: notas.trim(), ...(modal === 'RECHAZAR' ? { id_motivo_rechazo: idMotivo } : {}) }),
       })
       const data = await res.json()
 
@@ -96,8 +99,26 @@ export default function AccionesSolicitud({ solicitudId, nombreCliente }) {
                 : `Confirma el rechazo de la solicitud de ${nombreCliente}. Esta acción es definitiva.`}
             </p>
 
+            {!esPreAprobar && (
+              <>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Motivo del rechazo *</label>
+                <select
+                  value={idMotivo}
+                  onChange={e => setIdMotivo(e.target.value)}
+                  className="w-full mb-4 bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  {motivos.length === 0 && <option value="">No hay motivos activos en el catálogo</option>}
+                  {motivos.map(m => (
+                    <option key={m.id_motivo} value={m.id_motivo}>
+                      {m.descripcion_motivo}{m.visible_cliente ? '' : ' (interno)'}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+
             <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-              {esPreAprobar ? 'Notas de verificación *' : 'Motivo del rechazo *'}
+              {esPreAprobar ? 'Notas de verificación *' : 'Nota del rechazo *'}
             </label>
             <textarea
               maxLength={REGLAS_TEXTO.notaAsesor.max}

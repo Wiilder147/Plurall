@@ -19,6 +19,13 @@ export default async function AsesorSolicitudesPage({ searchParams }) {
   const params   = await searchParams
   const tab      = params?.tab?.toUpperCase() || 'PENDIENTE'
 
+  // M-08: motivos activos del catálogo para el rechazo
+  const { data: motivos } = await supabase
+    .from('motivo_rechazo')
+    .select('id_motivo, descripcion_motivo, visible_cliente')
+    .eq('activo', true)
+    .order('descripcion_motivo', { ascending: true })
+
   // Traer todas las solicitudes junto con sus scores
   const { data: todas } = await supabase
     .from('solicitud_credito')
@@ -172,6 +179,7 @@ export default async function AsesorSolicitudesPage({ searchParams }) {
                       <AccionesSolicitud
                         solicitudId={sol.id_solicitud}
                         nombreCliente={formatNombre(sol.cliente) || 'el cliente'}
+                        motivos={motivos ?? []}
                       />
                     ) : (
                       <div className="flex items-center gap-1.5 text-xs text-slate-500">

@@ -10,6 +10,9 @@ import { validarTextoLibre, REGLAS_TEXTO } from '@/lib/validacion'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
+// Comparación de nombres de motivo ignorando mayúsculas y espacios (M-12)
+const normalizarMotivo = (t) => String(t ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('es')
+
 function getServiceClient() {
   return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -46,9 +49,8 @@ export async function POST(request) {
   const service = getServiceClient()
 
   // M-12: no duplicar un motivo existente (ignorando mayúsculas y espacios)
-  const normalizar = (t) => String(t ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('es')
   const { data: existentes } = await service.from('motivo_rechazo').select('descripcion_motivo')
-  if ((existentes ?? []).some(m => normalizar(m.descripcion_motivo) === normalizar(descripcion_motivo))) {
+  if ((existentes ?? []).some(m => normalizarMotivo(m.descripcion_motivo) === normalizarMotivo(descripcion_motivo))) {
     return NextResponse.json({ error: 'Este motivo ya existe' }, { status: 409 })
   }
 
@@ -68,13 +70,29 @@ export async function PATCH(request) {
   const v = await validarRol()
   if (!v.ok) return NextResponse.json({ error: v.msg }, { status: v.status })
 
-  const { id_motivo, activo } = await request.json()
+  const { id_motivo, activo, descripcion_motivo, visible_cliente } = await request.json()
   if (!id_motivo) return NextResponse.json({ error: 'id_motivo requerido' }, { status: 400 })
 
   const service = getServiceClient()
+  const cambios = {}
+  if (activo !== undefined) cambios.activo = !!activo
+  if (visible_cliente !== undefined) cambios.visible_cliente = !!visible_cliente
+
+  // M-10: el nombre del motivo ahora se puede corregir, con las mismas reglas
+  if (descripcion_motivo !== undefined) {
+    const errorTexto = validarTextoLibre(descripcion_motivo, REGLAS_TEXTO.motivoCatalogo)
+    if (errorTexto) return NextResponse.json({ error: errorTexto }, { status: 400 })
+    const { data: existentes } = await service.from('motivo_rechazo').select('id_motivo, descripcion_motivo')
+    if ((existentes ?? []).some(m => m.id_motivo !== id_motivo && normalizarMotivo(m.descripcion_motivo) === normalizarMotivo(descripcion_motivo))) {
+      return NextResponse.json({ error: 'Este motivo ya existe' }, { status: 409 })
+    }
+    cambios.descripcion_motivo = descripcion_motivo.trim()
+  }
+  if (!Object.keys(cambios).length) return NextResponse.json({ error: 'Nada que actualizar' }, { status: 400 })
+
   const { error } = await service
     .from('motivo_rechazo')
-    .update({ activo: !!activo })
+    .update(cambios)
     .eq('id_motivo', id_motivo)
   if (error) {
     console.error('[motivos PATCH]', error)

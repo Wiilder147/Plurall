@@ -18,6 +18,9 @@ export default function GestionMotivos({ motivosIniciales }) {
   const [visibleCliente, setVisibleCliente] = useState(false)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
+  // M-10: edición en línea del nombre y la visibilidad
+  const [editando, setEditando] = useState(null) // { id_motivo, descripcion, visible }
+  const [errorEdicion, setErrorEdicion] = useState('')
 
   const crear = async (e) => {
     e.preventDefault()
@@ -40,6 +43,20 @@ export default function GestionMotivos({ motivosIniciales }) {
     } finally {
       setCargando(false)
     }
+  }
+
+  const guardarEdicion = async () => {
+    const errorTexto = validarTextoLibre(editando.descripcion, REGLAS_TEXTO.motivoCatalogo)
+    if (errorTexto) { setErrorEdicion(errorTexto); return }
+    const res = await fetch('/api/supervisor/motivos', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_motivo: editando.id_motivo, descripcion_motivo: editando.descripcion, visible_cliente: editando.visible }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) { setErrorEdicion(data?.error || 'No se pudo guardar'); return }
+    setEditando(null); setErrorEdicion('')
+    router.refresh()
   }
 
   const toggle = async (id_motivo, activo) => {
@@ -85,6 +102,26 @@ export default function GestionMotivos({ motivosIniciales }) {
         <div className="flex flex-col gap-2">
           {motivosIniciales.map((m) => (
             <div key={m.id_motivo} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between gap-4">
+              {editando?.id_motivo === m.id_motivo ? (
+                <div className="flex-1 flex flex-col gap-2 min-w-0">
+                  <input
+                    type="text"
+                    maxLength={REGLAS_TEXTO.motivoCatalogo.max}
+                    value={editando.descripcion}
+                    onChange={(e) => setEditando({ ...editando, descripcion: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-600 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <label className="flex items-center gap-2 text-xs text-slate-400">
+                    <input type="checkbox" checked={editando.visible} onChange={(e) => setEditando({ ...editando, visible: e.target.checked })} className="accent-indigo-500" />
+                    Visible para el cliente
+                  </label>
+                  {errorEdicion && <p className="text-xs text-red-400">{errorEdicion}</p>}
+                  <div className="flex gap-2">
+                    <button onClick={guardarEdicion} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-500 text-white">Guardar</button>
+                    <button onClick={() => { setEditando(null); setErrorEdicion('') }} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300">Cancelar</button>
+                  </div>
+                </div>
+              ) : (
               <div className="min-w-0">
                 <p className={`text-sm font-medium ${m.activo ? 'text-slate-200' : 'text-slate-500 line-through'}`}>{m.descripcion_motivo}</p>
                 <div className="flex gap-2 mt-1">
@@ -94,12 +131,21 @@ export default function GestionMotivos({ motivosIniciales }) {
                   </span>
                 </div>
               </div>
+              )}
+              <div className="shrink-0 flex gap-2">
+              {editando?.id_motivo !== m.id_motivo && (
+                <button onClick={() => { setEditando({ id_motivo: m.id_motivo, descripcion: m.descripcion_motivo, visible: !!m.visible_cliente }); setErrorEdicion('') }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors">
+                  Editar
+                </button>
+              )}
               <button onClick={() => toggle(m.id_motivo, m.activo)}
                 className={`shrink-0 inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
                   m.activo ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
                 }`}>
                 {m.activo ? <><X className="w-3 h-3" /> Desactivar</> : <><Check className="w-3 h-3" /> Activar</>}
               </button>
+              </div>
             </div>
           ))}
         </div>

@@ -30,14 +30,6 @@ import Link from 'next/link'
 import MoverPaso from '@/components/MoverPaso'
 import { formatNombre } from '@/lib/nombre'
 
-const MOTIVOS_RECHAZO = [
-  'Capacidad de pago insuficiente',
-  'Documentación incompleta o inconsistente',
-  'Historial crediticio negativo',
-  'Negocio con menos de 6 meses de antigüedad',
-  'Información no verificable',
-]
-
 export default function AdminDetalleSolicitudPage() {
   const router = useRouter()
   const params = useParams()
@@ -57,7 +49,8 @@ export default function AdminDetalleSolicitudPage() {
   const [tasaAprobada,   setTasaAprobada]   = useState('28')
   const [comentCliente,  setComentCliente]  = useState('')
   const [comentTecnico,  setComentTecnico]  = useState('')
-  const [motivoRechazo,  setMotivoRechazo]  = useState(MOTIVOS_RECHAZO[0])
+  const [motivos, setMotivos] = useState([])
+  const [motivoRechazo,  setMotivoRechazo]  = useState('')
 
   useEffect(() => {
     async function cargar() {
@@ -84,6 +77,15 @@ export default function AdminDetalleSolicitudPage() {
       setSol(data)
       setMontoAprobado(data.monto_solicitado)
       setPlazoAprobado(data.plazo_meses)
+
+      // M-09: motivos ACTIVOS del catálogo (antes una lista fija en el código)
+      const { data: cat } = await supabase
+        .from('motivo_rechazo')
+        .select('id_motivo, descripcion_motivo, visible_cliente')
+        .eq('activo', true)
+        .order('descripcion_motivo', { ascending: true })
+      setMotivos(cat ?? [])
+      setMotivoRechazo(cat?.[0]?.id_motivo ?? '')
       setLoading(false)
     }
     cargar()
@@ -115,7 +117,7 @@ export default function AdminDetalleSolicitudPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         accion:               'RECHAZAR',
-        comentarios_cliente:  motivoRechazo,
+        id_motivo_rechazo:  motivoRechazo,
         comentarios_tecnicos: comentTecnico,
       }),
     })
@@ -418,10 +420,15 @@ export default function AdminDetalleSolicitudPage() {
               {accion === 'rechazar' && (
                 <div className="flex flex-col gap-4">
                   <div>
-                    <label className="text-xs text-slate-400 mb-1 block">Motivo (visible al cliente)</label>
+                    <label className="text-xs text-slate-400 mb-1 block">Motivo del catálogo</label>
                     <select value={motivoRechazo} onChange={(e) => setMotivoRechazo(e.target.value)}
                       className="w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                      {MOTIVOS_RECHAZO.map((m) => <option key={m} value={m}>{m}</option>)}
+                      {motivos.length === 0 && <option value="">No hay motivos activos en el catálogo</option>}
+                      {motivos.map(m => (
+                        <option key={m.id_motivo} value={m.id_motivo}>
+                          {m.descripcion_motivo}{m.visible_cliente ? '' : ' (interno, no visible al cliente)'}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>
