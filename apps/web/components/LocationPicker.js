@@ -2,6 +2,7 @@
 
 import 'leaflet/dist/leaflet.css'
 import { useState, useEffect, useRef } from 'react'
+import { geocodificarDireccion } from '@/lib/geocodificacion'
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { ChevronDown, Navigation, Loader2 } from 'lucide-react'
@@ -91,6 +92,7 @@ export default function LocationPicker({ value, onChange }) {
   const [geoLoading,  setGeoLoading]  = useState(false)
   const [geoError,    setGeoError]    = useState('')
   const [geocoding,   setGeocoding]   = useState(false)
+  const [avisoMapa,   setAvisoMapa]   = useState('')
 
   // Catálogo de municipios (DANE) para autocompletar ciudad de forma canónica.
   // Se mantiene el input libre (la geocodificación del mapa sigue funcionando),
@@ -177,6 +179,24 @@ export default function LocationPicker({ value, onChange }) {
       })
     } else {
       emit({ lat: pos[0], lng: pos[1] })
+    }
+  }
+
+  // C-03: ubicar en el mapa la dirección escrita (al salir del campo)
+  async function ubicarDireccionEscrita() {
+    if (!direccion.trim() || !ciudad.trim()) return
+    setGeocoding(true)
+    setAvisoMapa('')
+    const r = await geocodificarDireccion({ direccion, ciudad, depto })
+    setGeocoding(false)
+    if (!r) {
+      setAvisoMapa('No pudimos ubicar la dirección. Marca la ubicación tocando el mapa.')
+      return
+    }
+    setPosition([r.lat, r.lng])
+    emit({ lat: r.lat, lng: r.lng })
+    if (r.precision === 'ciudad') {
+      setAvisoMapa('No encontramos la dirección exacta: ubicamos la ciudad. Ajusta el pin sobre tu dirección.')
     }
   }
 
@@ -277,8 +297,11 @@ export default function LocationPicker({ value, onChange }) {
         placeholder="Ej: Calle 50 # 45-10, Barrio El Centro"
         value={direccion}
         onChange={e => { setDireccion(e.target.value); emit({ direccion: e.target.value }) }}
+        onBlur={ubicarDireccionEscrita}
         className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400"
       />
+
+      {avisoMapa && <p className="text-xs text-amber-600 -mt-1">{avisoMapa}</p>}
 
       {geocoding && (
         <p className="text-xs text-orange-500 flex items-center gap-1.5 -mt-1">
