@@ -7,7 +7,7 @@ Rama: `fix/auditoria-qa-20261029` (base `origin/develop` @ `a52c090`).
 - **Fuentes:** 4 PDF del 29-oct (Camila Ávila 4, Jeferson Lugo 15, Juan Maurello 18, Wilder Feo 8 = **45 hallazgos**). También el documento de pruebas Vitest en `Estudio/evidencia`; los ejercicios PHP/Python de esa carpeta no son de Plurall.
 - **Auditoría adicional:** backend/financiero, seguridad (51 rutas API) y frontend. Encontró **8 defectos nuevos** (NEW-01..07, INF-01) y **13 de seguridad** (S-C1, S-C2, H1–H4, M1–M8).
 - **Corregidos:** 38 hallazgos, la mayoría con una prueba automatizada que fallaba antes del fix. Detalle en la sección B.
-- **Tests:** 22 → **136** (3 → 23 archivos), todos en verde.
+- **Tests:** 22 → **149** (3 → 28 archivos); lint en **0**, todos en verde.
 - **Calidad:** el lint queda igual a la línea base (4 errores preexistentes, ninguno en código tocado) y el build de producción termina bien.
 - **Riesgos críticos encontrados y corregidos:**
   - Fuga de cartera a cualquier cliente autenticado (S-C1).
@@ -122,6 +122,26 @@ Cuando se depuren estos datos, conviene reemplazar los triggers por índices UNI
 | Login en servidor (H3 completo) | `/api/auth/login` + migración 43; se eliminan `lockout` y `existe` | seguridad.login + E2E con build local y BD real |
 
 **Fuente de la tasa de usura:** [La República – Indicadores (fuente Superfinanciera)](https://www.larepublica.co/indicadores-economicos/bancos/tasa-de-usura), vigencia 01/10/2026–31/10/2026. **Se certifica mensualmente:** hay que actualizar `TASA_USURA_EA`.
+
+
+## C4. Segunda tanda: "corregir todo" (29-oct-2026)
+
+| ID | Corrección | Verificación |
+|---|---|---|
+| W-05 | Score 0–1000 (opción B): el RPC escala sobre el máximo del catálogo activo (1400); mínimo 600 → **429** (equivalente exacto); `score.puntaje_crudo` conserva el original (migración 44) | 13/15 pre-aprobables antes y después; ningún score > 1000 |
+| Lint | 4 errores (`set-state-in-effect`) y 3 warnings corregidos en la causa | `eslint` **0 problemas** |
+| J-04 / M-04 | El cron refresca créditos ya en mora, avisa solo en la transición y usa la fecha de Colombia | cron.mora.test; sintaxis validada contra PostgREST |
+| M-08 / M-09 / M-10 | Los rechazos usan el catálogo de motivos (API + 3 pantallas); los motivos se pueden editar | motivos.rechazo.test |
+| C-03 | El mapa ubica la dirección escrita (Nominatim) y, si no la encuentra, la ciudad | geocodificacion.test + consulta real |
+| INF-01 | `@sentry/nextjs` 8 → 10.76.2 | `npm ci` sin `--legacy-peer-deps` |
+| **NEW-09** | No existía `instrumentation.js`: Sentry **no** reportaba errores del servidor | build + E2E |
+| — | `middleware.js` → `proxy.js` (Next 16); `hideSourceMaps` (eliminado en Sentry 10) → `deleteSourcemapsAfterUpload` | build sin avisos; E2E: sin sesión → 307 `/login` |
+
+**Pendiente (datos reales, requiere un criterio de negocio):**
+- 3 pagos en efectivo por $3.200.000 sin aplicar.
+- 29 créditos en CANCELADO.
+- 1 crédito de prueba con −36 cuotas.
+- Registros semilla duplicados (4 créditos en una solicitud; 4 celulares `0000000000`; 1 par de celulares repetidos).
 
 ## C. Git
 
