@@ -1,6 +1,6 @@
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { withSentryConfig } from '@sentry/nextjs';
+import { withSentryConfig } from '@sentry/nextjs/config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -50,8 +50,10 @@ export default withSentryConfig(nextConfig, {
 
   // Subir source maps solo en producción para depuración de errores minificados
   silent:          true,   // No mostrar logs de Sentry durante el build
-  hideSourceMaps:  true,   // No exponer source maps al cliente
-  disableLogger:   true,   // Eliminar logs de Sentry del bundle del cliente
+  // No exponer source maps al cliente (hideSourceMaps ya no existe en Sentry 10)
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+  // Eliminar logs de depuración de Sentry del bundle (antes disableLogger)
+  webpack: { treeshake: { removeDebugLogging: true } },
 
   // No bloquear el build si Sentry falla (útil en CI/CD sin token configurado)
   telemetry: false,

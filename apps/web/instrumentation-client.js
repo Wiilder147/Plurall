@@ -1,12 +1,10 @@
 /* ==========================================================================
- * ARCHIVO: sentry.client.config.js
- * RUTA: apps/web/sentry.client.config.js
- * DESCRIPCIÓN: Archivo principal de la aplicación frontend.
- * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
+ * ARCHIVO: instrumentation-client.js
+ * RUTA: apps/web/instrumentation-client.js
+ * DESCRIPCIÓN: Sentry en el navegador.
+ * FUNCIONALIDAD: Next.js 16 (Turbopack) carga este archivo en el cliente; el
+ *                antiguo sentry.client.config.js ya no se cargaba (INF-01).
  * ========================================================================== */
-// sentry.client.config.js
-// Configuración de Sentry para el lado del cliente (navegador).
-// Este archivo se importa automáticamente por Next.js al hacer build.
 
 import * as Sentry from '@sentry/nextjs'
 
@@ -44,3 +42,6 @@ Sentry.init({
     }),
   ],
 })
+
+// Trazas de navegación entre páginas (App Router)
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart
