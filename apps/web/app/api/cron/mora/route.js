@@ -7,6 +7,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { notificarAsesorCliente } from '@/lib/notificacionesInApp'
+import { hoyColombia, resumenVencidasPorCredito } from '@/lib/credito'
 
 /**
  * GET /api/cron/mora
@@ -38,13 +39,14 @@ export async function GET(request) {
   }
 
   const supabase = getServiceClient()
-  const hoy      = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+  const hoy      = hoyColombia() // YYYY-MM-DD en Colombia (J-04: antes UTC)
 
   const resumen = {
     fecha:              hoy,
     cuotasVencidas:     0,
     creditosEnMora:     0,
     creditosRecuperados:0,
+    creditosActualizados:0,
     errores:            [],
   }
 
@@ -63,121 +65,77 @@ export async function GET(request) {
       resumen.cuotasVencidas = cuotasActualizadas?.length ?? 0
     }
 
-    // ── PASO 2: Marcar créditos ACTIVO como EN_MORA si tienen cuotas VENCIDAS
-    //    Obtenemos los id_credito afectados a través de plan_pago
-    if (resumen.cuotasVencidas > 0) {
-      // Obtener los plan_pago únicos de las cuotas recién vencidas
-      const planIds = [...new Set((cuotasActualizadas ?? []).map(c => c.id_plan_pago))]
+    // ── PASO 2: Refrescar TODOS los créditos con cuotas VENCIDAS (J-04/M-04)
+    //    Antes solo se tocaban créditos ACTIVO con cuotas recién vencidas: los
+    //    que ya estaban EN_MORA nunca actualizaban cuotas_en_mora ni días.
+    const { data: vencidas, error: errVenc } = await supabase
+      .from('cuota')
+      .select('fecha_vencimiento, plan_pago!inner ( id_credito )')
+      .eq('estado_cuota', 'VENCIDA')
+    if (errVenc) throw errVenc
 
-      if (planIds.length > 0) {
-        // Obtener los id_credito de esos planes
-        const { data: planes } = await supabase
-          .from('plan_pago')
+    const porCredito = resumenVencidasPorCredito(vencidas, hoy)
+    const conVencidas = Object.keys(porCredito)
+    const ahora = new Date().toISOString()
+
+    if (conVencidas.length > 0) {
+      const { data: creditos } = await supabase
+        .from('credito')
+        .select('id_credito, id_cliente, estado_credito, dias_mora_maximo')
+        .in('id_credito', conVencidas)
+        .in('estado_credito', ['ACTIVO', 'EN_MORA'])
+
+      for (const cr of creditos ?? []) {
+        const r = porCredito[cr.id_credito]
+        // "máximo": nunca baja respecto al histórico guardado
+        const diasMax = Math.max(Number(cr.dias_mora_maximo ?? 0), r.diasMora)
+        const { data: filas, error: errMora } = await supabase
+          .from('credito')
+          .update({
+            estado_credito:   'EN_MORA',
+            cuotas_en_mora:   r.vencidas,
+            dias_mora_maximo: diasMax,
+            updated_at:       ahora,
+          })
+          .eq('id_credito', cr.id_credito)
+          .eq('estado_credito', cr.estado_credito) // condicional: detecta la transición real
           .select('id_credito')
-          .in('id_plan_pago', planIds)
 
-        const creditoIds = [...new Set((planes ?? []).map(p => p.id_credito))]
+        if (errMora) { resumen.errores.push(`Crédito ${cr.id_credito}: ${errMora.message}`); continue }
+        if (!filas?.length) continue
 
-        if (creditoIds.length > 0) {
-          // Actualizar créditos ACTIVO → EN_MORA y recalcular cuotas_en_mora
-          for (const creditoId of creditoIds) {
-            // Contar cuotas VENCIDAS de este crédito
-            const { count: totalVencidas } = await supabase
-              .from('cuota')
-              .select('id_cuota', { count: 'exact', head: true })
-              .eq('id_plan_pago',
-                (await supabase
-                  .from('plan_pago')
-                  .select('id_plan_pago')
-                  .eq('id_credito', creditoId)
-                  .single()
-                ).data?.id_plan_pago
-              )
-              .eq('estado_cuota', 'VENCIDA')
-
-            // Calcular días de mora máximos
-            const { data: cuotaMasAntigua } = await supabase
-              .from('cuota')
-              .select('fecha_vencimiento')
-              .eq('estado_cuota', 'VENCIDA')
-              .eq('id_plan_pago',
-                (await supabase
-                  .from('plan_pago')
-                  .select('id_plan_pago')
-                  .eq('id_credito', creditoId)
-                  .single()
-                ).data?.id_plan_pago
-              )
-              .order('fecha_vencimiento', { ascending: true })
-              .limit(1)
-              .single()
-
-            const diasMora = cuotaMasAntigua?.fecha_vencimiento
-              ? Math.floor((new Date(hoy) - new Date(cuotaMasAntigua.fecha_vencimiento)) / 86400000)
-              : 0
-
-            const { error: errMora } = await supabase
-              .from('credito')
-              .update({
-                estado_credito:   'EN_MORA',
-                cuotas_en_mora:   totalVencidas ?? 0,
-                dias_mora_maximo: diasMora,
-                updated_at:       new Date().toISOString(),
-              })
-              .eq('id_credito', creditoId)
-              .eq('estado_credito', 'ACTIVO') // solo si estaba ACTIVO
-
-            if (!errMora) {
-              resumen.creditosEnMora++
-              const { data: cr } = await supabase.from('credito').select('id_cliente').eq('id_credito', creditoId).single()
-              if (cr?.id_cliente) {
-                await notificarAsesorCliente(cr.id_cliente, {
-                  codigoTipo: 'MORA_ASESOR',
-                  titulo: 'Cliente entró en mora',
-                  mensaje: `Crédito ${creditoId.slice(-8).toUpperCase()} — ${diasMora} días de mora.`,
-                  metadata: { id_credito: creditoId, dias_mora: diasMora },
-                })
-              }
-            }
-          }
+        if (cr.estado_credito === 'ACTIVO') {
+          // Solo una entrada nueva en mora genera aviso (antes se repetía cada noche)
+          resumen.creditosEnMora++
+          await notificarAsesorCliente(cr.id_cliente, {
+            codigoTipo: 'MORA_ASESOR',
+            titulo: 'Cliente entró en mora',
+            mensaje: `Crédito ${cr.id_credito.slice(-8).toUpperCase()} — ${r.diasMora} días de mora.`,
+            metadata: { id_credito: cr.id_credito, dias_mora: r.diasMora },
+          })
+        } else {
+          resumen.creditosActualizados++
         }
       }
     }
 
     // ── PASO 3: Recuperar créditos EN_MORA que ya no tienen cuotas VENCIDAS
-    //    (el cliente pagó todas las cuotas vencidas)
+    //    (el cliente pagó todas las cuotas vencidas). Se conserva el histórico
+    //    de dias_mora_maximo.
     const { data: creditosEnMora } = await supabase
       .from('credito')
       .select('id_credito')
       .eq('estado_credito', 'EN_MORA')
 
     for (const { id_credito } of creditosEnMora ?? []) {
-      const { data: plan } = await supabase
-        .from('plan_pago')
-        .select('id_plan_pago')
+      if (porCredito[id_credito]) continue
+      const { data: filas } = await supabase
+        .from('credito')
+        .update({ estado_credito: 'ACTIVO', cuotas_en_mora: 0, updated_at: ahora })
         .eq('id_credito', id_credito)
-        .single()
-
-      if (!plan) continue
-
-      const { count: vencidasRestantes } = await supabase
-        .from('cuota')
-        .select('id_cuota', { count: 'exact', head: true })
-        .eq('id_plan_pago', plan.id_plan_pago)
-        .eq('estado_cuota', 'VENCIDA')
-
-      if (vencidasRestantes === 0) {
-        await supabase
-          .from('credito')
-          .update({
-            estado_credito: 'ACTIVO',
-            cuotas_en_mora: 0,
-            updated_at:     new Date().toISOString(),
-          })
-          .eq('id_credito', id_credito)
-
-        resumen.creditosRecuperados++
-      }
+        .eq('estado_credito', 'EN_MORA')
+        .select('id_credito')
+      if (filas?.length) resumen.creditosRecuperados++
     }
 
     console.log('[CRON mora]', resumen)

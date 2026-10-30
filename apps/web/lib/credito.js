@@ -86,3 +86,26 @@ export function resumenMora(cuotas, diasMoraGuardado = 0, hoy = new Date()) {
   const actual = enAtraso.reduce((m, c) => Math.max(m, diasMoraDesde(c.fecha_vencimiento, hoy)), 0)
   return { enAtraso, diasMoraMax: Math.max(Number(diasMoraGuardado) || 0, actual) }
 }
+
+// Fecha de hoy en Colombia (YYYY-MM-DD). El cron corre en UTC: a las 23:55 de
+// Colombia ya es el día siguiente en UTC (J-04).
+export function hoyColombia(ahora = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(ahora)
+}
+
+// Agrupa cuotas VENCIDAS por crédito: cantidad y días de la más antigua.
+// Filas: { fecha_vencimiento, plan_pago: { id_credito } }.
+export function resumenVencidasPorCredito(cuotas, hoyISO) {
+  const ref = new Date(`${hoyISO}T12:00:00Z`)
+  const porCredito = {}
+  for (const c of cuotas ?? []) {
+    const id = c?.plan_pago?.id_credito
+    if (!id) continue
+    const r = porCredito[id] ??= { vencidas: 0, diasMora: 0 }
+    r.vencidas++
+    r.diasMora = Math.max(r.diasMora, diasMoraDesde(c.fecha_vencimiento, ref))
+  }
+  return porCredito
+}

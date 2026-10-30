@@ -24,6 +24,7 @@ export function crearFakeDb(tablas = {}) {
       if (tipo === 'eq')  return f[col] === v
       if (tipo === 'neq') return f[col] !== v
       if (tipo === 'in')  return v.includes(f[col])
+      if (tipo === 'lt')  return f[col] < v
       if (tipo === 'ilike') {
         // Solo se usa con prefijos de UUID: se conservan [\w-] y % → .*
         const re = new RegExp('^' + v.split('%').map(t => t.replace(/[^\w-]/g, '')).join('.*') + '$', 'i')
@@ -56,6 +57,7 @@ export function crearFakeDb(tablas = {}) {
       eq:  (c, v) => { filtros.push(['eq', c, v]); return q },
       neq: (c, v) => { filtros.push(['neq', c, v]); return q },
       in:  (c, v) => { filtros.push(['in', c, v]); return q },
+      lt:  (c, v) => { filtros.push(['lt', c, v]); return q },
       ilike: (c, patron) => { filtros.push(['ilike', c, patron]); return q },
       order: () => q,
       limit: () => q,
