@@ -105,8 +105,8 @@ Cuando se depuren estos datos, conviene reemplazar los triggers por índices UNI
 
 ### Diagnóstico de datos históricos (solo lectura)
 - **Tasa nominal (NEW-05):** 0 créditos desembolsados con tasa inflada y 0 decisiones aprobadas pendientes con tasa nominal. Los 2 créditos detectados por el filtro son semilla, coherentes al 24 %. No hay que remediar nada.
-- **Créditos CANCELADO:** 29. No se puede distinguir automáticamente cuáles se pagaron normalmente; requiere revisión manual.
-- **Pagos en efectivo confirmados con la cuota aún sin pagar (J-06):** 3, por $3.200.000. Hay que aplicarlos manualmente con la regla nueva.
+- **Créditos CANCELADO:** 29. Resuelto el 30-oct-2026; ver C5.
+- **Pagos en efectivo confirmados con la cuota aún sin pagar (J-06):** 3, por $3.200.000. Resuelto el 30-oct-2026; ver C5.
 
 
 ## C3. Decisiones de negocio implementadas (29-oct-2026)
@@ -137,9 +137,21 @@ Cuando se depuren estos datos, conviene reemplazar los triggers por índices UNI
 | **NEW-09** | No existía `instrumentation.js`: Sentry **no** reportaba errores del servidor | build + E2E |
 | — | `middleware.js` → `proxy.js` (Next 16); `hideSourceMaps` (eliminado en Sentry 10) → `deleteSourcemapsAfterUpload` | build sin avisos; E2E: sin sesión → 307 `/login` |
 
+## C5. Corrección de datos reales (30-oct-2026, autorizada) — `db/45`
+
+Aplicada en una sola transacción, con precondiciones que abortan si el estado difiere del inspeccionado. Las filas previas quedan respaldadas en `respaldo.{pago,cuota,credito}_20261030`, un esquema sin acceso para `anon` ni `authenticated`. Los triggers de auditoría registran cada cambio.
+
+- **J-06: 3 pagos en efectivo por $3.200.000** (todos del mismo crédito, registrados contra la cuota 2):
+  - **Cómo se recalculó:** con la regla vigente (mora → interés → capital, mora a la fecha de cada pago). Se reprodujo con `lib/credito.js` y `lib/pagos.js`.
+  - **Recibos:** el desglose original no cuadraba con el monto (el recibo de $200.000 declaraba $268.552 de capital e interés, y otro declaraba $1,73 M de mora). Se corrigió, y ahora cada recibo cuadra al centavo.
+  - **Cuotas:** las cuotas 2 a 5 quedan en PAGADA_MORA, pagadas el 17-ago-2026, con una mora total de $24.364,48.
+  - **Saldo pendiente:** pasa de $3.600.000 a $2.818.363,41 (se aplicaron $781.636,59 de capital).
+  - **Saldo a favor:** **$2.101.427,52**.
+  - **Abierto 1 — decisión de negocio:** las cuotas 6 y 7 siguen VENCIDAS aunque el saldo a favor las cubre. El sistema solo usa el saldo a favor cuando el cliente inicia un pago. Hay que decidir si se aplica automáticamente.
+  - **Abierto 2 — inconsistencia previa:** el `saldo_pendiente` de este crédito ya iba $214.416 por debajo del plan de cuotas antes de la corrección, que no la cambia.
+- **J-13: 29 créditos CANCELADO → PAGADO**, todos con saldo 0 y todas sus cuotas pagadas. No queda ninguno en CANCELADO.
+
 **Pendiente (datos reales, requiere un criterio de negocio):**
-- 3 pagos en efectivo por $3.200.000 sin aplicar.
-- 29 créditos en CANCELADO.
 - 1 crédito de prueba con −36 cuotas.
 - Registros semilla duplicados (4 créditos en una solicitud; 4 celulares `0000000000`; 1 par de celulares repetidos).
 
