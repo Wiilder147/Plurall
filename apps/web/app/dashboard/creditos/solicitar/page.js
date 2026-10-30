@@ -95,7 +95,7 @@ function trackEvent(evento, metadata = {}) {
 
 export default function SolicitarCredito() {
   const router   = useRouter()
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
   const topRef   = useRef(null)
 
   const [step,         setStep]         = useState(1)
@@ -188,7 +188,7 @@ export default function SolicitarCredito() {
       setCargandoQ(false)
     }
     cargarPreguntas()
-  }, [step])
+  }, [step, preguntas.length, supabase])
 
   function goTo(next) { setStep(next) }
 

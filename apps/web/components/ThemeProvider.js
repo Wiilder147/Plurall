@@ -7,7 +7,7 @@
  * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
  * ========================================================================== */
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useSyncExternalStore } from 'react'
 
 const ThemeContext = createContext({ theme: 'dark', toggle: () => {} })
 
@@ -146,24 +146,35 @@ function injectStyles() {
   el.textContent = LIGHT_MODE_CSS
 }
 
+// Preferencia de tema guardada en localStorage, leída como estado externo
+// (useSyncExternalStore): sin setState dentro de un efecto y sin desajuste de
+// hidratación (el servidor siempre renderiza 'dark').
+const EVENTO_TEMA = 'plurall-theme'
+function leerTema() {
+  try { return localStorage.getItem('plurall-theme') ?? 'dark' } catch { return 'dark' }
+}
+function suscribirTema(onCambio) {
+  window.addEventListener('storage', onCambio)
+  window.addEventListener(EVENTO_TEMA, onCambio)
+  return () => {
+    window.removeEventListener('storage', onCambio)
+    window.removeEventListener(EVENTO_TEMA, onCambio)
+  }
+}
+
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState('dark')
+  const theme = useSyncExternalStore(suscribirTema, leerTema, () => 'dark')
 
-  useEffect(() => {
-    // Inyectar los estilos del tema en el <head>
-    injectStyles()
+  // Inyectar los estilos del tema en el <head> (una vez)
+  useEffect(() => { injectStyles() }, [])
 
-    // Leer preferencia guardada
-    const saved = localStorage.getItem('plurall-theme') ?? 'dark'
-    setTheme(saved)
-    document.documentElement.setAttribute('data-theme', saved)
-  }, [])
+  // Reflejar el tema en <html data-theme>
+  useEffect(() => { document.documentElement.setAttribute('data-theme', theme) }, [theme])
 
   function toggle() {
     const next = theme === 'dark' ? 'light' : 'dark'
-    setTheme(next)
-    document.documentElement.setAttribute('data-theme', next)
-    localStorage.setItem('plurall-theme', next)
+    try { localStorage.setItem('plurall-theme', next) } catch { /* modo privado */ }
+    window.dispatchEvent(new Event(EVENTO_TEMA))
   }
 
   return (

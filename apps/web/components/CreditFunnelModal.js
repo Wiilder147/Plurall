@@ -108,7 +108,7 @@ const REG_INITIAL = {
 
 export default function CreditFunnelModal({ isOpen, onClose }) {
   const router   = useRouter()
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
 
   // Wizard state
   const [step,     setStep]     = useState(1)
@@ -156,7 +156,7 @@ export default function CreditFunnelModal({ isOpen, onClose }) {
       .then(({ data: { user } }) => setCurrentUser(user ?? null))
       .catch(() => {})
       .finally(() => setCheckingUser(false))
-  }, [])
+  }, [supabase])
 
   // Prevent body scroll while open
   useEffect(() => {

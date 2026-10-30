@@ -8,31 +8,40 @@
  * FUNCIONALIDAD: Carga /api/analitica/detalle y lista los registros con enlaces
  *                de navegación a su ficha y reasignación de asesor en línea.
  * ========================================================================== */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { X, RefreshCw, ExternalLink, UserCog, ArrowRight, Check } from 'lucide-react'
 
 export default function DrilldownDrawer({ drill, basePath, desde, hasta, onClose }) {
   const router = useRouter()
-  const [data, setData] = useState(null)
-  const [cargando, setCargando] = useState(false)
+  const [data, setData] = useState(null)      // { clave, ...respuesta }
+  const [version, setVersion] = useState(0)    // fuerza recarga tras reasignar
   const [reasignando, setReasignando] = useState(null) // id_cliente en edición
-  const [okMsg, setOkMsg] = useState('')
+  const [ok, setOk] = useState({ segmento: null, msg: '' })
 
-  const cargar = useCallback(async () => {
-    if (!drill) return
-    setCargando(true); setData(null); setOkMsg('')
+  // "cargando" se deriva: los datos guardan la clave de su petición, así el
+  // efecto solo escribe estado al llegar la respuesta (sin setState síncrono).
+  const segmento = drill ? `${drill.dim}|${drill.valor}|${desde ?? ''}|${hasta ?? ''}` : null
+  const clave    = segmento ? `${segmento}|${version}` : null
+  const cargando = !!clave && data?.clave !== clave
+  const okMsg    = ok.segmento === segmento ? ok.msg : ''
+  const setOkMsg = (msg) => setOk({ segmento, msg })
+
+  useEffect(() => {
+    if (!drill || !clave) return
+    let vigente = true
     const params = new URLSearchParams({ dim: drill.dim, valor: drill.valor })
     if (desde) params.set('desde', desde)
     if (hasta) params.set('hasta', hasta)
-    const res = await fetch(`/api/analitica/detalle?${params.toString()}`)
-    const json = await res.json()
-    setData(res.ok ? json : { error: json?.error, items: [] })
-    setCargando(false)
-  }, [drill, desde, hasta])
-
-  useEffect(() => { cargar() }, [cargar])
+    fetch(`/api/analitica/detalle?${params.toString()}`)
+      .then(async (res) => {
+        const json = await res.json().catch(() => ({}))
+        if (vigente) setData({ clave, ...(res.ok ? json : { error: json?.error, items: [] }) })
+      })
+      .catch(() => { if (vigente) setData({ clave, error: 'Error de conexión', items: [] }) })
+    return () => { vigente = false }
+  }, [drill, desde, hasta, clave])
 
   if (!drill) return null
 
@@ -61,7 +70,7 @@ export default function DrilldownDrawer({ drill, basePath, desde, hasta, onClose
       setOkMsg('Asesor reasignado correctamente.')
       setReasignando(null)
       router.refresh()
-      cargar()
+      setVersion(v => v + 1)
     } else {
       const j = await res.json()
       setOkMsg(j?.error || 'No se pudo reasignar')

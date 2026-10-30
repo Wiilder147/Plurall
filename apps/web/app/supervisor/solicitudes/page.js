@@ -34,8 +34,21 @@ const TABS = [
   { key: 'TODOS',      label: 'Todas'       },
 ]
 
+async function consultarSolicitudes(supabase) {
+  const { data } = await supabase
+    .from('solicitud_credito')
+    .select(`
+      id_solicitud, monto_solicitado, plazo_meses, fecha_solicitud, proposito,
+      estado_solicitud ( nombre ),
+      cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono ),
+      score ( puntaje_total, porcentaje, recomendacion )
+    `)
+    .order('fecha_solicitud', { ascending: false })
+  return data ?? []
+}
+
 export default function SupervisorSolicitudesPage() {
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
 
   const [todas,      setTodas]      = useState([])
   const [filtro,     setFiltro]     = useState('PENDIENTE')
@@ -43,25 +56,27 @@ export default function SupervisorSolicitudesPage() {
   const [selected,   setSelected]   = useState(new Set())   // ids de solicitudes seleccionadas
   const [batch,      setBatch]      = useState({ loading: false, resultado: null })
 
+  // La carga inicial parte con loading=true; las recargas lo marcan antes de llamar.
   const cargar = useCallback(async () => {
-    setLoading(true)
-    const { data } = await supabase
-      .from('solicitud_credito')
-      .select(`
-        id_solicitud, monto_solicitado, plazo_meses, fecha_solicitud, proposito,
-        estado_solicitud ( nombre ),
-        cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono ),
-        score ( puntaje_total, porcentaje, recomendacion )
-      `)
-      .order('fecha_solicitud', { ascending: false })
-    setTodas(data ?? [])
+    setTodas(await consultarSolicitudes(supabase))
     setLoading(false)
-  }, [])
+  }, [supabase])
 
-  useEffect(() => { cargar() }, [cargar])
+  // Carga inicial: el estado solo se escribe al llegar la respuesta
+  useEffect(() => {
+    let vigente = true
+    consultarSolicitudes(supabase).then((filas) => {
+      if (vigente) { setTodas(filas); setLoading(false) }
+    })
+    return () => { vigente = false }
+  }, [supabase])
 
-  // Limpiar selección al cambiar de tab
-  useEffect(() => { setSelected(new Set()); setBatch({ loading: false, resultado: null }) }, [filtro])
+  // Limpiar selección al cambiar de tab (en el evento, no en un efecto)
+  const cambiarFiltro = (key) => {
+    setFiltro(key)
+    setSelected(new Set())
+    setBatch({ loading: false, resultado: null })
+  }
 
   const solicitudes = filtro === 'TODOS'
     ? todas
@@ -101,6 +116,7 @@ export default function SupervisorSolicitudesPage() {
       setBatch({ loading: false, resultado: data })
       setSelected(new Set())
       // Recargar lista
+      setLoading(true)
       await cargar()
     } catch {
       setBatch({ loading: false, resultado: { ok: false, resumen: 'Error de conexión' } })
@@ -118,7 +134,7 @@ export default function SupervisorSolicitudesPage() {
       <div className="flex gap-2 flex-wrap">
         {TABS.map(({ key, label }) => (
           <button key={key}
-            onClick={() => setFiltro(key)}
+            onClick={() => cambiarFiltro(key)}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
               filtro === key
                 ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20'
