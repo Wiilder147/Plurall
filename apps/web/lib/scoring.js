@@ -52,8 +52,19 @@ export function puntosPorOpciones(respuestas, opciones) {
  * @returns {'PRE_APROBADO'|'REVISION_MANUAL'|'RECHAZAR'}
  */
 export function clasificarPuntaje(puntaje, modelo = {}) {
-  const minimo = modelo.puntaje_minimo ?? 600
+  // Escala 0–1000 (migración 44): 429 equivale al antiguo 600 sobre la suma cruda
+  const minimo = modelo.puntaje_minimo ?? 429
   if (puntaje >= minimo)        return 'PRE_APROBADO'
   if (puntaje >= minimo * 0.67) return 'REVISION_MANUAL'
   return 'RECHAZAR'
+}
+
+// Color del score según la regla real del modelo (W-05): verde = pre-aprobable,
+// amarillo = revisión manual, rojo = rechazo. Antes eran umbrales fijos 700/500.
+export function colorScore(puntaje, modelo = {}) {
+  if (puntaje == null) return 'text-slate-500'
+  const dictamen = clasificarPuntaje(puntaje, modelo)
+  return dictamen === 'PRE_APROBADO' ? 'text-emerald-400'
+    : dictamen === 'REVISION_MANUAL' ? 'text-yellow-400'
+    : 'text-red-400'
 }

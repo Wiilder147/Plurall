@@ -5,6 +5,7 @@
  * FUNCIONALIDAD: Este archivo define la lógica y estructura para su respectivo módulo.
  * ========================================================================== */
 import { createClient } from '@/lib/supabase/server'
+import { colorScore } from '@/lib/scoring'
 import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { Users, Search, ArrowRight, CheckCircle2, XCircle, Clock } from 'lucide-react'
@@ -54,6 +55,10 @@ export default async function AdminClientesPage({ searchParams }) {
     const scoreDe = Object.fromEntries((scores ?? []).map(s => [s.id_cliente, s.puntaje_total]))
     clientes.forEach(c => { c.score_credito = scoreDe[c.id_cliente] ?? null })
   }
+
+  // W-05: colores según el mínimo del modelo activo (escala 0–1000)
+  const { data: modeloScore } = await supabase
+    .from('modelo_score').select('puntaje_minimo').eq('activo', true).limit(1).maybeSingle()
 
   return (
     <div className="flex flex-col gap-6 pb-10">
@@ -119,8 +124,7 @@ export default async function AdminClientesPage({ searchParams }) {
                       <td className="px-5 py-4 text-slate-400">{cli.telefono}</td>
                       <td className="px-5 py-4 text-center">
                         <span className={`font-bold text-sm ${
-                          (cli.score_credito || 0) >= 700 ? 'text-emerald-400' :
-                          (cli.score_credito || 0) >= 500 ? 'text-yellow-400' : 'text-red-400'
+                          colorScore(cli.score_credito, modeloScore)
                         }`}>
                           {cli.score_credito || 0}
                         </span>

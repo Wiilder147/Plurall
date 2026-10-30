@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { puntosPorRangos, puntosPorOpciones, clasificarPuntaje } from '../lib/scoring'
+import { puntosPorRangos, puntosPorOpciones, clasificarPuntaje, colorScore } from '../lib/scoring'
 
 // Rangos reales de la pregunta de ingreso mensual (db/11_ponderacion_score_numerico.sql)
 const RANGOS_INGRESO = [
@@ -85,7 +85,19 @@ describe('clasificarPuntaje (umbrales del modelo)', () => {
     expect(clasificarPuntaje(0, MODELO)).toBe('RECHAZAR')
   })
 
-  it('usa 600 como mínimo por defecto si no hay modelo', () => {
-    expect(clasificarPuntaje(600)).toBe('PRE_APROBADO')
+  // W-05 (decisión 29-oct-2026): escala 0–1000; 600 crudo ≡ 429 escalado (migración 44)
+  it('usa 429 como mínimo por defecto si no hay modelo (escala 0–1000)', () => {
+    expect(clasificarPuntaje(429)).toBe('PRE_APROBADO')
+    expect(clasificarPuntaje(428)).not.toBe('PRE_APROBADO')
+  })
+})
+
+describe('colorScore (W-05)', () => {
+  it('el color sigue la regla de aprobación del modelo, no umbrales fijos', () => {
+    const modelo = { puntaje_minimo: 429 }
+    expect(colorScore(429, modelo)).toMatch(/emerald/)
+    expect(colorScore(300, modelo)).toMatch(/yellow/)
+    expect(colorScore(100, modelo)).toMatch(/red/)
+    expect(colorScore(null, modelo)).toMatch(/slate/)
   })
 })
