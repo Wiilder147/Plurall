@@ -1,8 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 import { parseNombre } from '../../lib/nombre.js';
 
-const supabaseUrl = 'https://bnemrismjmvmemypokaz.supabase.co';
+dotenv.config({ path: '.env.local' });
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SEED_PASSWORD = process.env.SEED_PASSWORD;
+
+if (!SEED_PASSWORD) {
+  console.error('Define SEED_PASSWORD en el entorno antes de ejecutar el script.');
+  process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function inject() {
@@ -28,7 +38,7 @@ async function inject() {
   const email = 'supervisor_test@plurall.com';
   const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
     email,
-    password: 'Password123!',
+    password: SEED_PASSWORD,
     email_confirm: true,
     user_metadata: { ...parseNombre('Supervisor QA') }
   });
@@ -114,7 +124,7 @@ async function inject() {
   console.log('=> Crédito ID creado con éxito:', cred.id_credito);
   console.log('\n--- 🎉 DONE ---');
   console.log('Email: ', email);
-  console.log('Password: ', 'Password123!');
+  console.log('Password: valor de SEED_PASSWORD');
 }
 
 inject().catch(console.error);

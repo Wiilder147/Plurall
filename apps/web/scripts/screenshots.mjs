@@ -9,13 +9,13 @@ const OUTPUT_DIR  = join(__dirname, 'screenshots');
 const REPORT_PATH = join(OUTPUT_DIR, 'REPORTE.md');
 const VIEWPORT    = { width: 1440, height: 900 };
 
-// Credenciales de los usuarios semilla, validadas con `smoke_login.mjs`
-// contra el Supabase real para los 4 roles (verificado 2026-07-03).
+// Credenciales de los usuarios semilla. Se leen del entorno para no
+// versionar secretos: SMOKE_<ROL>_CELULAR y SMOKE_<ROL>_PASSWORD.
 const CREDENTIALS = {
-  cliente:    { celular: '3173784693', password: 'Plurall2026*' },
-  asesor:     { celular: '3100000002', password: 'Plurall2026*' },
-  supervisor: { celular: '3100000001', password: 'Plurall2026*' },
-  admin:      { celular: '3001234567', password: 'Plurall2026*' },
+  cliente:    { celular: process.env.SMOKE_CLIENTE_CELULAR,    password: process.env.SMOKE_CLIENTE_PASSWORD },
+  asesor:     { celular: process.env.SMOKE_ASESOR_CELULAR,     password: process.env.SMOKE_ASESOR_PASSWORD },
+  supervisor: { celular: process.env.SMOKE_SUPERVISOR_CELULAR, password: process.env.SMOKE_SUPERVISOR_PASSWORD },
+  admin:      { celular: process.env.SMOKE_ADMIN_CELULAR,      password: process.env.SMOKE_ADMIN_PASSWORD },
 };
 
 const PREFIX_BY_ROLE = {
@@ -92,7 +92,9 @@ const ensureDir  = (dir)   => { if (!existsSync(dir)) mkdirSync(dir, { recursive
 
 async function login(page, role) {
   const creds = CREDENTIALS[role];
-  if (!creds) throw new Error(`Sin credenciales para rol: ${role}`);
+  if (!creds || !creds.celular || !creds.password) {
+    throw new Error(`Faltan SMOKE_${role.toUpperCase()}_CELULAR y/o SMOKE_${role.toUpperCase()}_PASSWORD`);
+  }
 
   await page.goto(BASE_URL + '/login', { waitUntil: 'networkidle', timeout: 30000 });
   const telInput = page.locator('input[type="tel"], input[name="celular"], input[id*="celular"], input[placeholder*="celular"]').first();
