@@ -42,6 +42,10 @@ image.png
 
 # Capturas de documentación (regenerables con apps/web/scripts/screenshots.mjs)
 apps/web/scripts/screenshots/
+apps/web/smoke_*.png
+
+# Diagrama AWS generado (la fuente es docs/diagramas/arquitectura_aws.html)
+docs/diagramas/arquitectura_aws.png
 
 # Archivos de trabajo / generación (no van al repo)
 generar_cronograma.py

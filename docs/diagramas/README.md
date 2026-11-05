@@ -39,6 +39,14 @@ Diagramas en **Mermaid** (`.mmd`). Organización:
 | [`proyecto/6-despliegue.mmd`](proyecto/6-despliegue.mmd) | Despliegue (serverless, nodos físicos) |
 | [`proyecto/7-mer.mmd`](proyecto/7-mer.mmd) | MER — Modelo Entidad-Relación (3FN) |
 
+## Arquitectura AWS (diseño de referencia)
+
+- [`../ARQUITECTURA_AWS.md`](../ARQUITECTURA_AWS.md) — documento de diseño AWS lean-secure.
+- [`arquitectura_aws.html`](arquitectura_aws.html) — diagrama visual fuente.
+
+El PNG se genera con `apps/web/scripts/render_arquitectura.mjs` y **no se versiona**
+(ver `.gitignore`).
+
 > El MER refleja el modelo normalizado (rama `feat/normalizacion-bd`): `cliente` adelgazada + `direccion`/`negocio_cliente`/`perfil_financiero`/`cuenta_bancaria`. El score vigente vive en la vista `vw_cliente_score` (no es tabla).
 
 ## Cómo renderizar / exportar
