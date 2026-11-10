@@ -24,6 +24,8 @@ import {
   TrendingUp, Wallet, FileText, BarChart3, Shield, Calendar,
   Download, Receipt, ExternalLink,
 } from 'lucide-react'
+import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 const ESTADO_SOL_UI = {
   PENDIENTE:    { label: 'Pendiente',   cls: 'bg-yellow-500/10 text-yellow-400',   icon: Clock },
@@ -108,11 +110,11 @@ export default async function FichaClienteStaff({ clienteId, backHref = '/', pue
             <div>
               <h1 className="text-2xl font-bold text-white">{nombre}</h1>
               <div className="flex items-center gap-2 flex-wrap mt-1">
-                <span className="text-slate-400 text-sm">CC {cliente.dni}</span>
+                <span className="text-slate-400 text-sm">CC {documentoVisible(cliente.dni) ?? '—'}</span>
                 <span className="text-slate-600">·</span>
                 {puedeEditarCelular
                   ? <CambiarCelular idCliente={cliente.id_cliente} celularActual={cliente.telefono} />
-                  : <span className="text-slate-400 text-sm">{cliente.telefono}</span>}
+                  : <span className="text-slate-400 text-sm">{celularVisible(cliente.telefono) ?? '—'}</span>}
               </div>
             </div>
           </div>
@@ -156,8 +158,8 @@ export default async function FichaClienteStaff({ clienteId, backHref = '/', pue
             <User className="w-4 h-4 text-orange-400" /> Datos personales
           </h2>
           <div className="flex flex-col gap-3 text-sm">
-            <Campo icon={Hash}   label="Cédula"    value={cliente.dni} />
-            <Campo icon={Phone}  label="Celular"   value={cliente.telefono} />
+            <Campo icon={Hash}   label="Cédula"    value={documentoVisible(cliente.dni) ?? '—'} />
+            <Campo icon={Phone}  label="Celular"   value={celularVisible(cliente.telefono)} />
             <Campo icon={Mail}   label="Email"     value={emailVisible(cliente.email)} />
             <Campo icon={MapPin} label="Ciudad"    value={[dir?.municipio?.nombre, dir?.municipio?.departamento?.nombre].filter(Boolean).join(', ')} />
             <Campo icon={MapPin} label="Dirección" value={dir?.linea} />

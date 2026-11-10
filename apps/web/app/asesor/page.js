@@ -16,6 +16,7 @@ import {
   Users, AlertTriangle, CheckCircle2, PhoneCall,
   Clock, DollarSign, FileCheck, Wallet, UserPlus,
 } from 'lucide-react'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -142,7 +143,7 @@ export default async function AsesorDashboard() {
               <PanelRow key={c.id_cliente} href={`/asesor/cobranza/${c.id_cliente}`}>
                 <div>
                   <p className="font-semibold text-slate-200 text-sm">{formatNombre(c)}</p>
-                  <p className="text-slate-500 text-xs">{c.telefono}</p>
+                  <p className="text-slate-500 text-xs">{celularVisible(c.telefono) ?? '—'}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-red-400 font-bold text-sm">{c.creditoMora?.dias_mora_maximo}d mora</p>
@@ -168,7 +169,7 @@ export default async function AsesorDashboard() {
               <PanelRow key={p.id_gestion}>
                 <div>
                   <p className="font-semibold text-slate-200 text-sm">{formatNombre(p.cliente)}</p>
-                  <p className="text-slate-500 text-xs">{p.cliente?.telefono}</p>
+                  <p className="text-slate-500 text-xs">{celularVisible(p.cliente?.telefono) ?? '—'}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-yellow-400 font-bold text-sm">{formatCOP(p.monto_prometido)}</p>

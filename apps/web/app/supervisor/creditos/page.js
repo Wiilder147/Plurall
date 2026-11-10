@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { CreditCard, User, AlertTriangle, Download } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -73,7 +74,7 @@ export default async function CreditosSupervisorPage() {
                         )}
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
-                        <span>CC {c.cliente?.dni ?? '—'}</span>
+                        <span>CC {documentoVisible(c.cliente?.dni) ?? '—'}</span>
                         <span>Desembolsado: {formatCOP(c.monto_desembolsado ?? 0)}</span>
                         <span>Saldo: {formatCOP(c.saldo_pendiente ?? 0)}</span>
                       </div>

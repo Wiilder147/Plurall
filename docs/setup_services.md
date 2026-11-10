@@ -189,14 +189,16 @@ npm run build
 
 # Ejecutar cron de mora manualmente (para pruebas)
 curl -H "Authorization: Bearer TU_CRON_SECRET" http://localhost:3000/api/cron/mora
-
-# Generar PDF de presentación DBA
-node scripts/generar_pdf.mjs
 ```
 
 ---
 
 ## Scripts utilitarios (`apps/web/scripts/utilidades/`)
+
+> Estos scripts se ejecutan manualmente y usan `SUPABASE_SERVICE_ROLE_KEY`
+> (omite RLS). Nunca los ejecutes contra producción sin autorización.
+> Requieren `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en el
+> entorno. Los seeds requieren además `SEED_PASSWORD`; no versiones credenciales.
 
 | Script | Descripción |
 |--------|-------------|

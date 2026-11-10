@@ -10,6 +10,7 @@ import { formatCOP } from '@/lib/calculadora'
 import { Banknote, User, Calendar } from 'lucide-react'
 import BotonDesembolsar from './BotonDesembolsar'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,7 +58,7 @@ export default async function DesembolsosPage() {
                     <div className="min-w-0">
                       <p className="font-semibold text-slate-200 text-sm">{formatNombre(s.cliente) || '—'}</p>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
-                        <span>CC {s.cliente?.dni ?? '—'}</span>
+                        <span>CC {documentoVisible(s.cliente?.dni) ?? '—'}</span>
                         <span>{formatCOP(s.monto_solicitado)} — {s.plazo_meses} meses</span>
                         <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {fecha}</span>
                       </div>

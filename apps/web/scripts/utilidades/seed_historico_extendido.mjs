@@ -14,6 +14,13 @@ const db = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
+const SEED_PASSWORD = process.env.SEED_PASSWORD
+
+if (!SEED_PASSWORD) {
+  console.error('Define SEED_PASSWORD en el entorno antes de ejecutar el seed.')
+  process.exit(1)
+}
+
 const rnd  = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a
 const isoD = (d)    => d.toISOString().split('T')[0]
 const ago  = (dias) => new Date(Date.now() - dias * 86400000)
@@ -103,7 +110,7 @@ async function seed() {
 
     // Auth user
     const { data: authData, error: authErr } = await db.auth.admin.createUser({
-      email: fakeEmail, password: 'Plurall2025!', email_confirm: true,
+      email: fakeEmail, password: SEED_PASSWORD, email_confirm: true,
       user_metadata: { ...parseNombre(c.nombre), dni: c.dni, telefono: c.cel },
     })
     if (authErr && !authErr.message.includes('already')) { console.warn(`  ⚠️  ${c.nombre}: ${authErr.message}`); continue }

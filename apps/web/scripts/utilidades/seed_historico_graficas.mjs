@@ -17,6 +17,13 @@ const db = createClient(
 )
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+const SEED_PASSWORD = process.env.SEED_PASSWORD
+
+if (!SEED_PASSWORD) {
+  console.error('Define SEED_PASSWORD en el entorno antes de ejecutar el seed.')
+  process.exit(1)
+}
+
 const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
 const rndF = (min, max, dec = 2) => parseFloat((Math.random() * (max - min) + min).toFixed(dec))
 const fechaHace = (dias) => new Date(Date.now() - dias * 86400000)
@@ -89,7 +96,7 @@ async function seed() {
     // 1. Crear auth user
     const { data: authData, error: authErr } = await db.auth.admin.createUser({
       email: fakeEmail,
-      password: 'Plurall2025!',
+      password: SEED_PASSWORD,
       email_confirm: true,
       user_metadata: { ...parseNombre(c.nombre), dni: c.dni, telefono: c.cel },
     })

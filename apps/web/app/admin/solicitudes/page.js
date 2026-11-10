@@ -10,6 +10,8 @@ import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { ArrowRight, Clock, CheckCircle2, XCircle, Hourglass, TrendingUp, Search } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -140,7 +142,7 @@ export default async function AdminSolicitudesPage({ searchParams }) {
                     {/* NOMBRE DEL CLIENTE — text-slate-200 (gris muy claro), font-semibold */}
                     <p className="font-semibold text-slate-200">{formatNombre(sol.cliente) || 'Cliente'}</p>
                     {/* CC Y TELÉFONO — text-slate-500 (gris), text-xs (12px) */}
-                    <p className="text-slate-500 text-xs">CC {sol.cliente?.dni} — {sol.cliente?.telefono}</p>
+                    <p className="text-slate-500 text-xs">CC {documentoVisible(sol.cliente?.dni) ?? '—'} — {celularVisible(sol.cliente?.telefono) ?? '—'}</p>
                     {/* MONTO Y PLAZO — text-slate-400, text-sm (14px) */}
                     <p className="text-slate-400 text-sm mt-1">{formatCOP(sol.monto_solicitado)} — {sol.plazo_meses} meses</p>
                     {/* PROPÓSITO (si existe) — text-xs (12px), line-clamp-1 (máximo 1 línea) */}

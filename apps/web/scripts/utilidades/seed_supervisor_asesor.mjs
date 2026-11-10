@@ -18,6 +18,13 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
+const SEED_PASSWORD = process.env.SEED_PASSWORD
+
+if (!SEED_PASSWORD) {
+  console.error('Define SEED_PASSWORD en el entorno antes de ejecutar el seed.')
+  process.exit(1)
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function getRolId(nombre) {
@@ -134,7 +141,7 @@ async function seed() {
   console.log('👔 Creando SUPERVISOR...')
   const supId = await crearUsuario({
     celular:  '3100000001',
-    password: 'Plurall2025!',
+    password: SEED_PASSWORD,
     nombre:   'Laura Supervisora',
     dni:      '52100001',
     email:    'laura.supervisora@plurall.app',
@@ -146,7 +153,7 @@ async function seed() {
   console.log('📞 Creando ASESOR...')
   const asesorId = await crearUsuario({
     celular:  '3100000002',
-    password: 'Plurall2025!',
+    password: SEED_PASSWORD,
     nombre:   'Carlos Asesor',
     dni:      '52100002',
     email:    'carlos.asesor@plurall.app',
@@ -176,7 +183,7 @@ async function seed() {
   for (const c of clientesMora) {
     const uid = await crearUsuario({
       celular:  c.celular,
-      password: 'Plurall2025!',
+      password: SEED_PASSWORD,
       nombre:   c.nombre,
       dni:      c.dni,
       email:    `${c.celular}@plurall.app`,
@@ -281,7 +288,7 @@ async function seed() {
   for (const c of clientesAlDia) {
     const uid = await crearUsuario({
       celular:  c.celular,
-      password: 'Plurall2025!',
+      password: SEED_PASSWORD,
       nombre:   c.nombre,
       dni:      c.dni,
       email:    `${c.celular}@plurall.app`,
@@ -376,7 +383,7 @@ async function seed() {
   for (const c of solicitantes) {
     const uid = await crearUsuario({
       celular:  c.celular,
-      password: 'Plurall2025!',
+      password: SEED_PASSWORD,
       nombre:   c.nombre,
       dni:      c.dni,
       email:    `${c.celular}@plurall.app`,
@@ -484,18 +491,18 @@ async function seed() {
   console.log('┌─────────────────────────────────────────────────────────┐')
   console.log('│  ROL        │  CELULAR       │  CONTRASEÑA              │')
   console.log('├─────────────────────────────────────────────────────────┤')
-  console.log('│  SUPERVISOR │  3100000001    │  Plurall2025!            │')
-  console.log('│  ASESOR     │  3100000002    │  Plurall2025!            │')
+  console.log('│  SUPERVISOR │  3100000001    │  SEED_PASSWORD           │')
+  console.log('│  ASESOR     │  3100000002    │  SEED_PASSWORD           │')
   console.log('├─────────────────────────────────────────────────────────┤')
-  console.log('│  CLIENTE    │  3200000001    │  Plurall2025!  (mora 25d)│')
-  console.log('│  CLIENTE    │  3200000002    │  Plurall2025!  (mora 45d)│')
-  console.log('│  CLIENTE    │  3200000003    │  Plurall2025!  (mora 75d)│')
-  console.log('│  CLIENTE    │  3200000004    │  Plurall2025!  (mora 95d)│')
-  console.log('│  CLIENTE    │  3300000001    │  Plurall2025!  (al día)  │')
-  console.log('│  CLIENTE    │  3300000002    │  Plurall2025!  (al día)  │')
-  console.log('│  CLIENTE    │  3400000001    │  Plurall2025!  (pendiente│')
-  console.log('│  CLIENTE    │  3400000002    │  Plurall2025!  (pendiente│')
-  console.log('│  CLIENTE    │  3400000003    │  Plurall2025!  (pendiente│')
+  console.log('│  CLIENTE    │  3200000001    │  SEED_PASSWORD  (mora 25d)│')
+  console.log('│  CLIENTE    │  3200000002    │  SEED_PASSWORD  (mora 45d)│')
+  console.log('│  CLIENTE    │  3200000003    │  SEED_PASSWORD  (mora 75d)│')
+  console.log('│  CLIENTE    │  3200000004    │  SEED_PASSWORD  (mora 95d)│')
+  console.log('│  CLIENTE    │  3300000001    │  SEED_PASSWORD  (al día)  │')
+  console.log('│  CLIENTE    │  3300000002    │  SEED_PASSWORD  (al día)  │')
+  console.log('│  CLIENTE    │  3400000001    │  SEED_PASSWORD  (pendiente│')
+  console.log('│  CLIENTE    │  3400000002    │  SEED_PASSWORD  (pendiente│')
+  console.log('│  CLIENTE    │  3400000003    │  SEED_PASSWORD  (pendiente│')
   console.log('└─────────────────────────────────────────────────────────┘')
   console.log('\n🌐 PORTALES:')
   console.log('   Supervisor → http://localhost:3000/supervisor')

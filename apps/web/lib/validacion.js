@@ -22,8 +22,21 @@ export function esCelularValido(celular) {
 // Reglas de textos libres (criterio de auditoría 29-oct-2026, delegado por negocio):
 // mínimo para que quede una nota/motivo real, máximo para que no desborde la UI.
 export const REGLAS_TEXTO = {
-  notaAsesor:     { min: 10, max: 500, etiqueta: 'El motivo o nota' },
+  notaAsesor:     { min: 10, max: 500, etiqueta: 'La nota' },
   motivoCatalogo: { min: 5,  max: 150, etiqueta: 'El motivo' },
+}
+
+// JM-06: un solo término por dato. "Motivo del rechazo" = elemento del catálogo;
+// la "nota" es el texto libre del asesor, con el nombre del formulario que la pide.
+export const ETIQUETA_NOTA_ASESOR = {
+  PRE_APROBAR: 'Nota de verificación',
+  RECHAZAR:    'Nota del rechazo',
+}
+
+/** Reglas de la nota del asesor con la etiqueta de la acción (formulario, error y tarjeta). */
+export function reglasNotaAsesor(accion) {
+  const etiqueta = ETIQUETA_NOTA_ASESOR[accion]
+  return etiqueta ? { ...REGLAS_TEXTO.notaAsesor, etiqueta: `La ${etiqueta.toLowerCase()}` } : REGLAS_TEXTO.notaAsesor
 }
 
 /** Devuelve un mensaje de error o null si el texto es válido. */

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root{
+    --aws:#ff9900; --aws-d:#ec7211; --blue:#2563eb; --blue-l:#eff6ff;
+    --green:#16a34a; --green-l:#ecfdf5; --red:#dc2626; --red-l:#fef2f2;
+    --purple:#7c3aed; --purple-l:#f5f3ff; --slate:#334155; --line:#94a3b8;
+    --ink:#0f172a; --muted:#64748b;
+  }
+  body{ font-family:"Segoe UI",system-ui,Arial,sans-serif; background:#f8fafc; color:var(--ink); width:1320px; padding:28px 32px; }
+  .wrap{ position:relative; }
+  h1{ font-size:24px; font-weight:800; letter-spacing:-.3px; }
+  h1 small{ font-size:14px; font-weight:600; color:var(--muted); }
+  .tag{ display:inline-block; background:var(--aws); color:#fff; font-weight:700; font-size:12px; padding:3px 10px; border-radius:6px; vertical-align:middle; margin-left:8px;}
+  .row{ display:flex; gap:16px; align-items:stretch; }
+  .col{ display:flex; flex-direction:column; gap:14px; }
+  .card{ background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; padding:12px 14px; box-shadow:0 1px 2px rgba(15,23,42,.05); }
+  .card .t{ font-weight:700; font-size:14px; display:flex; align-items:center; gap:7px; }
+  .card .s{ font-size:11.5px; color:var(--muted); margin-top:3px; line-height:1.35; }
+  .ico{ width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:800; }
+  .i-aws{background:var(--aws-d)} .i-blue{background:var(--blue)} .i-green{background:var(--green)}
+  .i-red{background:var(--red)} .i-purple{background:var(--purple)} .i-slate{background:var(--slate)}
+  .pill{ display:inline-block; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; font-size:10.5px; padding:2px 7px; margin:3px 3px 0 0; color:#475569; font-weight:600;}
+
+  .zone{ border:2px dashed var(--purple); border-radius:14px; padding:12px; background:var(--purple-l); position:relative; }
+  .zone-h{ position:absolute; top:-11px; left:14px; background:#fff; border:1.5px solid var(--purple); color:var(--purple); font-weight:800; font-size:11px; padding:1px 9px; border-radius:7px;}
+  .subnet{ border:1.5px solid #cbd5e1; border-radius:11px; padding:10px; background:rgba(255,255,255,.65); position:relative; margin-top:10px;}
+  .subnet-h{ position:absolute; top:-10px; left:12px; background:#fff; font-weight:700; font-size:10.5px; padding:1px 8px; border-radius:6px; border:1px solid #cbd5e1;}
+  .lock{ color:var(--green); font-weight:800;}
+
+  .edge{ background:linear-gradient(180deg,#fff7ed,#ffedd5); border-color:#fdba74; }
+  .ext{ background:var(--red-l); border-color:#fecaca; }
+
+  .arrow{ display:flex; align-items:center; justify-content:center; color:var(--blue); font-weight:800; font-size:20px; }
+  .vgap{ height:6px; }
+
+  table{ border-collapse:collapse; width:100%; font-size:11.5px; }
+  th,td{ border:1px solid #e2e8f0; padding:5px 9px; text-align:left; }
+  th{ background:#fff7ed; font-weight:700; }
+  td.n{ text-align:right; font-variant-numeric:tabular-nums; font-weight:700; }
+  .tot td{ background:#fff7ed; font-weight:800; }
+  .legend{ font-size:11.5px; color:#475569; line-height:1.5;}
+  .legend b{color:var(--ink)}
+  .flow{ display:flex; align-items:center; gap:10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Arquitectura AWS — Fintech de crédito <span class="tag">Opción B · lean-secure</span>
+    <br><small>Next.js + RDS/RLS · seguridad al mil · conectores (Experian · Banco · Pagos · KYC · FNG) · us-east-1</small>
+  </h1>
+
+  <div style="height:16px"></div>
+
+  <!-- TOP FLOW -->
+  <div class="row" style="align-items:center;">
+    <div class="card" style="width:150px;text-align:center;">
+      <div class="t" style="justify-content:center;"><span class="ico i-slate">👥</span></div>
+      <div style="font-weight:700;font-size:13px;margin-top:4px;">Usuarios</div>
+      <div class="s">Web / Móvil</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="card edge" style="flex:1;">
+      <div class="t"><span class="ico i-aws">CF</span>CloudFront (CDN) + AWS WAF</div>
+      <div class="s">HTTPS global · reglas OWASP + rate-based (anti fuerza bruta) · AWS Shield (DDoS)</div>
+      <div><span class="pill">TLS</span><span class="pill">WAF</span><span class="pill">DDoS</span><span class="pill">CDN</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="card" style="width:210px;background:var(--green-l);border-color:#86efac;">
+      <div class="t"><span class="ico i-green">🔑</span>Amazon Cognito</div>
+      <div class="s">Registro · Login · emite <b>JWT</b> → habilita RLS por rol/cliente</div>
+    </div>
+  </div>
+
+  <div class="vgap"></div>
+  <div class="arrow" style="font-size:22px;">↓</div>
+
+  <!-- VPC ZONE -->
+  <div class="zone">
+    <div class="zone-h">🛡️ VPC (us-east-1) — 2 Zonas de Disponibilidad</div>
+
+    <div class="row">
+      <!-- LEFT: public subnet + app -->
+      <div class="col" style="flex:1.15;">
+        <div class="subnet" style="border-color:#93c5fd;">
+          <div class="subnet-h"><span class="lock">🔓</span> Subred pública</div>
+          <div class="row" style="margin-top:6px;">
+            <div class="card" style="flex:1;border-color:#fdba74;">
+              <div class="t"><span class="ico i-aws">AR</span>AWS App Runner</div>
+              <div class="s">Next.js = SSR UI + API/BFF. HTTPS, autoscaling y HA <b>gestionados</b> (sin EC2, sin ALB).</div>
+              <div>
+                <span class="pill">Clientes</span><span class="pill">Créditos</span><span class="pill">Cuotas/Pagos</span>
+                <span class="pill">Scoring</span><span class="pill">Cobranza</span><span class="pill">Contabilidad</span>
+              </div>
+            </div>
+            <div class="card" style="width:150px;border-color:#fdba74;">
+              <div class="t"><span class="ico i-aws">NAT</span>NAT Gateway</div>
+              <div class="s"><b>+ Elastic IP (IP fija)</b> para el allowlist que exigen Experian y el banco.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subnet" style="border-color:#cbd5e1;">
+          <div class="subnet-h"><span class="lock">🔒</span> Subred privada — sin acceso público</div>
+          <div class="row" style="margin-top:6px;">
+            <div class="card" style="flex:1;">
+              <div class="t"><span class="ico i-blue">🐘</span>RDS PostgreSQL</div>
+              <div class="s">Multi-AZ · cifrado KMS · <b>RLS nativa</b> atada al JWT · backups + PITR. Fuente única de verdad.</div>
+            </div>
+            <div class="card" style="width:170px;">
+              <div class="t"><span class="ico i-red">⚡</span>ElastiCache (Valkey)</div>
+              <div class="s">Rate-limit · idempotencia · caché (opcional MVP).</div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;background:#f8fafc;">
+            <div class="t"><span class="ico i-purple">⟳</span>Capa asíncrona — procesos de dinero</div>
+            <div class="s" style="margin-top:4px;">
+              <b>EventBridge</b> (cron) → <b>Lambda workers</b> (jobs + conectores) → <b>SQS + DLQ</b> (reintentos).
+            </div>
+            <div>
+              <span class="pill">Cron mora</span><span class="pill">Débito automático</span><span class="pill">Desembolso</span>
+              <span class="pill">Conciliación</span><span class="pill">Notificaciones (SES)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: shared services -->
+      <div class="col" style="width:235px;">
+        <div class="card">
+          <div class="t"><span class="ico i-green">🗄️</span>Amazon S3</div>
+          <div class="s">KYC · contratos · paz y salvo. SSE-KMS · versioning · lifecycle a Glacier (retención 5 años).</div>
+        </div>
+        <div class="card">
+          <div class="t"><span class="ico i-slate">🔐</span>Secrets Manager + KMS</div>
+          <div class="s">Certificados <b>mTLS</b> · API keys · rotación. ACM para TLS.</div>
+        </div>
+        <div class="card">
+          <div class="t"><span class="ico i-blue">📈</span>Observabilidad</div>
+          <div class="s">CloudTrail (auditoría) · CloudWatch · GuardDuty · Sentry.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="vgap"></div>
+  <div class="arrow" style="font-size:22px;">↓ &nbsp; vía NAT (IP fija) + mTLS &nbsp; ↓</div>
+
+  <!-- EXTERNAL CONNECTORS -->
+  <div class="card ext">
+    <div class="t"><span class="ico i-red">🔌</span>Anti-Corruption Layer — un conector por proveedor</div>
+    <div class="row" style="margin-top:8px;gap:10px;">
+      <div class="card" style="flex:1;"><div class="t" style="font-size:12.5px;">📊 DataCrédito / Experian</div><div class="s">Score crediticio · allowlist IP + API key</div></div>
+      <div class="card" style="flex:1;"><div class="t" style="font-size:12.5px;">🏦 Aliado bancario</div><div class="s">Desembolso · mTLS / SFTP batch</div></div>
+      <div class="card" style="flex:1;"><div class="t" style="font-size:12.5px;">💳 Agregador pagos</div><div class="s">Recaudo · webhook firmado (HMAC) idempotente</div></div>
+      <div class="card" style="flex:1;"><div class="t" style="font-size:12.5px;">🪪 KYC / OCR</div><div class="s">MetaMap / Truora · callback</div></div>
+      <div class="card" style="flex:1;"><div class="t" style="font-size:12.5px;">🛡️ FNG</div><div class="s">Fondo Nac. de Garantías · convenio</div></div>
+    </div>
+  </div>
+
+  <div style="height:18px"></div>
+
+  <!-- BOTTOM: security + costs -->
+  <div class="row">
+    <div class="card" style="flex:1.1;">
+      <div class="t"><span class="ico i-green">🔒</span>Seguridad "al mil"</div>
+      <div class="legend" style="margin-top:6px;">
+        • <b>Security Groups</b> least-privilege (RDS solo desde App Runner/Lambda)<br>
+        • <b>Cifrado total</b>: KMS en reposo + TLS en tránsito<br>
+        • <b>RLS</b> por fila atada al JWT (authz en app <i>y</i> en DB)<br>
+        • <b>VPC Endpoints</b> (S3/Secrets) — no pasan por NAT<br>
+        • <b>SSM Session Manager</b> (sin bastión, sin SSH abierto)<br>
+        • <b>CloudTrail + GuardDuty</b> · backups + PITR · WAF
+      </div>
+    </div>
+    <div class="card" style="width:430px;">
+      <div class="t"><span class="ico i-aws">$</span>Costos estimados reales (USD/mes · us-east-1)</div>
+      <table style="margin-top:8px;">
+        <tr><th>Componente</th><th style="text-align:right">MVP</th><th style="text-align:right">Prod. HA</th></tr>
+        <tr><td>CloudFront + WAF</td><td class="n">$7</td><td class="n">$12</td></tr>
+        <tr><td>App Runner (Next.js)</td><td class="n">$25</td><td class="n">$45</td></tr>
+        <tr><td>RDS PostgreSQL (small→Multi-AZ)</td><td class="n">$23</td><td class="n">$46</td></tr>
+        <tr><td>NAT Gateway + Elastic IP</td><td class="n">$33</td><td class="n">$66</td></tr>
+        <tr><td>ElastiCache (Valkey)</td><td class="n">—</td><td class="n">$12</td></tr>
+        <tr><td>Lambda + SQS + EventBridge</td><td class="n">$2</td><td class="n">$5</td></tr>
+        <tr><td>S3 + lifecycle</td><td class="n">$2</td><td class="n">$5</td></tr>
+        <tr><td>Cognito (&lt;10k MAU)</td><td class="n">$0</td><td class="n">$0</td></tr>
+        <tr><td>Secrets + KMS</td><td class="n">$3</td><td class="n">$5</td></tr>
+        <tr><td>CloudTrail + CloudWatch + GuardDuty</td><td class="n">$3</td><td class="n">$16</td></tr>
+        <tr class="tot"><td>Total mensual</td><td class="n">≈ $100</td><td class="n">≈ $200</td></tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -9,7 +9,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { calcularAmortizacion, validarCondicionesAprobacion } from '@/lib/calculadora'
 import { formatNombre } from '@/lib/nombre'
-import { tieneKycRechazado, MENSAJE_KYC_RECHAZADO } from '@/lib/kyc'
+import { bloqueoKyc } from '@/lib/kyc'
 import { resolverMotivoRechazo, textoMotivoCliente } from '@/lib/motivos'
 import {
   notificarSolicitudAprobada,
@@ -82,8 +82,9 @@ export async function PATCH(request, { params }) {
   if (!['PENDIENTE', 'EN_ESTUDIO'].includes(estadoActual)) {
     return NextResponse.json({ error: 'La solicitud ya fue procesada' }, { status: 409 })
   }
-  if (accion === 'APROBAR' && await tieneKycRechazado(service, sol.id_cliente)) {
-    return NextResponse.json({ error: MENSAJE_KYC_RECHAZADO }, { status: 409 })
+  if (accion === 'APROBAR') {
+    const kyc = await bloqueoKyc(service, sol.id_cliente)
+    if (kyc) return NextResponse.json({ error: kyc }, { status: 409 })
   }
 
   // M-09: el rechazo usa un motivo ACTIVO del catálogo (antes una lista fija)

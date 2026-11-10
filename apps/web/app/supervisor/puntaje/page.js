@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { Gauge, User, Calendar } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +69,7 @@ export default async function PuntajePage() {
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${reco.cls}`}>{reco.label}</span>
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
-                        <span>CC {cliente?.dni ?? '—'}</span>
+                        <span>CC {documentoVisible(cliente?.dni) ?? '—'}</span>
                         <span>{formatCOP(s.solicitud_credito?.monto_solicitado ?? 0)}</span>
                         <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {fecha}</span>
                         <span>{s.modelo_score?.nombre_modelo ?? 'Modelo'}</span>

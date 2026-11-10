@@ -6,6 +6,12 @@ dotenv.config({ path: '.env.local' })
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const SEED_PASSWORD = process.env.SEED_PASSWORD
+
+if (!SEED_PASSWORD) {
+  console.error('Define SEED_PASSWORD en el entorno antes de ejecutar el seed.')
+  process.exit(1)
+}
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { autoRefreshToken: false, persistSession: false }
@@ -29,10 +35,10 @@ async function seed() {
   }
 
   // --- Usuario 1: ADMIN ---
-  console.log('🧑‍💼 Creando ADMIN (Celular: 0000000000 / pass: 123456)...')
+  console.log('🧑‍💼 Creando ADMIN (Celular: 0000000000)...')
   const { data: uAdmin } = await supabase.auth.admin.createUser({
     email: '0000000000@plurall.app',
-    password: 'password123',
+    password: SEED_PASSWORD,
     email_confirm: true,
     user_metadata: { ...parseNombre('Julio Administrador'), rol_override: 'ADMIN' }
   })
@@ -46,10 +52,10 @@ async function seed() {
   }
 
   // --- Usuario 2: CLIENTE CON CRÉDITO APROBADO ---
-  console.log('🟢 Creando Cliente Aprobado (Celular: 1111111111 / pass: password123)...')
+  console.log('🟢 Creando Cliente Aprobado (Celular: 1111111111)...')
   const { data: uAprob } = await supabase.auth.admin.createUser({
     email: '1111111111@plurall.app',
-    password: 'password123',
+    password: SEED_PASSWORD,
     email_confirm: true,
     user_metadata: { ...parseNombre('Carlos Aprobado'), dni: '123456', telefono: '1111111111' }
   })
@@ -123,10 +129,10 @@ async function seed() {
   }
 
   // --- Usuario 3: CLIENTE CON SOLICITUD PENDIENTE ---
-  console.log('🟡 Creando Cliente Pendiente (Celular: 2222222222 / pass: password123)...')
+  console.log('🟡 Creando Cliente Pendiente (Celular: 2222222222)...')
   const { data: uPend } = await supabase.auth.admin.createUser({
     email: '2222222222@plurall.app',
-    password: 'password123',
+    password: SEED_PASSWORD,
     email_confirm: true,
     user_metadata: { ...parseNombre('María Pendiente'), dni: '987654', telefono: '2222222222' }
   })

@@ -23,6 +23,7 @@ import KpiCard, { KpiGrid } from '@/components/dashboard/KpiCard'
 import DashboardPanel, { PanelList, PanelRow } from '@/components/dashboard/DashboardPanel'
 import HeroMetric from '@/components/dashboard/HeroMetric'
 import StatusBadge from '@/components/dashboard/StatusBadge'
+import { celularVisible } from '@/lib/telefono'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const COP = (v) => new Intl.NumberFormat('es-CO', {
@@ -626,7 +627,7 @@ function MoraCritica() {
         <PanelRow key={c.id}>
           <div>
             <p className="font-semibold text-slate-200 text-sm">{c.nombre}</p>
-            <p className="text-slate-500 text-xs">{c.telefono} · {COP(c.saldo)}</p>
+            <p className="text-slate-500 text-xs">{celularVisible(c.telefono) ?? '—'} · {COP(c.saldo)}</p>
           </div>
           <div className="text-right">
             <p className={`font-bold text-sm ${c.dias > 60 ? 'text-red-400' : 'text-orange-400'}`}>{c.dias}d</p>

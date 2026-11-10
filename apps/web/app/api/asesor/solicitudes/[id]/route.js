@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { validarTextoLibre, REGLAS_TEXTO } from '@/lib/validacion'
+import { validarTextoLibre, reglasNotaAsesor } from '@/lib/validacion'
 import { resolverMotivoRechazo } from '@/lib/motivos'
-import { tieneKycRechazado, MENSAJE_KYC_RECHAZADO } from '@/lib/kyc'
+import { bloqueoKyc } from '@/lib/kyc'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
@@ -44,7 +44,7 @@ export async function PATCH(request, { params }) {
   if (!['PRE_APROBAR', 'RECHAZAR'].includes(accion)) {
     return NextResponse.json({ error: 'Acción inválida' }, { status: 400 })
   }
-  const errorNota = validarTextoLibre(notas, REGLAS_TEXTO.notaAsesor)
+  const errorNota = validarTextoLibre(notas, reglasNotaAsesor(accion))
   if (errorNota) return NextResponse.json({ error: errorNota }, { status: 400 })
 
   const service = getServiceClient()
@@ -71,8 +71,9 @@ export async function PATCH(request, { params }) {
     motivo = r.motivo
   }
 
-  if (accion === 'PRE_APROBAR' && await tieneKycRechazado(service, sol.id_cliente)) {
-    return NextResponse.json({ error: MENSAJE_KYC_RECHAZADO }, { status: 409 })
+  if (accion === 'PRE_APROBAR') {
+    const kyc = await bloqueoKyc(service, sol.id_cliente)
+    if (kyc) return NextResponse.json({ error: kyc }, { status: 409 })
   }
 
   // Determinar estado destino

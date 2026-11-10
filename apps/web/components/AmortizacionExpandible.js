@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { User, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCOP, formatPorcentaje } from '@/lib/calculadora'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
 
 const ESTADO_CUOTA = {
   PENDIENTE:   'bg-slate-500/15 text-slate-300',
@@ -44,7 +45,7 @@ export default function AmortizacionExpandible({ plan, accent = 'indigo' }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-slate-200 text-sm">
-            {formatNombre(cliente) || '—'} <span className="text-slate-500 font-normal">· CC {cliente?.dni ?? '—'}</span>
+            {formatNombre(cliente) || '—'} <span className="text-slate-500 font-normal">· CC {documentoVisible(cliente?.dni) ?? '—'}</span>
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
             <div><p className="text-xs text-slate-500">Cuotas</p><p className="text-sm font-semibold text-slate-200">{plan.num_cuotas_totales}</p></div>

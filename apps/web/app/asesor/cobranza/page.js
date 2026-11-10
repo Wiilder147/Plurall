@@ -6,6 +6,8 @@ import StaffPageShell from '@/components/dashboard/StaffPageShell'
 import KpiCard, { KpiGrid } from '@/components/dashboard/KpiCard'
 import { AlertTriangle, Phone, ArrowRight, DollarSign, Target } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -126,7 +128,7 @@ export default async function AsesorCobranzaPage() {
                       <span className="text-xs text-slate-500">Score {c.score}</span>
                     </div>
                     <p className="text-slate-500 text-xs flex items-center gap-1 mt-0.5">
-                      <Phone className="w-3 h-3" /> {c.telefono} · CC {c.dni}
+                      <Phone className="w-3 h-3" /> {celularVisible(c.telefono) ?? '—'} · CC {documentoVisible(c.dni) ?? '—'}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${tramo.cls}`}>{tramo.label}</span>

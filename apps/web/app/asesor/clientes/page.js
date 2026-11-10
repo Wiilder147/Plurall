@@ -9,6 +9,8 @@ import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { Users, ArrowRight, AlertTriangle, CheckCircle2, Search } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,7 +83,7 @@ export default async function AsesorClientesPage({ searchParams }) {
                   </div>
                   <div>
                     <p className="font-semibold text-slate-200">{formatNombre(c)}</p>
-                    <p className="text-slate-500 text-xs">CC {c.dni} · {c.telefono}</p>
+                    <p className="text-slate-500 text-xs">CC {documentoVisible(c.dni) ?? '—'} · {celularVisible(c.telefono) ?? '—'}</p>
                     {creditoActivo && (
                       <div className="flex items-center gap-3 mt-1.5">
                         <div className="w-24 bg-slate-700 rounded-full h-1.5">

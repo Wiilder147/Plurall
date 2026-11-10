@@ -11,8 +11,12 @@ export async function GET(request, { params }) {
     creditoId,
     tipoSlug: 'paz-y-salvo',
     titulo: 'Paz y Salvo',
-    extraValidate: (credito) =>
-      !CREDITO_SALDADO.includes(credito.estado_credito) ? 'El paz y salvo solo está disponible para créditos pagados o cancelados.' : null,
+    extraValidate: (credito, titular) => {
+      if (!CREDITO_SALDADO.includes(credito.estado_credito)) return 'El paz y salvo solo está disponible para créditos pagados o cancelados.'
+      // WF-02: un certificado legal no se expide sin cédula real del titular
+      if (!titular?.dni) return 'El cliente no tiene un número de cédula registrado: actualízalo antes de expedir el paz y salvo.'
+      return null
+    },
     buildCuerpo: async ({ credito, titular, supabase }) => {
       const { data: plan } = await supabase.from('plan_pago').select('id_plan_pago').eq('id_credito', credito.id_credito).single()
       let totalPagado = 0

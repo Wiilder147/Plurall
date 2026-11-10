@@ -22,7 +22,7 @@ export async function procesarDocumento(request, { creditoId, tipoSlug, titulo, 
   if (!credito) return new Response('Crédito no encontrado', { status: 404 })
 
   if (extraValidate) {
-    const err = extraValidate(credito)
+    const err = extraValidate(credito, acceso.titular)
     if (err) return new Response(err, { status: 403 })
   }
 

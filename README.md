@@ -175,9 +175,14 @@ auth.users (Supabase)
     └── perfil_usuario (id, id_rol, intentos_fallidos, bloqueado_hasta)
             └── rol (cliente | asesor | supervisor | admin)
 
-cliente (id_cliente, nombre_completo, dni, telefono, email, id_estado_cliente)
-    ├── detalle_cliente (ingresos, egresos, tipo_negocio, dirección, coordenadas)
+cliente (id_cliente, dni, telefono, email, id_estado_cliente,
+         primer_nombre, segundo_nombre, primer_apellido, segundo_apellido)
+    ├── direccion (casa / negocio, municipio, coordenadas)
+    ├── negocio_cliente (tipo, descripción, antigüedad)
+    ├── perfil_financiero (ingresos, egresos, score)
+    ├── cuenta_bancaria
     └── documento_cliente (cedula_frontal, cedula_trasera → Storage)
+    └── vw_cliente_score (vista con el score vigente)
 
 solicitud_credito (monto, plazo, id_estado_solicitud, id_analista)
     ├── respuesta_cliente → score (puntaje, decision_automatica)
@@ -204,42 +209,41 @@ vw_kpi_cartera | vw_cohortes_desembolso (vistas materializadas)
 Plurall/
 ├── apps/web/                    # Aplicación Next.js principal
 │   ├── app/                     # App Router
-│   │   ├── (landing)/           # Página pública /
+│   │   ├── page.js              # Landing pública
 │   │   ├── login/ registro/ recuperar/   # Autenticación
-│   │   ├── auth/callback/       # Supabase OAuth callback
+│   │   ├── auth/callback/       # Callback de Supabase Auth
 │   │   ├── dashboard/           # Portal cliente
 │   │   ├── asesor/              # Portal asesor
 │   │   ├── supervisor/          # Portal supervisor
 │   │   ├── admin/               # Portal admin
-│   │   └── api/                 # 25+ API Routes
-│   │       ├── auth/            # OTP, lockout, portal redirect
-│   │       ├── creditos/        # Solicitar (con scoring)
-│   │       ├── pagos/           # Wompi: iniciar + webhook
-│   │       ├── admin/           # Aprobar, rechazar, desembolsar
+│   │   └── api/                 # 47 API Routes
+│   │       ├── auth/            # Login servidor, OTP, portal redirect
+│   │       ├── creditos/        # Solicitar (con scoring) y elegibilidad
+│   │       ├── pagos/           # Wompi: cotizar, iniciar + webhook
+│   │       ├── admin/           # Aprobar, rechazar, desembolsar, usuarios
 │   │       ├── asesor/          # Gestiones de cobranza
-│   │       ├── supervisor/      # KPIs, asignación, búsqueda
+│   │       ├── supervisor/      # KPIs, asignación, mora, motivos
+│   │       ├── cliente/         # Cambio de celular con OTP
 │   │       ├── documentos/      # PDF: contrato, plan pagos, estado cuenta, paz y salvo
 │   │       ├── analitica/       # KPIs + drill-down
 │   │       ├── eventos/         # Funnel tracking
 │   │       ├── notificaciones/  # Email transaccional (Resend)
 │   │       ├── pqr/             # CRUD peticiones / quejas / reclamos
 │   │       ├── reportes/        # Export CSV / XLSX
-│   │       └── cron/mora/       # Detección automática mora (Vercel Cron)
-│   ├── components/              # 24 componentes reutilizables
-│   ├── lib/                     # Supabase clients, calculadora, notificaciones
-│   └── scripts/utilidades/      # Seeds y scripts de datos históricos
-├── db/                          # Migraciones SQL (orden de ejecución)
-│   ├── plurall_database_completa.sql    # DDL principal (17 pasos)
-│   ├── migration_v2_solicitar.sql
-│   ├── 01_mejoras_integridad.sql
-│   ├── 02_vistas_reporteria.sql
-│   ├── 03_cron_mora_automatica.sql      # Función pg_cron (alternativa a Vercel Cron)
-│   ├── 04_roles_supervisor_asesor.sql
-│   ├── 05_evento_funnel.sql
-│   ├── 06_otp_recuperacion.sql
-│   ├── 07_consolidar_4_roles.sql
-│   └── 08_modulo_pqr.sql
-└── docs/                        # Documentación de sprints y módulos
+│   │       └── cron/            # Mora y recordatorios (Vercel Cron)
+│   ├── components/              # Componentes reutilizables
+│   ├── lib/                     # Dominio: Supabase, scoring, cálculos, PDF, pagos, KYC
+│   ├── tests/                   # Pruebas Vitest
+│   ├── scripts/                 # Seeds, utilidades y herramientas de documentación
+│   ├── proxy.js                 # Sesión y control de acceso por rol (Next 16)
+│   ├── instrumentation.js       # Inicialización de Sentry en servidor/edge
+│   └── vercel.json              # Crons de mora y recordatorios
+├── db/                          # Migraciones SQL (01…45) + esquema consolidado
+├── docs/                        # Documentación técnica vigente
+│   ├── historial/               # Documentos de sprints y handoffs anteriores
+│   └── diagramas/               # Diagramas Mermaid por requerimiento y de proyecto
+├── tools/db/                    # Scripts manuales de datos de prueba
+└── .github/workflows/           # CI: lint, test y build
 ```
 
 ---
@@ -247,7 +251,7 @@ Plurall/
 ## Inicio Rápido
 
 ### Requisitos previos
-- Node.js 18+
+- Node.js 20.9+ (probado con Node 22 y 24)
 - Cuenta Supabase (plan gratuito funciona)
 - Cuenta Resend (sandbox gratuito)
 - Cuenta Wompi (modo pruebas)
@@ -291,35 +295,41 @@ NEXT_PUBLIC_SENTRY_DSN=https://...@sentry.io/...
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 CRON_SECRET=genera_un_secreto_con_openssl_rand_hex_32
+
+# Datos legales (documentos PDF)
+PLURALL_RAZON_SOCIAL=PLURALL S.A.S.
+PLURALL_NIT=901.567.890-1
+PLURALL_CIUDAD=Bogotá D.C., Colombia
+PLURALL_EMAIL=legal@plurall.app
+
+# Tasa de usura vigente (% EA); se certifica mensualmente
+TASA_USURA_EA=28.59
 ```
 
 ### 3. Aplicar migraciones de base de datos
 
-En Supabase Dashboard → SQL Editor, ejecutar **en orden**:
+En Supabase Dashboard → SQL Editor, ejecutar **en orden numérico** las migraciones
+`db/01_*.sql` … `db/45_*.sql`. Para una base nueva, `db/plurall_database_completa.sql`
+refleja el estado consolidado hasta la migración 23; después deben aplicarse las
+migraciones 24–45. El orden detallado y las precondiciones están en
+`docs/deploy_normalizacion_bd.md` y en la cabecera de cada archivo.
 
-```
-1. db/plurall_database_completa.sql
-2. db/migration_v2_solicitar.sql
-3. db/01_mejoras_integridad.sql
-4. db/02_vistas_reporteria.sql
-5. db/04_roles_supervisor_asesor.sql
-6. db/05_evento_funnel.sql
-7. db/06_otp_recuperacion.sql
-8. db/07_consolidar_4_roles.sql
-9. db/08_modulo_pqr.sql
-10. db/03_cron_mora_automatica.sql  ← Opcional: solo si usas pg_cron
-```
+> Las migraciones se aplican manualmente. No hay una herramienta automática de
+> migraciones en el repositorio.
 
 ### 4. Crear usuarios de prueba
 
-Ver `docs/usuarios_prueba.md` para credenciales de cada rol.
-
-O ejecutar el seed desde la terminal:
+Ejecutar los seeds desde la terminal (requieren `SUPABASE_SERVICE_ROLE_KEY`):
 
 ```bash
+cd apps/web
 node scripts/utilidades/seed_supervisor_asesor.mjs
 ```
+
+Las credenciales de prueba no se versionan. Para pruebas de humo, definir
+`SMOKE_<ROL>_CELULAR` y `SMOKE_<ROL>_PASSWORD` en el entorno local.
 
 ### 5. Iniciar servidor de desarrollo
 
@@ -335,9 +345,14 @@ Abre `http://localhost:3000`.
 
 1. Conectar el repositorio en [vercel.com](https://vercel.com).
 2. Configurar todas las variables de entorno en Vercel Dashboard → Settings → Environment Variables.
-3. El `vercel.json` ya incluye el cron de mora:
+3. El `vercel.json` ya incluye los dos crons del sistema:
    ```json
-   { "crons": [{ "path": "/api/cron/mora", "schedule": "0 11 * * *" }] }
+   {
+     "crons": [
+       { "path": "/api/cron/mora", "schedule": "55 4 * * *" },
+       { "path": "/api/cron/recordatorios", "schedule": "0 13 * * *" }
+     ]
+   }
    ```
 4. Configurar el webhook de Wompi apuntando a `https://tu-dominio.vercel.app/api/webhooks/wompi`.
 
@@ -347,23 +362,28 @@ Abre `http://localhost:3000`.
 
 | Método | Ruta | Propósito |
 |--------|------|-----------|
-| `GET/POST/DELETE` | `/api/auth/lockout` | Bloqueo por intentos fallidos (RN-02) |
+| `POST` | `/api/auth/login` | Login en servidor con bloqueo real por intentos (H3) |
 | `POST` | `/api/auth/otp/enviar` | Enviar OTP de recuperación |
 | `POST` | `/api/auth/otp/verificar` | Verificar OTP + cambiar contraseña |
 | `POST` | `/api/creditos/solicitar` | Solicitud de crédito + scoring |
+| `GET` | `/api/creditos/elegibilidad` | Validar elegibilidad y cooldown |
+| `POST` | `/api/pagos/cotizar` | Cotización de crédito |
 | `POST` | `/api/pagos/iniciar` | Generar firma Wompi (rate limited) |
 | `POST` | `/api/webhooks/wompi` | Webhook HMAC — confirmar pagos |
 | `PATCH` | `/api/admin/solicitud/[id]` | Aprobar / rechazar solicitud |
 | `POST` | `/api/admin/desembolsar/[id]` | Crear crédito + cuotas + plan de pagos |
 | `POST` | `/api/admin/desembolsar/batch` | Desembolso masivo |
-| `GET` | `/api/documentos/contrato/[id]` | PDF contrato de crédito |
-| `GET` | `/api/documentos/plan-pagos/[id]` | PDF plan de pagos |
-| `GET` | `/api/documentos/estado-cuenta/[id]` | PDF estado de cuenta |
-| `GET` | `/api/documentos/paz-y-salvo/[id]` | PDF paz y salvo |
+| `GET/POST` | `/api/admin/usuarios` | Listar / crear staff |
+| `GET` | `/api/staff/buscar` | Búsqueda unificada de clientes y staff |
+| `GET` | `/api/documentos/contrato/[creditoId]` | PDF contrato de crédito |
+| `GET` | `/api/documentos/plan-pagos/[creditoId]` | PDF plan de pagos |
+| `GET` | `/api/documentos/estado-cuenta/[creditoId]` | PDF estado de cuenta |
+| `GET` | `/api/documentos/paz-y-salvo/[creditoId]` | PDF paz y salvo |
 | `GET` | `/api/analitica` | KPIs consolidados del negocio |
 | `GET` | `/api/reportes/export` | Export CSV / XLSX |
 | `GET` | `/api/cron/mora` | Detección automática de mora (Cron) |
-| `POST` | `/api/notificaciones/solicitud` | Email transaccional via Resend |
+| `GET` | `/api/cron/recordatorios` | Recordatorios de cuotas (Cron) |
+| `POST` | `/api/notificaciones/solicitud` | Email transaccional vía Resend |
 | `GET/POST` | `/api/pqr` | CRUD peticiones / quejas / reclamos |
 
 ---
@@ -374,10 +394,11 @@ Abre `http://localhost:3000`.
 |-----------|----------------|
 | Autenticación | Supabase Auth — celular → `[celular]@plurall.app` |
 | Autorización | Row Level Security en todas las tablas |
-| Anti-brute force | 3 intentos → bloqueo 30 min (`perfil_usuario.bloqueado_hasta`) |
+| Anti-brute force | Login en servidor: 3 intentos → bloqueo 30 min (`perfil_usuario.bloqueado_hasta`) |
 | Rate limiting | Upstash Redis — 5 intentos pago / 10 min por usuario |
 | Webhook integrity | HMAC SHA-256 Wompi events + integrity secret |
 | Headers HTTP | HSTS, X-Frame-Options, X-Content-Type-Options (next.config.mjs) |
+| Sesión y roles | `proxy.js` + `lib/supabase/middleware.js` (Next 16) |
 | Monitoreo | Sentry — captura errores, omite 401/403 esperados |
 | Auditoría | Tabla `auditoria` con usuario, acción, IP y timestamp |
 
@@ -405,7 +426,7 @@ Abre `http://localhost:3000`.
 
 | Integrante | Módulo Principal |
 |------------|-----------------|
-| Wilder Feo | Infraestructura, Middleware, Pagos Wompi, Cron Mora, Auditoría |
+| Wilder Feo | Infraestructura, Proxy/Sesión, Pagos Wompi, Cron Mora, Auditoría |
 | Camila Avila | Autenticación, Perfil, Solicitud de Crédito, KYC, Gestiones Admin |
 | Juan Cetina | Base de datos, Scoring, Panel Admin, Analytics |
 | Juan Maurello | UI/Diseño, Landing, Documentos PDF, Decisiones, Cobranza |

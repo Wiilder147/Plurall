@@ -10,6 +10,8 @@ import { formatCOP } from '@/lib/calculadora'
 import { UserCheck, Users, TrendingUp, AlertTriangle } from 'lucide-react'
 import AsignarAsesorBtn from '@/components/AsignarAsesorBtn'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -121,7 +123,7 @@ export default async function SupervisorAsesoresPage() {
                         <div key={a.id_asignacion} className="px-5 py-3 flex items-center justify-between">
                           <div>
                             <p className="text-slate-300 text-sm font-medium">{formatNombre(a.cliente)}</p>
-                            <p className="text-slate-500 text-xs">{a.cliente?.telefono} · CC {a.cliente?.dni}</p>
+                            <p className="text-slate-500 text-xs">{celularVisible(a.cliente?.telefono) ?? '—'} · CC {documentoVisible(a.cliente?.dni) ?? '—'}</p>
                           </div>
                           <div className="flex items-center gap-3">
                             {creditoActivo && (
@@ -165,7 +167,7 @@ export default async function SupervisorAsesoresPage() {
               <div key={c.id_credito} className="px-5 py-3.5 flex items-center justify-between">
                 <div>
                   <p className="text-slate-300 text-sm font-medium">{formatNombre(c.cliente)}</p>
-                  <p className="text-slate-500 text-xs">{c.cliente?.telefono} · Saldo: {formatCOP(c.saldo_pendiente)}</p>
+                  <p className="text-slate-500 text-xs">{celularVisible(c.cliente?.telefono) ?? '—'} · Saldo: {formatCOP(c.saldo_pendiente)}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-red-400 font-bold text-sm">{c.dias_mora_maximo}d mora</span>

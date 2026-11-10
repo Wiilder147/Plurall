@@ -1,21 +1,31 @@
 /**
  * smoke_login.mjs — Test de humo de login con Playwright.
- * Confirma que las credenciales de `docs/usuarios_prueba.md` funcionan
- * contra el Supabase real antes de hacer el barrido completo.
+ * Verifica que un usuario de prueba puede iniciar sesión contra el Supabase real.
+ *
+ * Uso:
+ *   SMOKE_CLIENTE_CELULAR=... SMOKE_CLIENTE_PASSWORD=... node scripts/smoke_login.mjs cliente
+ *
+ * Las credenciales NUNCA se versionan. Define una variable por rol:
+ *   SMOKE_<ROL>_CELULAR y SMOKE_<ROL>_PASSWORD
  */
 import { chromium } from 'playwright';
 
-const BASE = 'http://localhost:3000';
+const BASE = process.env.SMOKE_BASE_URL || 'http://localhost:3000';
 const ROLE = process.argv[2] || 'cliente';
-const CRED = {
-  cliente:    { celular: '3173784693', password: 'Plurall2026*' },
-  asesor:     { celular: '3100000002', password: 'Plurall2026*' },
-  supervisor: { celular: '3100000001', password: 'Plurall2026*' },
-  admin:      { celular: '3001234567', password: 'Plurall2026*' },
-};
 
-const c = CRED[ROLE];
-if (!c) { console.error('Rol inválido:', ROLE); process.exit(1); }
+function credenciales(rol) {
+  const key = rol.toUpperCase();
+  return {
+    celular: process.env[`SMOKE_${key}_CELULAR`],
+    password: process.env[`SMOKE_${key}_PASSWORD`],
+  };
+}
+
+const c = credenciales(ROLE);
+if (!c.celular || !c.password) {
+  console.error(`Faltan SMOKE_${ROLE.toUpperCase()}_CELULAR y/o SMOKE_${ROLE.toUpperCase()}_PASSWORD`);
+  process.exit(1);
+}
 
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
