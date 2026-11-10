@@ -12,6 +12,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { esEmailValido } from '@/lib/validacion'
+import { esDniValido } from '@/lib/dni'
 import { parseNombre } from '@/lib/nombre'
 import { POLITICA_TRATAMIENTO_DATOS } from '@/lib/legal'
 import { Lock, Phone, User, IdCard, CheckCircle, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react'
@@ -110,6 +111,7 @@ function RegistroContent() {
     if (!form.primer_nombre.trim()) { setError('El primer nombre es obligatorio.'); return }
     if (!form.primer_apellido.trim()) { setError('El primer apellido es obligatorio.'); return }
     if (telLimpio.length !== 10) { setError('El celular debe tener 10 dígitos.'); return }
+    if (!esDniValido(form.dni.replace(/\D/g, ''))) { setError('El número de documento debe tener entre 5 y 12 dígitos.'); return }
     if (!esEmailValido(form.email)) {
       setError('Ingresa un correo completo y válido, por ejemplo: tucorreo@gmail.com')
       return
@@ -118,77 +120,37 @@ function RegistroContent() {
     if (form.password !== form.confirmPassword) { setError('Las contraseñas no coinciden.'); return }
     if (form.password.length < 8) { setError('La contraseña requiere al menos 8 caracteres.'); return }
 
+    // CA-01 / WF-02: el alta se hace en el servidor, que valida los datos,
+    // rechaza un celular, correo o documento ya registrado y aplica el rate limit.
+    setLoading(true)
     try {
-      const rl = await fetch('/api/auth/rate-limit', {
+      const res = await fetch('/api/auth/registro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'registro' }),
+        body: JSON.stringify({
+          primer_nombre:    form.primer_nombre,
+          segundo_nombre:   form.segundo_nombre,
+          primer_apellido:  form.primer_apellido,
+          segundo_apellido: form.segundo_apellido,
+          telefono:         telLimpio,
+          dni:              form.dni,
+          email:            form.email,
+          password:         form.password,
+          aceptaTerminos:   form.aceptaTerminos,
+          website:          form.website,
+        }),
       })
-      if (!rl.ok) {
-        setError('Demasiados intentos de registro. Espera unos minutos.')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'No se pudo crear la cuenta. Intenta de nuevo.')
         return
       }
-    } catch { /* si el rate-limit no responde, no bloqueamos el registro */ }
-
-    setLoading(true)
-    const supabase = createClient()
-
-    // Disponibilidad de correo y documento ANTES de crear la cuenta: el celular
-    // es la identidad única en auth, pero el correo/dni son únicos en `cliente`.
-    // Sin esto, un correo/dni repetido dejaba una cuenta sin perfil de cliente.
-    const emailReal = form.email.trim().toLowerCase()
-    const dniLimpio = form.dni.replace(/\D/g, '')
-    try {
-      const { data: disp, error: dispError } = await supabase.rpc('fn_verificar_disponibilidad', {
-        p_email: emailReal,
-        p_dni:   dniLimpio,
-      })
-      if (!dispError && disp) {
-        if (disp.email_disponible === false) {
-          setError('Este correo ya está registrado. Inicia sesión o usa otro correo.')
-          setLoading(false)
-          return
-        }
-        if (disp.dni_disponible === false) {
-          setError('Este número de documento ya está registrado. Si es tuyo, inicia sesión.')
-          setLoading(false)
-          return
-        }
-      }
-    } catch { /* si la verificación falla no bloqueamos: el trigger revalida */ }
-
-    // El login es por celular: se usa un email sintético para Supabase Auth
-    // y el correo real viaja en metadata (el trigger de BD lo persiste en cliente)
-    const fakeEmail = `${telLimpio}@plurall.app`.toLowerCase()
-
-    const { error: authError } = await supabase.auth.signUp({
-      email: fakeEmail,
-      password: form.password,
-      options: {
-        data: {
-          primer_nombre:    form.primer_nombre.trim(),
-          segundo_nombre:   form.segundo_nombre.trim() || null,
-          primer_apellido:  form.primer_apellido.trim(),
-          segundo_apellido: form.segundo_apellido.trim() || null,
-          telefono: telLimpio,
-          dni: dniLimpio,
-          email_real: emailReal
-        },
-      },
-    })
-
-    if (authError) {
-      if (authError.message.includes('already registered')) {
-        setError('Este celular ya está registrado.')
-      } else {
-        setError(`Error de Supabase: ${authError.message}`)
-      }
+      setSuccess(true)
+    } catch {
+      setError('No se pudo conectar con el servidor. Intenta de nuevo.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    setSuccess(true)
-    setLoading(false)
   }
 
   if (initializing) {
