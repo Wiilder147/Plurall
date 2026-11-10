@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { docRef } from '@/lib/documentosLegal'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +37,7 @@ export async function GET(request) {
     tipo: tipo || 'documento',
     credito: credito.id_credito,
     titular: formatNombre(credito.cliente),
-    dni: credito.cliente?.dni,
+    dni: documentoVisible(credito.cliente?.dni),
     estado: credito.estado_credito,
     verificado_at: new Date().toISOString(),
     emisor: 'PLURALL S.A.S.',

@@ -12,6 +12,7 @@ import { formatCOP } from '@/lib/calculadora'
 import { Users, Search, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { orBusquedaNombre, formatNombre } from '@/lib/nombre'
 import { emailVisible } from '@/lib/email'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -152,7 +153,7 @@ export default async function SupervisorClientesPage({ searchParams }) {
                           <p className="text-slate-500 text-xs">{emailVisible(cli.email)}</p>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-slate-400 font-mono text-xs">{cli.dni}</td>
+                      <td className="px-5 py-4 text-slate-400 font-mono text-xs">{documentoVisible(cli.dni) ?? '—'}</td>
                       <td className="px-5 py-4 text-slate-400">{cli.telefono}</td>
                       <td className="px-5 py-4 text-center">
                         <span className={`font-bold text-sm ${

@@ -9,6 +9,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { formatCOP } from '@/lib/calculadora'
 import { BarChart3, TrendingUp, DollarSign, CheckCircle2, AlertTriangle, CreditCard } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -161,7 +162,7 @@ export default async function SupervisorCarteraPage() {
                     <tr key={c.id_credito} className="hover:bg-slate-700/20">
                       <td className="px-5 py-3">
                         <p className="text-slate-200 font-medium">{formatNombre(c.cliente)}</p>
-                        <p className="text-slate-500 text-xs">{c.cliente?.dni} · {c.cliente?.telefono}</p>
+                        <p className="text-slate-500 text-xs">{documentoVisible(c.cliente?.dni) ?? '—'} · {c.cliente?.telefono}</p>
                       </td>
                       <td className="px-5 py-3 text-right text-slate-300">{formatCOP(c.monto_desembolsado)}</td>
                       <td className="px-5 py-3 text-right font-semibold text-slate-200">{formatCOP(c.saldo_pendiente)}</td>

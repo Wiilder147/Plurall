@@ -10,6 +10,7 @@
  *     ASESOR pueden el de cualquier cliente. Devuelve los datos del titular para
  *     que el PDF muestre el nombre/cédula correctos del cliente (no del staff).
  * ========================================================================== */
+import { documentoVisible } from '@/lib/dni'
 
 const STAFF = ['ADMIN', 'SUPERVISOR', 'ASESOR']
 
@@ -56,5 +57,6 @@ export async function resolverAccesoCredito(supabase, creditoId) {
     .eq('id_cliente', credito.id_cliente)
     .single()
 
-  return { idCliente: credito.id_cliente, titular: titular || {} }
+  // WF-02: el documento de relleno ('SN…') nunca se imprime como cédula
+  return { idCliente: credito.id_cliente, titular: titular ? { ...titular, dni: documentoVisible(titular.dni) } : {} }
 }

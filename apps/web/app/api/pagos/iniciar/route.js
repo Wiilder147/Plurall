@@ -15,6 +15,7 @@ import { createHash } from 'crypto'
 import { formatNombre } from '@/lib/nombre'
 import { emailVisible } from '@/lib/email'
 import { resolverPago } from '@/lib/pagos'
+import { documentoVisible } from '@/lib/dni'
 
 // ── Rate limiting con Upstash Redis ─────────────────────────────────────────
 // Máximo 5 intentos de pago por usuario cada 10 minutos
@@ -179,6 +180,6 @@ export async function POST(request) {
     email:    emailVisible(cliente.email) || '',
     nombre:   formatNombre(cliente),
     telefono: cliente.telefono,
-    dni:      cliente.dni,
+    dni:      documentoVisible(cliente.dni),   // WF-02: sin legal-id de relleno
   })
 }

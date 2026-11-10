@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { MessageSquare, User } from 'lucide-react'
 import ResponderPqr from '@/components/ResponderPqr'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,7 +63,7 @@ export default async function PqrSupervisorPage() {
                       </div>
                       <p className="font-medium text-slate-200 text-sm mt-1.5">{p.asunto}</p>
                       <p className="text-slate-500 text-xs mt-1">{p.descripcion}</p>
-                      <p className="text-slate-600 text-xs mt-1">CC {p.cliente?.dni ?? '—'} · {fecha}</p>
+                      <p className="text-slate-600 text-xs mt-1">CC {documentoVisible(p.cliente?.dni) ?? '—'} · {fecha}</p>
                       {p.respuesta && (
                         <div className="mt-2 bg-slate-900/60 rounded-lg px-3 py-2">
                           <p className="text-slate-400 text-xs"><strong className="text-emerald-400">Respuesta:</strong> {p.respuesta}</p>

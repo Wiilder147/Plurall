@@ -10,6 +10,7 @@ import { formatCOP } from '@/lib/calculadora'
 import { AlertTriangle, Phone, DollarSign, Calendar } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
 import { esEmailSintetico } from '@/lib/email'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -150,7 +151,7 @@ export default async function SupervisorMoraPage() {
                     <tr key={c.id_credito} className="hover:bg-slate-700/20">
                       <td className="px-5 py-3">
                         <p className="text-slate-200 font-medium">{formatNombre(c.cliente)}</p>
-                        <p className="text-slate-500 text-xs">CC {c.cliente?.dni}</p>
+                        <p className="text-slate-500 text-xs">CC {documentoVisible(c.cliente?.dni) ?? '—'}</p>
                       </td>
                       <td className="px-5 py-3">
                         <p className="text-slate-400 text-xs flex items-center gap-1">

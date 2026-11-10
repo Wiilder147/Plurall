@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import { FileText, CheckCircle2, XCircle, Clock, ExternalLink } from 'lucide-react'
 import VerificarDoc from '@/components/VerificarDoc'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +69,7 @@ export default async function DocumentosAsesorPage() {
                     </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-slate-500">
                       <span>{formatNombre(d.cliente) || '—'}</span>
-                      <span>CC {d.cliente?.dni ?? '—'}</span>
+                      <span>CC {documentoVisible(d.cliente?.dni) ?? '—'}</span>
                       <span>{fecha}</span>
                     </div>
                   </div>

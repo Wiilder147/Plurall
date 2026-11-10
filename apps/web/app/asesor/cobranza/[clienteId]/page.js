@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import RegistrarGestionForm from '@/components/RegistrarGestionForm'
 import { formatNombre } from '@/lib/nombre'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -114,7 +115,7 @@ export default async function AsesorFichaClientePage({ params }) {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">{formatNombre(cliente)}</h1>
-            <p className="text-slate-400 text-sm">CC {cliente.dni} · {cliente.telefono}</p>
+            <p className="text-slate-400 text-sm">CC {documentoVisible(cliente.dni) ?? '—'} · {cliente.telefono}</p>
           </div>
         </div>
       </header>

@@ -19,6 +19,7 @@ import {
   Calendar, Shield, CreditCard, TrendingUp, Wallet, Landmark, Users,
   GraduationCap, Heart, Home, Award, BarChart3, AlertCircle,
 } from 'lucide-react'
+import { documentoVisible } from '@/lib/dni'
 
 export const dynamic = 'force-dynamic'
 
@@ -184,7 +185,7 @@ export default async function DashboardPerfil() {
           </h3>
           {/* CAMPOS — usando el componente InfoField */}
           <div className="space-y-4">
-            <InfoField icon={Hash} label="Número de Documento (CC)" value={cliente?.dni} />
+            <InfoField icon={Hash} label="Número de Documento (CC)" value={documentoVisible(cliente?.dni) ?? '—'} />
             <InfoField icon={Phone} label="Número de Celular" value={cliente?.telefono} />
             <InfoField icon={Mail} label="Correo Electrónico" value={emailVisible(email_real || cliente?.email)} />
             <InfoField icon={MapPin} label="Dirección" value={dir?.linea} />
