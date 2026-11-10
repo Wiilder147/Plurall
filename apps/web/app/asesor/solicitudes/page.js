@@ -3,6 +3,7 @@ import { formatCOP } from '@/lib/calculadora'
 import { FileCheck, Clock, Phone, User, Calendar, TrendingUp, CheckCircle2, XCircle } from 'lucide-react'
 import AccionesSolicitud from './AccionesSolicitud'
 import { formatNombre } from '@/lib/nombre'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -149,7 +150,7 @@ export default async function AsesorSolicitudesPage({ searchParams }) {
 
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
                         <span className="flex items-center gap-1">
-                          <Phone className="w-3 h-3" /> {sol.cliente?.telefono}
+                          <Phone className="w-3 h-3" /> {celularVisible(sol.cliente?.telefono) ?? '—'}
                         </span>
                         <span className="flex items-center gap-1">
                           <TrendingUp className="w-3 h-3" /> {formatCOP(sol.monto_solicitado)} — {sol.plazo_meses} meses

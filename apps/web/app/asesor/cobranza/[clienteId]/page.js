@@ -15,6 +15,7 @@ import {
 import RegistrarGestionForm from '@/components/RegistrarGestionForm'
 import { formatNombre } from '@/lib/nombre'
 import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -96,6 +97,7 @@ export default async function AsesorFichaClientePage({ params }) {
     cuotasVencidas = cv ?? []
   }
 
+  const celular      = celularVisible(cliente.telefono)
   const enMora       = credito?.estado_credito === 'EN_MORA'
   const montoVencido = cuotasVencidas.reduce((s, c) => s + (c.monto_total_cuota || 0), 0)
   const progreso     = credito ? Math.round((credito.cuotas_pagadas / credito.numero_cuotas) * 100) : 0
@@ -115,7 +117,7 @@ export default async function AsesorFichaClientePage({ params }) {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">{formatNombre(cliente)}</h1>
-            <p className="text-slate-400 text-sm">CC {documentoVisible(cliente.dni) ?? '—'} · {cliente.telefono}</p>
+            <p className="text-slate-400 text-sm">CC {documentoVisible(cliente.dni) ?? '—'} · {celular ?? '—'}</p>
           </div>
         </div>
       </header>
@@ -130,18 +132,22 @@ export default async function AsesorFichaClientePage({ params }) {
           <div className="flex flex-col gap-3 text-sm">
             <div>
               <p className="text-slate-500 text-xs">Celular</p>
-              <a href={`tel:${cliente.telefono}`}
-                className="text-teal-400 font-semibold hover:text-teal-300 flex items-center gap-1.5 mt-0.5">
-                <Phone className="w-3.5 h-3.5" /> {cliente.telefono}
-              </a>
+              {celular ? (
+                <a href={`tel:${celular}`}
+                  className="text-teal-400 font-semibold hover:text-teal-300 flex items-center gap-1.5 mt-0.5">
+                  <Phone className="w-3.5 h-3.5" /> {celular}
+                </a>
+              ) : <p className="text-slate-400 mt-0.5">Sin registrar</p>}
             </div>
-            <div>
-              <p className="text-slate-500 text-xs">WhatsApp</p>
-              <a href={`https://wa.me/57${cliente.telefono}`} target="_blank" rel="noopener noreferrer"
-                className="text-emerald-400 font-semibold hover:text-emerald-300 text-sm">
-                Abrir chat →
-              </a>
-            </div>
+            {celular && (
+              <div>
+                <p className="text-slate-500 text-xs">WhatsApp</p>
+                <a href={`https://wa.me/57${celular}`} target="_blank" rel="noopener noreferrer"
+                  className="text-emerald-400 font-semibold hover:text-emerald-300 text-sm">
+                  Abrir chat →
+                </a>
+              </div>
+            )}
             <div>
               <p className="text-slate-500 text-xs">Email</p>
               <p className="text-slate-300">{cliente.email || '—'}</p>

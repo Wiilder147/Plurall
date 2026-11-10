@@ -9,6 +9,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { formatNombre } from '@/lib/nombre'
 import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 /**
  * GET /api/reportes/export?tipo=clientes|creditos|pagos|solicitudes|mora
@@ -95,7 +96,7 @@ async function exportarClientes(service) {
     { label: 'Nombre completo',    valor: r => formatNombre(r) },
     { label: 'Cédula',             valor: r => documentoVisible(r.dni) },
     { label: 'Email',              valor: r => r.email },
-    { label: 'Teléfono',           valor: r => r.telefono },
+    { label: 'Teléfono',           valor: r => celularVisible(r.telefono) },
     { label: 'Ciudad',             valor: r => dirDe[r.id_cliente]?.municipio?.nombre },
     { label: 'Departamento',       valor: r => dirDe[r.id_cliente]?.municipio?.departamento?.nombre },
     { label: 'Negocio',            valor: r => negDe[r.id_cliente]?.nombre_negocio },
@@ -124,7 +125,7 @@ async function exportarCreditos(service) {
     { label: 'ID crédito',         valor: r => r.id_credito },
     { label: 'Cliente',            valor: r => formatNombre(r.cliente) },
     { label: 'Cédula',             valor: r => documentoVisible(r.cliente?.dni) },
-    { label: 'Teléfono',           valor: r => r.cliente?.telefono },
+    { label: 'Teléfono',           valor: r => celularVisible(r.cliente?.telefono) },
     { label: 'Estado',             valor: r => r.estado_credito },
     { label: 'Monto desembolsado', valor: r => fmtCOP(r.monto_desembolsado) },
     { label: 'Tasa EA (%)',        valor: r => Number(r.tasa_interes_anual).toFixed(2) },
@@ -188,7 +189,7 @@ async function exportarSolicitudes(service) {
     { label: 'ID solicitud',       valor: r => r.id_solicitud },
     { label: 'Cliente',            valor: r => formatNombre(r.cliente) },
     { label: 'Cédula',             valor: r => documentoVisible(r.cliente?.dni) },
-    { label: 'Teléfono',           valor: r => r.cliente?.telefono },
+    { label: 'Teléfono',           valor: r => celularVisible(r.cliente?.telefono) },
     { label: 'Monto solicitado',   valor: r => fmtCOP(r.monto_solicitado) },
     { label: 'Plazo (meses)',      valor: r => r.plazo_meses },
     { label: 'Canal',              valor: r => r.canal_solicitud },
@@ -222,7 +223,7 @@ async function exportarMora(service) {
     { label: 'ID crédito',         valor: r => r.id_credito },
     { label: 'Cliente',            valor: r => formatNombre(r.cliente) },
     { label: 'Cédula',             valor: r => documentoVisible(r.cliente?.dni) },
-    { label: 'Teléfono',           valor: r => r.cliente?.telefono },
+    { label: 'Teléfono',           valor: r => celularVisible(r.cliente?.telefono) },
     { label: 'Email',              valor: r => r.cliente?.email },
     { label: 'Saldo pendiente',    valor: r => fmtCOP(r.saldo_pendiente) },
     { label: 'Cuotas en mora',     valor: r => r.cuotas_en_mora },

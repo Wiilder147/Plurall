@@ -30,6 +30,7 @@ import Link from 'next/link'
 import MoverPaso from '@/components/MoverPaso'
 import { formatNombre } from '@/lib/nombre'
 import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export default function AdminDetalleSolicitudPage() {
   const router = useRouter()
@@ -209,7 +210,7 @@ export default function AdminDetalleSolicitudPage() {
           <div className="flex flex-col gap-2 text-sm">
             <p className="text-white font-bold text-lg">{formatNombre(cliente)}</p>
             <p className="text-slate-400">CC: {documentoVisible(cliente?.dni) ?? '—'}</p>
-            <p className="text-slate-400">{cliente?.telefono}</p>
+            <p className="text-slate-400">{celularVisible(cliente?.telefono) ?? '—'}</p>
             {emailVisible(cliente?.email) && <p className="text-slate-400 text-xs">{emailVisible(cliente?.email)}</p>}
             {negocio?.nombre_negocio && (
               <div className="mt-2 bg-slate-700/50 rounded-lg p-3">

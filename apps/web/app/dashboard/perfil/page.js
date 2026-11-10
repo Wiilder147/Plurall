@@ -20,6 +20,7 @@ import {
   GraduationCap, Heart, Home, Award, BarChart3, AlertCircle,
 } from 'lucide-react'
 import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -186,7 +187,7 @@ export default async function DashboardPerfil() {
           {/* CAMPOS — usando el componente InfoField */}
           <div className="space-y-4">
             <InfoField icon={Hash} label="Número de Documento (CC)" value={documentoVisible(cliente?.dni) ?? '—'} />
-            <InfoField icon={Phone} label="Número de Celular" value={cliente?.telefono} />
+            <InfoField icon={Phone} label="Número de Celular" value={celularVisible(cliente?.telefono)} />
             <InfoField icon={Mail} label="Correo Electrónico" value={emailVisible(email_real || cliente?.email)} />
             <InfoField icon={MapPin} label="Dirección" value={dir?.linea} />
             <div className="grid grid-cols-2 gap-4">
@@ -259,7 +260,7 @@ export default async function DashboardPerfil() {
             el acceso es por celular. Se muestra el celular en su lugar. */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <InfoField icon={Phone} label="Celular de Acceso" value={cliente?.telefono} />
+            <InfoField icon={Phone} label="Celular de Acceso" value={celularVisible(cliente?.telefono)} />
             <CambiarCelularCliente celularActual={cliente?.telefono} />
           </div>
           <InfoField icon={Calendar} label="Cuenta Creada" value={new Date(user.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })} />

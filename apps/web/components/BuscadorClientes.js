@@ -15,6 +15,7 @@ import { Search, Loader2, User, X } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
 import { emailVisible } from '@/lib/email'
 import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export default function BuscadorClientes({ basePath, accent = 'indigo', placeholder = 'Buscar cliente por nombre, cédula o celular…', onNavigate }) {
   const router = useRouter()
@@ -91,7 +92,7 @@ export default function BuscadorClientes({ basePath, accent = 'indigo', placehol
                 <div className="min-w-0 flex-1">
                   <p className="text-slate-200 text-sm font-medium truncate">{formatNombre(r)}</p>
                   <p className="text-slate-500 text-xs truncate">
-                    CC {documentoVisible(r.dni) ?? '—'} · {r.telefono}{emailVisible(r.email) ? ` · ${emailVisible(r.email)}` : ''}
+                    CC {documentoVisible(r.dni) ?? '—'} · {celularVisible(r.telefono) ?? '—'}{emailVisible(r.email) ? ` · ${emailVisible(r.email)}` : ''}
                   </p>
                 </div>
                 {enMora && <span className="text-red-400 text-xs font-semibold shrink-0">mora</span>}

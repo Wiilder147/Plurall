@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCOP } from '@/lib/calculadora'
 import { DollarSign, CheckCircle2, TrendingUp } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -119,7 +120,7 @@ export default async function AsesorPagosPage() {
                   <tr key={p.id_recibo} className="hover:bg-slate-700/20">
                     <td className="px-5 py-3">
                       <p className="text-slate-200 font-medium">{formatNombre(p.credito?.cliente)}</p>
-                      <p className="text-slate-500 text-xs">{p.credito?.cliente?.telefono}</p>
+                      <p className="text-slate-500 text-xs">{celularVisible(p.credito?.cliente?.telefono) ?? '—'}</p>
                     </td>
                     <td className="px-5 py-3 text-right font-semibold text-emerald-400">{formatCOP(p.monto_pagado)}</td>
                     <td className="px-5 py-3 text-right text-slate-300">{formatCOP(p.monto_capital)}</td>

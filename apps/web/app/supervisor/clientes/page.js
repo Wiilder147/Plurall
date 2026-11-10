@@ -13,6 +13,7 @@ import { Users, Search, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-r
 import { orBusquedaNombre, formatNombre } from '@/lib/nombre'
 import { emailVisible } from '@/lib/email'
 import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -154,7 +155,7 @@ export default async function SupervisorClientesPage({ searchParams }) {
                         )}
                       </td>
                       <td className="px-5 py-4 text-slate-400 font-mono text-xs">{documentoVisible(cli.dni) ?? '—'}</td>
-                      <td className="px-5 py-4 text-slate-400">{cli.telefono}</td>
+                      <td className="px-5 py-4 text-slate-400">{celularVisible(cli.telefono) ?? '—'}</td>
                       <td className="px-5 py-4 text-center">
                         <span className={`font-bold text-sm ${
                           colorScore(cli.score_credito, modeloScore)

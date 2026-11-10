@@ -4,6 +4,15 @@
  * DESCRIPCIÓN: Utilidades para nombres atómicos (sin columna nombre_completo).
  * ========================================================================== */
 
+// Relleno que los triggers de registro (db/16 … db/33) guardan cuando el alta
+// no trae apellido (WF-04). No es un apellido: no se muestra.
+export const APELLIDO_PLACEHOLDER = 'NOMBRE'
+
+/** true si el apellido es el valor de relleno del trigger de registro. */
+export function esApellidoPlaceholder(apellido) {
+  return apellido != null && String(apellido).trim() === APELLIDO_PLACEHOLDER
+}
+
 /**
  * Concatena las 4 partes del nombre (equivalente a concat_ws en SQL).
  * Acepta un objeto con las columnas o argumentos sueltos.
@@ -12,11 +21,12 @@ export function formatNombre(persona) {
   if (!persona) return ''
   if (typeof persona === 'string') return persona.trim()
 
+  const apellido = (a) => (esApellidoPlaceholder(a) ? null : a)
   const partes = [
     persona.primer_nombre,
     persona.segundo_nombre,
-    persona.primer_apellido,
-    persona.segundo_apellido,
+    apellido(persona.primer_apellido),
+    apellido(persona.segundo_apellido),
   ]
     .map(p => (p == null ? '' : String(p).trim()))
     .filter(Boolean)

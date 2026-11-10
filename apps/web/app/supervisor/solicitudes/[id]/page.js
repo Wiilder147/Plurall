@@ -20,6 +20,7 @@ import {
 import Link from 'next/link'
 import { formatNombre } from '@/lib/nombre'
 import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export default function SupervisorDetalleSolicitudPage() {
   const router = useRouter()
@@ -209,7 +210,7 @@ export default function SupervisorDetalleSolicitudPage() {
           <div className="flex flex-col gap-2.5 text-sm">
             <p className="text-white font-bold text-base">{formatNombre(cliente)}</p>
             <p className="text-slate-400">CC: {documentoVisible(cliente?.dni) ?? '—'}</p>
-            <p className="text-slate-400">{cliente?.telefono}</p>
+            <p className="text-slate-400">{celularVisible(cliente?.telefono) ?? '—'}</p>
             {emailVisible(cliente?.email) && <p className="text-slate-400 text-xs">{emailVisible(cliente?.email)}</p>}
             {dir?.municipio?.nombre && <p className="text-slate-400 text-xs">{dir.municipio.nombre}</p>}
             {negocio?.nombre_negocio && (

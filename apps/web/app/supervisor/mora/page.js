@@ -11,6 +11,7 @@ import { AlertTriangle, Phone, DollarSign, Calendar } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
 import { esEmailSintetico } from '@/lib/email'
 import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -155,7 +156,7 @@ export default async function SupervisorMoraPage() {
                       </td>
                       <td className="px-5 py-3">
                         <p className="text-slate-400 text-xs flex items-center gap-1">
-                          <Phone className="w-3 h-3" /> {c.cliente?.telefono}
+                          <Phone className="w-3 h-3" /> {celularVisible(c.cliente?.telefono) ?? '—'}
                         </p>
                         {emailRealMap[c.cliente?.id_usuario_cuenta] && (
                           <p className="text-slate-500 text-xs">{emailRealMap[c.cliente?.id_usuario_cuenta]}</p>

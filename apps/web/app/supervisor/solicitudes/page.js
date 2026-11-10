@@ -18,6 +18,7 @@ import {
   CheckSquare, Square, AlertCircle, X,
 } from 'lucide-react'
 import { documentoVisible } from '@/lib/dni'
+import { celularVisible } from '@/lib/telefono'
 
 const ESTADO_UI = {
   PENDIENTE:    { label: 'Pendiente',    color: 'bg-yellow-500/10 text-yellow-400',   icon: Clock        },
@@ -260,7 +261,7 @@ export default function SupervisorSolicitudesPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-slate-200 truncate">{formatNombre(sol.cliente)}</p>
-                      <p className="text-slate-500 text-xs">CC {documentoVisible(sol.cliente?.dni) ?? '—'} · {sol.cliente?.telefono}</p>
+                      <p className="text-slate-500 text-xs">CC {documentoVisible(sol.cliente?.dni) ?? '—'} · {celularVisible(sol.cliente?.telefono) ?? '—'}</p>
                       <p className="text-slate-400 text-sm mt-1">{formatCOP(sol.monto_solicitado)} · {sol.plazo_meses} meses</p>
                       {sol.proposito && (
                         <p className="text-slate-500 text-xs mt-0.5 line-clamp-1">{sol.proposito}</p>

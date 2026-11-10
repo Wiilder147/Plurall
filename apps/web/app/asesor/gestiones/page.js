@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { formatCOP } from '@/lib/calculadora'
 import { ClipboardList, CheckCircle2, Clock, XCircle, PhoneCall } from 'lucide-react'
 import { formatNombre } from '@/lib/nombre'
+import { celularVisible } from '@/lib/telefono'
 
 export const dynamic = 'force-dynamic'
 
@@ -104,7 +105,7 @@ export default async function AsesorGestionesPage({ searchParams }) {
                     </div>
                     <div>
                       <p className="font-semibold text-slate-200 text-sm">{formatNombre(g.cliente)}</p>
-                      <p className="text-slate-500 text-xs">{g.cliente?.telefono}</p>
+                      <p className="text-slate-500 text-xs">{celularVisible(g.cliente?.telefono) ?? '—'}</p>
                       <div className="flex items-center gap-2 mt-1.5">
                         <span className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded font-medium">
                           {g.tipo_gestion.replace('_', ' ')}
