@@ -96,3 +96,32 @@ Tablero: [Plurall — Sprints (develop)](https://trello.com/b/HyoaCUo5/plurall-s
 - **MEDIO:** el job pg_cron `refresh-vistas-cartera` falla todos los días.
 - **MEDIO:** el desembolso fija `tasa_mora_diaria: 0.001` en `plan_pago`, aunque la mora se topa a la usura (NEW-08). Hay que confirmar si ese campo se usa.
 - **BAJO:** `/api/auth/rate-limit` quedó sin uso.
+
+## G. Resto del Backlog (24 tarjetas, 10-nov-2026)
+
+Las 24 tarjetas restantes del Backlog se cruzaron con el código actual (rama `fix/bugs-wilder-20261109`, que contiene `develop`). Solo 2 seguían abiertas; las otras 22 se corrigieron el 29-oct y sus commits están en la rama.
+
+| Tarjeta | ID auditoría | Estado | Evidencia |
+|---|---|---|---|
+| BUG-JM-02, BUG-JM-03 | M-02, M-03 | Corregido (29-oct) | 95e7cb9 · `estados.test` |
+| BUG-JM-05, BUG-JM-14 | M-05, M-14 | Corregido (29-oct) | 99f89f8 · `validacion.test` (motivo 5–150, nota 10–500, ≥3 letras) |
+| BUG-JM-06 | M-06 | Corregido (29-oct) | 99f89f8 |
+| BUG-JM-07 | M-07 | Corregido (29-oct) | a94c873 |
+| BUG-JM-08, BUG-JM-09, BUG-JM-10 | M-08..M-10 | Corregido (29-oct) | fefc046 · `motivos.rechazo.test` |
+| BUG-JM-11 | M-11 | Corregido (29-oct) | b9e6bdd |
+| BUG-JM-12 | M-12 | Corregido (29-oct) | 61158ad · `motivos.duplicados.test` |
+| BUG-JM-13 | M-13 | Corregido (29-oct) | 99f89f8 (máximo 150 caracteres) |
+| BUG-JM-15, BUG-JM-16, BUG-JM-17 | M-15..M-17 | Corregido (29-oct) | ba98b9e · `condicionesCredito.test`; migración 40 (CHECK) |
+| BUG-WF-01 | W-01 | Corregido (antes del 29-oct) | 533b2cc |
+| **BUG-WF-03** | W-03 | **Corregido hoy** | c0e61cc: `celularVisible()` en 26 puntos de UI y en el CSV; los enlaces de llamada y WhatsApp solo aparecen con un número real. La prevención en el registro ya existía (ab3cabf, db/33 y db/39) |
+| **BUG-WF-04** | W-04 | **Corregido hoy** | c0e61cc: `formatNombre` omite el apellido de relleno `NOMBRE`; el registro en servidor exige apellido (bffd315) · `placeholders.test` |
+| BUG-WF-06 | W-06 | Corregido (29-oct) | 4123d02 |
+| BUG-WF-07 | W-07 | Corregido (29-oct) | 3bc734f |
+| BUG-WF-08 | W-08 | Corregido (29-oct) | d2731fd |
+| BUG-CA-02 | C-02 | Corregido (29-oct) | 4b2657c |
+| BUG-CA-03 | C-03 | Corregido (29-oct) | 1e4e376 · `geocodificacion.test` |
+| BUG-CA-04 | C-04 | Corregido (29-oct) | 11ef19d + migración 41 (aplicada) |
+
+**Datos no modificados (requieren remediación manual):** 4 clientes con `0000000000` y los clientes con apellido `NOMBRE`. La UI ya no muestra esos valores, pero hay que pedir el dato real a cada cliente.
+
+**Calidad tras este cambio:** Vitest 191/191 (29 archivos), ESLint sin problemas y `next build` correcto.
