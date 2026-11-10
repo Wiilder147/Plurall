@@ -38,7 +38,7 @@ describe('esCelularValido', () => {
 })
 
 // M-05 / M-14 / M-10 / M-13: textos libres con longitud mínima/máxima y contenido real
-import { validarTextoLibre, REGLAS_TEXTO } from '../lib/validacion'
+import { validarTextoLibre, REGLAS_TEXTO, reglasNotaAsesor, ETIQUETA_NOTA_ASESOR } from '../lib/validacion'
 describe('validarTextoLibre', () => {
   const { notaAsesor, motivoCatalogo } = REGLAS_TEXTO
   it('rechaza "-" y textos sin letras (M-05, M-14)', () => {
@@ -55,5 +55,18 @@ describe('validarTextoLibre', () => {
   })
   it('motivo del catálogo: mínimo 5 caracteres', () => {
     expect(validarTextoLibre('abc', motivoCatalogo)).toMatch(/al menos 5/i)
+  })
+})
+
+// JM-06: el formulario, el error y la tarjeta usan el mismo término para la nota del asesor.
+describe('reglasNotaAsesor (JM-06)', () => {
+  it('el error nombra la nota igual que el formulario de cada acción', () => {
+    expect(validarTextoLibre('-', reglasNotaAsesor('RECHAZAR'))).toBe('La nota del rechazo debe tener al menos 10 caracteres.')
+    expect(validarTextoLibre('-', reglasNotaAsesor('PRE_APROBAR'))).toBe('La nota de verificación debe tener al menos 10 caracteres.')
+    expect(ETIQUETA_NOTA_ASESOR.RECHAZAR).toBe('Nota del rechazo')
+  })
+
+  it('mantiene los límites de la nota (10–500)', () => {
+    expect(reglasNotaAsesor('RECHAZAR')).toMatchObject({ min: 10, max: 500 })
   })
 })

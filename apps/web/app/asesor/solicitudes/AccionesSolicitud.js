@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, XCircle, Loader2, X } from 'lucide-react'
-import { validarTextoLibre, REGLAS_TEXTO } from '@/lib/validacion'
+import { validarTextoLibre, REGLAS_TEXTO, reglasNotaAsesor, ETIQUETA_NOTA_ASESOR } from '@/lib/validacion'
 
 export default function AccionesSolicitud({ solicitudId, nombreCliente, motivos = [] }) {
   const router = useRouter()
@@ -28,7 +28,7 @@ export default function AccionesSolicitud({ solicitudId, nombreCliente, motivos 
 
   async function confirmar() {
     if (modal === 'RECHAZAR' && !idMotivo) { setError('Selecciona un motivo de rechazo del catálogo.'); return }
-    const errorNota = validarTextoLibre(notas, REGLAS_TEXTO.notaAsesor)
+    const errorNota = validarTextoLibre(notas, reglasNotaAsesor(modal))
     if (errorNota) { setError(errorNota); return }
     setLoading(true)
     setError('')
@@ -118,7 +118,7 @@ export default function AccionesSolicitud({ solicitudId, nombreCliente, motivos 
             )}
 
             <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-              {esPreAprobar ? 'Notas de verificación *' : 'Nota del rechazo *'}
+              {ETIQUETA_NOTA_ASESOR[modal]} *
             </label>
             <textarea
               maxLength={REGLAS_TEXTO.notaAsesor.max}

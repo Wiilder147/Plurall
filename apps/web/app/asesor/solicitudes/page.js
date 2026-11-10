@@ -4,6 +4,7 @@ import { FileCheck, Clock, Phone, User, Calendar, TrendingUp, CheckCircle2, XCir
 import AccionesSolicitud from './AccionesSolicitud'
 import { formatNombre } from '@/lib/nombre'
 import { celularVisible } from '@/lib/telefono'
+import { ETIQUETA_NOTA_ASESOR } from '@/lib/validacion'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +39,7 @@ export default async function AsesorSolicitudesPage({ searchParams }) {
       fecha_solicitud,
       comentarios_analista,
       estado_solicitud ( nombre ),
+      motivo_rechazo ( descripcion_motivo ),
       cliente ( primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, dni, telefono ),
       score ( recomendacion, puntaje_total, porcentaje )
     `)
@@ -111,6 +113,7 @@ export default async function AsesorSolicitudesPage({ searchParams }) {
             const estado    = sol.estado_solicitud?.nombre?.toUpperCase() || 'PENDIENTE'
             const badge     = BADGE[estado] || BADGE.PENDIENTE
             const isPending = estado === 'PENDIENTE'
+            const esRechazada = estado === 'RECHAZADA'
             const score     = Array.isArray(sol.score) ? sol.score[0] : sol.score
             const recomendacion = score?.recomendacion
             const fecha = new Date(sol.fecha_solicitud).toLocaleDateString('es-CO', {
@@ -164,11 +167,20 @@ export default async function AsesorSolicitudesPage({ searchParams }) {
                         <p className="text-slate-500 text-xs mt-1.5 italic line-clamp-1">{sol.proposito}</p>
                       )}
 
-                      {sol.comentarios_analista && (
-                        <div className="mt-2 bg-slate-900/60 rounded-lg px-3 py-2">
-                          <p className="text-slate-400 text-xs">
-                            <strong className="text-slate-300">Notas:</strong> {sol.comentarios_analista}
-                          </p>
+                      {(sol.motivo_rechazo?.descripcion_motivo || sol.comentarios_analista) && (
+                        <div className="mt-2 bg-slate-900/60 rounded-lg px-3 py-2 flex flex-col gap-1">
+                          {esRechazada && sol.motivo_rechazo?.descripcion_motivo && (
+                            <p className="text-slate-400 text-xs">
+                              <strong className="text-slate-300">Motivo del rechazo:</strong> {sol.motivo_rechazo.descripcion_motivo}
+                            </p>
+                          )}
+                          {sol.comentarios_analista && (
+                            <p className="text-slate-400 text-xs">
+                              <strong className="text-slate-300">
+                                {esRechazada ? ETIQUETA_NOTA_ASESOR.RECHAZAR : ETIQUETA_NOTA_ASESOR.PRE_APROBAR}:
+                              </strong> {sol.comentarios_analista}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>

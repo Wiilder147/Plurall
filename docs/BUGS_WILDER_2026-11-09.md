@@ -99,13 +99,13 @@ Tablero: [Plurall — Sprints (develop)](https://trello.com/b/HyoaCUo5/plurall-s
 
 ## G. Resto del Backlog (24 tarjetas, 10-nov-2026)
 
-Las 24 tarjetas restantes del Backlog se cruzaron con el código actual (rama `fix/bugs-wilder-20261109`, que contiene `develop`). Solo 2 seguían abiertas; las otras 22 se corrigieron el 29-oct y sus commits están en la rama.
+Las 24 tarjetas restantes del Backlog se cruzaron con el código actual (rama `fix/bugs-wilder-20261109`, que contiene `develop`). Seguían abiertas 2 (WF-03 y WF-04) y 1 estaba a medias (JM-06); las otras 21 se corrigieron el 29-oct y sus commits están en la rama.
 
 | Tarjeta | ID auditoría | Estado | Evidencia |
 |---|---|---|---|
 | BUG-JM-02, BUG-JM-03 | M-02, M-03 | Corregido (29-oct) | 95e7cb9 · `estados.test` |
 | BUG-JM-05, BUG-JM-14 | M-05, M-14 | Corregido (29-oct) | 99f89f8 · `validacion.test` (motivo 5–150, nota 10–500, ≥3 letras) |
-| BUG-JM-06 | M-06 | Corregido (29-oct) | 99f89f8 |
+| **BUG-JM-06** | M-06 | **Completado hoy** | El 29-oct quedó a medias: el error decía "El motivo o nota" y la tarjeta "Notas". Ahora "Motivo del rechazo" es siempre el elemento del catálogo y la nota usa el mismo nombre en el formulario, el error y la tarjeta ("Nota del rechazo" o "Nota de verificación"). La tarjeta de rechazadas muestra también el motivo del catálogo · `validacion.test` |
 | BUG-JM-07 | M-07 | Corregido (29-oct) | a94c873 |
 | BUG-JM-08, BUG-JM-09, BUG-JM-10 | M-08..M-10 | Corregido (29-oct) | fefc046 · `motivos.rechazo.test` |
 | BUG-JM-11 | M-11 | Corregido (29-oct) | b9e6bdd |
@@ -124,4 +124,4 @@ Las 24 tarjetas restantes del Backlog se cruzaron con el código actual (rama `f
 
 **Datos no modificados (requieren remediación manual):** 4 clientes con `0000000000` y los clientes con apellido `NOMBRE`. La UI ya no muestra esos valores, pero hay que pedir el dato real a cada cliente.
 
-**Calidad tras este cambio:** Vitest 191/191 (29 archivos), ESLint sin problemas y `next build` correcto.
+**Calidad tras este cambio:** Vitest 193/193 (29 archivos), ESLint sin problemas y `next build` correcto.

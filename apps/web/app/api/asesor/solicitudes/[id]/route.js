@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { validarTextoLibre, REGLAS_TEXTO } from '@/lib/validacion'
+import { validarTextoLibre, reglasNotaAsesor } from '@/lib/validacion'
 import { resolverMotivoRechazo } from '@/lib/motivos'
 import { bloqueoKyc } from '@/lib/kyc'
 import { createClient } from '@/lib/supabase/server'
@@ -44,7 +44,7 @@ export async function PATCH(request, { params }) {
   if (!['PRE_APROBAR', 'RECHAZAR'].includes(accion)) {
     return NextResponse.json({ error: 'Acción inválida' }, { status: 400 })
   }
-  const errorNota = validarTextoLibre(notas, REGLAS_TEXTO.notaAsesor)
+  const errorNota = validarTextoLibre(notas, reglasNotaAsesor(accion))
   if (errorNota) return NextResponse.json({ error: errorNota }, { status: 400 })
 
   const service = getServiceClient()
