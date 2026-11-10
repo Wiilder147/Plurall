@@ -10,7 +10,7 @@ import { NextResponse } from 'next/server'
 import { calcularAmortizacion, fechasVencimientoMensual, validarCondicionesAprobacion } from '@/lib/calculadora'
 import { notificarDesembolso } from '@/lib/notificaciones'
 import { formatNombre } from '@/lib/nombre'
-import { tieneKycRechazado, MENSAJE_KYC_RECHAZADO } from '@/lib/kyc'
+import { bloqueoKyc } from '@/lib/kyc'
 
 function getServiceClient() {
   return createServiceClient(
@@ -43,7 +43,8 @@ export async function desembolsarSolicitud(solicitudId, service) {
     return { ok: false, error: 'La solicitud no está en estado APROBADA' }
   }
 
-  if (await tieneKycRechazado(service, sol.id_cliente)) return { ok: false, error: MENSAJE_KYC_RECHAZADO }
+  const kyc = await bloqueoKyc(service, sol.id_cliente)
+  if (kyc) return { ok: false, error: kyc }
 
   // Verificar crédito activo (RN-07)
   const { data: creditoExistente } = await service
